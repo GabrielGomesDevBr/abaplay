@@ -24,7 +24,6 @@ const ClientsPage = () => {
     closeReportModal
   } = usePatients();
 
-  // A sua lógica de negócio para guardar pacientes permanece intacta.
   const handleSavePatient = async (patientData) => {
     if (patientToEdit) {
       await editPatient(patientData);
@@ -48,23 +47,26 @@ const ClientsPage = () => {
   return (
     <>
       {selectedPatient ? (
-        // <<< LAYOUT PRINCIPAL REESTRUTURADO >>>
-        // Este container agora usa Flexbox para gerir a altura e o layout dos seus filhos,
-        // garantindo que eles usem o espaço disponível de forma correta.
-        <div className="flex flex-col h-full gap-6">
+        // <<< LAYOUT SIMPLIFICADO E MAIS ROBUSTO >>>
+        // Removemos o layout flex complexo. Agora é um simples container
+        // com espaçamento vertical, permitindo um scroll natural da página.
+        <div className="space-y-6">
           
-          {/* O PatientDetails fica no topo, como antes. */}
+          {/* O PatientDetails fica no topo. */}
           <PatientDetails />
           
-          {/* A grelha agora é um item flexível, o que resolve problemas de overflow e altura. */}
-          {/* min-h-0 é uma correção crucial para evitar que a grelha cresça para além do seu contentor em layouts flex. */}
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
+          {/* A grelha agora é um elemento de layout normal. */}
+          {/* Em mobile (por defeito), é uma coluna (grid-cols-1). */}
+          {/* Em ecrãs grandes (lg:), torna-se uma grelha de 3 colunas. */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* O AssignedProgramsList já tem 'lg:col-span-1' e vai-se encaixar aqui. */}
-            <AssignedProgramsList />
+            {/* Estes componentes já têm as classes de 'span' corretas para desktop (lg:col-span-1, etc.) */}
+            {/* e irão ocupar a largura total em mobile. */}
+            <div className="lg:col-span-1">
+                <AssignedProgramsList />
+            </div>
             
-            {/* O SessionProgress já tem 'lg:col-span-2' e vai-se encaixar aqui. */}
-            <div className="lg:col-span-2 min-h-0">
+            <div className="lg:col-span-2">
                  <SessionProgress />
             </div>
           </div>

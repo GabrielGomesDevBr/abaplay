@@ -1,6 +1,7 @@
 import React from 'react';
+// <<< CAMINHOS DE IMPORTAÇÃO CORRIGIDOS >>>
 import { usePatients } from '../../context/PatientContext';
-import { useAuth } from '../../context/AuthContext';
+// A importação 'useAuth' foi removida, pois não era utilizada.
 import { usePrograms } from '../../context/ProgramContext'; 
 import { generateProgramGradePDF, generateWeeklyRecordSheetPDF } from '../../utils/pdfGenerator'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -51,10 +52,6 @@ const ActionButton = ({ icon, title, description, onClick, disabled, iconClassNa
 
 const PatientDetails = () => {
   const { selectedPatient, openPatientForm, removePatient, openReportModal } = usePatients();
-  const { user } = useAuth();
-  
-  // <<< CORREÇÃO APLICADA AQUI >>>
-  // Reintroduzimos o getProgramById que vem do hook usePrograms.
   const { allProgramsData, isLoading: programsAreLoading, getProgramById } = usePrograms();
 
   if (!selectedPatient) {
@@ -69,13 +66,10 @@ const PatientDetails = () => {
   const handleEdit = () => openPatientForm(selectedPatient);
   const handleDelete = () => removePatient(selectedPatient.id);
   const handleGenerateGradePdf = () => generateProgramGradePDF(selectedPatient, allProgramsData);
-  
-  // <<< CORREÇÃO APLICADA AQUI >>>
-  // Agora passamos a função getProgramById corretamente.
   const handleGenerateRecordSheet = () => generateWeeklyRecordSheetPDF(selectedPatient, getProgramById, allProgramsData);
 
   return (
-    <div className="bg-white p-5 rounded-lg shadow-md border border-gray-200 flex flex-col h-full">
+    <div className="bg-white p-5 rounded-lg shadow-md border border-gray-200 flex flex-col">
         <div className="flex justify-between items-start pb-4 border-b border-gray-200 mb-4">
             <div>
                 <h2 className="text-xl font-bold text-gray-800">{selectedPatient.name}</h2>
@@ -97,9 +91,9 @@ const PatientDetails = () => {
         </div>
 
         {selectedPatient.general_notes && (
-            <div className="mb-5 flex-1">
+            <div className="mb-5">
                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Anotações Gerais</h4>
-                 <div className="bg-gray-50 p-3 rounded-md border border-gray-200 h-full">
+                 <div className="bg-gray-50 p-3 rounded-md border border-gray-200 min-h-[100px]">
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedPatient.general_notes}</p>
                  </div>
             </div>
@@ -107,7 +101,7 @@ const PatientDetails = () => {
         
         <div className="mt-auto border-t border-gray-100 pt-4">
             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Documentos e Relatórios</h4>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 <ActionButton 
                     icon={faFilePdf}
                     title="Grade de Programas"
