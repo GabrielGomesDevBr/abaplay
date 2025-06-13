@@ -247,7 +247,6 @@ export const generateConsolidatedReportPDF = (patient, reportText, getProgramByI
     doc.text(`Data do Relatório: ${formatDate(new Date().toISOString())}`, pageWidth - margin, y, { align: 'right' });
     y += 6;
 
-    // Adiciona o período do relatório se as sessões foram filtradas
     if (patient.sessionData.length < (patient.fullSessionData || []).length) {
       const firstSession = patient.sessionData[0];
       const lastSession = patient.sessionData[patient.sessionData.length - 1];
@@ -304,24 +303,47 @@ export const generateConsolidatedReportPDF = (patient, reportText, getProgramByI
                 label: 'Pontuação (%)',
                 data: programSessionData.map(s => s.score),
                 borderColor: '#4f46e5',
-                backgroundColor: 'rgba(79, 70, 229, 0.05)',
-                pointRadius: programSessionData.map(s => s.is_baseline ? 4 : 3),
-                pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#fbbf24' : '#4f46e5'),
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                borderWidth: 2,
+                pointRadius: 4,
+                pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#f59e0b' : '#4f46e5'),
+                pointStyle: programSessionData.map(s => s.is_baseline ? 'rectRot' : 'circle'),
                 fill: true,
-                tension: 0.1,
+                tension: 0.3,
             }]
+        };
+        
+        const chartOptions = {
+            animation: false,
+            responsive: false,
+            scales: { 
+                y: { 
+                    beginAtZero: true, 
+                    max: 105,
+                    ticks: {
+                        padding: 5,
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        padding: 5,
+                    }
+                }
+            },
+            plugins: { 
+                legend: { display: false },
+                tooltip: { enabled: false }
+            }
         };
 
         return new Promise(resolve => {
             new Chart(canvas.getContext('2d'), {
                 type: 'line',
                 data: chartData,
-                options: {
-                    animation: false,
-                    responsive: false,
-                    scales: { y: { beginAtZero: true, max: 100 } },
-                    plugins: { legend: { display: false } }
-                },
+                options: chartOptions,
                 plugins: [{
                     id: 'customCanvasBackgroundColor',
                     beforeDraw: (chart) => {
@@ -336,8 +358,11 @@ export const generateConsolidatedReportPDF = (patient, reportText, getProgramByI
             });
             
             setTimeout(() => {
+                // <<< ALTERAÇÃO APLICADA AQUI >>>
+                // O objeto resolvido agora também inclui a 'area' do programa.
                 resolve({
                     title: program.title,
+                    area: program.area || 'Outros', // Adiciona a área
                     imageData: canvas.toDataURL('image/png')
                 });
             }, 50);
@@ -353,15 +378,38 @@ export const generateConsolidatedReportPDF = (patient, reportText, getProgramByI
             doc.text("Nenhum dado de progresso para os programas ativos no período selecionado.", margin, y);
             y += 10;
         } else {
-            validCharts.forEach(chartInfo => {
-                const chartHeight = 60; 
-                y = checkAndAddPage(y, chartHeight + 10);
-                doc.setFontSize(10);
+            // <<< NOVA LÓGICA PARA AGRUPAR GRÁFICOS POR ÁREA >>>
+            const chartsByArea = validCharts.reduce((acc, chart) => {
+                if (!acc[chart.area]) {
+                    acc[chart.area] = [];
+                }
+                acc[chart.area].push(chart);
+                return acc;
+            }, {});
+
+            const sortedAreas = Object.keys(chartsByArea).sort();
+
+            sortedAreas.forEach(area => {
+                y = checkAndAddPage(y, 15);
+                // Adiciona o cabeçalho da área
+                doc.setFontSize(12);
                 doc.setFont('helvetica', 'bold');
-                doc.text(chartInfo.title, margin, y);
-                y += 4;
-                doc.addImage(chartInfo.imageData, 'PNG', margin, y, contentWidth, chartHeight);
-                y += chartHeight + 10;
+                doc.setFillColor(240, 240, 240);
+                doc.rect(margin, y - 4, contentWidth, 7, 'F');
+                doc.text(area.replace(/([A-Z])/g, ' $1').trim(), margin + 2, y);
+                y += 10;
+
+                // Desenha os gráficos para esta área
+                chartsByArea[area].forEach(chartInfo => {
+                    const chartHeight = 60; 
+                    y = checkAndAddPage(y, chartHeight + 10);
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(chartInfo.title, margin, y);
+                    y += 4;
+                    doc.addImage(chartInfo.imageData, 'PNG', margin, y, contentWidth, chartHeight);
+                    y += chartHeight + 10;
+                });
             });
         }
 

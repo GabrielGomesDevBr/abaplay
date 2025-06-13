@@ -16,8 +16,11 @@ import {
   Legend,
   Filler,
 } from 'chart.js/auto';
+// <<< PLUGIN DE ANOTAÇÃO IMPORTADO >>>
+import annotationPlugin from 'chartjs-plugin-annotation';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
+// <<< PLUGIN DE ANOTAÇÃO REGISTADO >>>
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, annotationPlugin);
 
 const StatCard = ({ title, value, icon, colorClass }) => (
   <div className={`bg-white p-4 rounded-lg shadow border border-gray-200 flex items-start space-x-4`}>
@@ -119,7 +122,6 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData, allProgramsData })
             .sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
         
         if (programSessionData.length === 0) {
-            // MELHORIA: Adicionado padding e altura mínima para o texto não ser cortado.
             return <div className="flex items-center justify-center h-48 text-xs text-gray-400 p-4">Sem dados neste período.</div>;
         }
 
@@ -129,10 +131,13 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData, allProgramsData })
                 data: programSessionData.map(s => s.score),
                 borderColor: '#4f46e5', 
                 backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                borderWidth: 2,
+                pointRadius: 5,
+                pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#f59e0b' : '#4f46e5'),
+                pointStyle: programSessionData.map(s => s.is_baseline ? 'rectRot' : 'circle'),
+                pointHoverRadius: 7,
                 fill: true,
                 tension: 0.3,
-                pointRadius: programSessionData.map(s => s.is_baseline ? 4 : 3),
-                pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#fbbf24' : '#4f46e5'),
             }]
         };
 
@@ -140,24 +145,58 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData, allProgramsData })
             responsive: true, 
             maintainAspectRatio: false, 
             scales: { 
-                y: { display: true, min: 0, max: 100, ticks: { font: { size: 9 } } }, 
-                x: { display: true, ticks: { font: { size: 9 } } } 
+                y: { 
+                    display: true, 
+                    min: 0, 
+                    max: 105, 
+                    ticks: { 
+                        font: { size: 9 },
+                        callback: (value) => value + '%'
+                    } 
+                }, 
+                x: { 
+                    display: true, 
+                    ticks: { font: { size: 9 } } 
+                } 
             }, 
             plugins: { 
                 legend: { display: false }, 
                 tooltip: {
-                    backgroundColor: '#1f2937', titleColor: '#fff', bodyColor: '#fff',
-                    padding: 10, cornerRadius: 4, displayColors: true,
+                    enabled: true,
+                    backgroundColor: '#111827',
+                    titleColor: '#fff',
+                    bodyColor: '#e5e7eb',
+                    padding: 12,
+                    cornerRadius: 6,
+                    displayColors: false,
                     callbacks: {
                         title: (items) => `Data: ${formatDate(programSessionData[items[0].dataIndex].session_date)}`,
-                        label: (context) => {
-                            const session = programSessionData[context.dataIndex];
-                            let label = `${session.is_baseline ? '[Linha de Base] ' : ''}Pontuação: ${context.parsed.y}%`;
-                            if (session.notes) {
-                                const noteLines = session.notes.match(/.{1,40}/g) || [];
-                                label += `\nObs: ${noteLines.join('\n')}`;
+                        label: (context) => `Pontuação: ${context.parsed.y.toFixed(2)}%`,
+                        afterBody: (items) => {
+                            const session = programSessionData[items[0].dataIndex];
+                            let details = [];
+                            if (session.is_baseline) details.push('Tipo: Linha de Base');
+                            if (session.notes) details.push(`Obs: ${session.notes}`);
+                            return details;
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        goalLine: {
+                            type: 'line',
+                            yMin: 80,
+                            yMax: 80,
+                            borderColor: '#16a34a',
+                            borderWidth: 2,
+                            borderDash: [6, 6],
+                            label: {
+                                content: 'Meta',
+                                enabled: true,
+                                position: 'end',
+                                font: { size: 9 },
+                                yAdjust: -10,
                             }
-                            return label;
                         }
                     }
                 } 
@@ -178,7 +217,8 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData, allProgramsData })
                             <FontAwesomeIcon icon={faFolderOpen} className="mr-3 text-gray-400" />
                             {area.replace(/([A-Z])/g, ' $1').trim()}
                         </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {/* <<< ALTERAÇÃO APLICADA AQUI >>> */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {programsByArea[area].map(program => (
                                 <div key={program.id} className="bg-white p-4 rounded-lg shadow border border-gray-200 flex flex-col">
                                     <p className="text-sm font-semibold text-gray-700 truncate" title={program.title}>{program.title}</p>

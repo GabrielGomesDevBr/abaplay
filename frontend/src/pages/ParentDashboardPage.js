@@ -29,7 +29,7 @@ ChartJS.register(
 );
 
 // Função auxiliar para formatar a data, garantindo consistência
-const formatDate = (dateString) => {
+const formatDate = (dateString, format = 'long') => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return 'Data inválida';
@@ -37,36 +37,73 @@ const formatDate = (dateString) => {
     const userTimezoneOffset = date.getTimezoneOffset() * 60000;
     const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
     
-    return adjustedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    const options = format === 'short' 
+        ? { day: '2-digit', month: '2-digit' } 
+        : { day: '2-digit', month: '2-digit', year: 'numeric' };
+
+    return adjustedDate.toLocaleDateString('pt-BR', options);
 };
 
-// Componente para renderizar um único gráfico
+// <<< COMPONENTE PARENTCHART ATUALIZADO >>>
 const ParentChart = ({ program, sessionData }) => {
     const programSessionData = (sessionData || [])
       .filter(session => session.program_id === program.id)
       .sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
 
     if (programSessionData.length === 0) {
-        return <p className="text-xs text-gray-500 italic mt-2">Nenhum dado de sessão para este programa.</p>;
+        return <div className="flex items-center justify-center h-48 text-xs text-gray-400 p-4">Sem dados de sessão.</div>;
     }
 
     const chartData = {
-        labels: programSessionData.map(session => formatDate(session.session_date)),
+        labels: programSessionData.map(session => formatDate(session.session_date, 'short')),
         datasets: [{
             label: 'Pontuação (%)',
             data: programSessionData.map(session => session.score),
             borderColor: '#4f46e5',
-            backgroundColor: 'rgba(79, 70, 229, 0.05)',
+            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            borderWidth: 2,
+            pointRadius: 5,
+            pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#f59e0b' : '#4f46e5'),
+            pointStyle: programSessionData.map(s => s.is_baseline ? 'rectRot' : 'circle'),
+            pointHoverRadius: 7,
             fill: true,
-            tension: 0.1,
+            tension: 0.3,
         }]
     };
 
     const chartOptions = {
         responsive: true,
         maintainAspectRatio: false,
-        scales: { y: { beginAtZero: true, max: 100, ticks: { font: { size: 9 } } }, x: { ticks: { font: { size: 9 } } } },
-        plugins: { legend: { display: false } }
+        scales: { 
+            y: { 
+                beginAtZero: true, 
+                max: 105, // Margem superior para não cortar
+                ticks: { 
+                    font: { size: 9 },
+                    callback: (value) => value + '%' // Adiciona '%'
+                } 
+            }, 
+            x: { 
+                ticks: { font: { size: 9 } } 
+            } 
+        },
+        plugins: { 
+            legend: { display: false },
+            tooltip: { // Tooltip simplificado para pais
+                enabled: true,
+                backgroundColor: '#111827',
+                titleColor: '#fff',
+                bodyColor: '#e5e7eb',
+                padding: 12,
+                cornerRadius: 6,
+                displayColors: false,
+                callbacks: {
+                    title: (items) => `Data: ${formatDate(programSessionData[items[0].dataIndex].session_date)}`,
+                    label: (context) => `Pontuação: ${context.parsed.y.toFixed(2)}%`,
+                    // afterBody callback foi removido para não mostrar as anotações
+                }
+            } 
+        }
     };
     
     return (
@@ -114,11 +151,10 @@ const ParentDashboardPage = () => {
 
     const assignedPrograms = (selectedPatient.assigned_programs || [])
         .map(p => getProgramById(p.id))
-        .filter(p => p); // Garante que apenas programas válidos são incluídos
+        .filter(p => p); 
 
-    // Agrupa os programas atribuídos por área
     const programsByArea = assignedPrograms.reduce((acc, program) => {
-        const area = program.area || 'Outros'; // Assume que 'area' é uma propriedade do programa. Se não houver, categoriza como 'Outros'.
+        const area = program.area || 'Outros';
         if (!acc[area]) {
             acc[area] = [];
         }
@@ -157,7 +193,8 @@ const ParentDashboardPage = () => {
                             <h4 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-300">
                                 {area}
                             </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                            {/* <<< ALTERAÇÃO NA GRELHA APLICADA AQUI >>> */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 {programsByArea[area].map(program => (
                                     <div key={program.id} className="border border-gray-200 rounded-md p-4 bg-gray-50 flex flex-col items-center shadow-sm">
                                         <h5 className="text-sm font-medium text-gray-600 mb-2 text-center">{program.title}</h5>

@@ -14,8 +14,12 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
+// <<< NOVO PLUGIN IMPORTADO >>>
+// Importamos o plugin de anotações para desenhar a linha de meta.
+import annotationPlugin from 'chartjs-plugin-annotation';
 
-// Registra os componentes do Chart.js que vamos usar
+
+// <<< REGISTO DO NOVO PLUGIN >>>
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -24,22 +28,20 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  annotationPlugin // Registamos o plugin
 );
 
-// Função para formatar a data, garantindo consistência
+// A função formatDate permanece a mesma
 const formatDate = (dateString, format = 'long') => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return 'Data inválida';
-
     const userTimezoneOffset = date.getTimezoneOffset() * 60000;
     const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
-
     const options = format === 'short' 
         ? { day: '2-digit', month: '2-digit' } 
         : { day: '2-digit', month: '2-digit', year: 'numeric' };
-    
     return adjustedDate.toLocaleDateString('pt-BR', options);
 };
 
@@ -49,15 +51,11 @@ const SessionProgress = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState('');
-
-  // Estados locais para o formulário
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);
   const [correctTrials, setCorrectTrials] = useState('');
   const [sessionNotes, setSessionNotes] = useState('');
   const [isBaseline, setIsBaseline] = useState(false);
 
-
-  // Limpa o formulário sempre que um novo programa for selecionado
   useEffect(() => {
     setSessionDate(new Date().toISOString().split('T')[0]);
     setCorrectTrials('');
@@ -67,16 +65,13 @@ const SessionProgress = () => {
     setSaveSuccess(false);
   }, [programForProgress]);
 
-  // Placeholder melhorado
   if (!programForProgress) {
     return (
       <div className="md:col-span-1 lg:col-span-2 bg-white p-6 rounded-xl shadow-lg border border-gray-200 flex items-center justify-center h-full">
         <div className="text-center text-gray-500">
           <FontAwesomeIcon icon={faTasks} className="text-5xl mb-4 text-gray-300" />
-          {/* <<< CORREÇÃO APLICADA AQUI >>> */}
           <p className="text-lg font-semibold text-gray-700">Registro de Sessão</p>
           <p className="text-sm mt-1">
-            {/* <<< CORREÇÃO APLICADA AQUI >>> */}
             Selecione um programa na lista ao lado para ver o progresso e registrar uma nova sessão.
           </p>
         </div>
@@ -118,11 +113,11 @@ const SessionProgress = () => {
     }
   };
 
-  // Prepara os dados para o gráfico
   const programSessionData = (selectedPatient?.sessionData || [])
       .filter(session => session.program_id === programForProgress.id)
       .sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
 
+  // <<< DADOS DO GRÁFICO ATUALIZADOS >>>
   const chartData = {
     labels: programSessionData.map(session => formatDate(session.session_date, 'short')),
     datasets: [{
@@ -130,35 +125,103 @@ const SessionProgress = () => {
         data: programSessionData.map(session => session.score),
         borderColor: '#4f46e5',
         backgroundColor: 'rgba(79, 70, 229, 0.1)',
-        pointRadius: programSessionData.map(s => s.is_baseline ? 5 : 4),
-        pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#fbbf24' : '#4f46e5'),
-        pointStyle: programSessionData.map(s => s.is_baseline ? 'rect' : 'circle'),
+        borderWidth: 2, // Linha mais espessa
+        pointRadius: 5, // Pontos maiores
+        pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#f59e0b' : '#4f46e5'), // Cor de baseline mais viva
+        pointStyle: programSessionData.map(s => s.is_baseline ? 'rectRot' : 'circle'), // Estilo mais distinto para baseline
+        pointHoverRadius: 7, // Ponto maior no hover
         fill: true,
-        tension: 0.2,
+        tension: 0.3, // Curvas mais suaves
     }]
   };
   
+  // <<< OPÇÕES DO GRÁFICO ATUALIZADAS >>>
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     scales: { 
-        y: { beginAtZero: true, max: 100, grid: { color: '#e5e7eb' } },
-        x: { grid: { display: false } }
+        y: { 
+            beginAtZero: true, 
+            max: 105, // Adiciona margem superior para não cortar o gráfico
+            grid: { 
+                color: '#f3f4f6', // Cor da grelha mais suave
+                drawBorder: false,
+            },
+            ticks: {
+                padding: 10,
+                callback: function(value) {
+                    return value + '%'; // Adiciona '%' aos valores do eixo
+                }
+            },
+            title: {
+                display: true,
+                text: 'Pontuação (%)', // Título do eixo Y
+                font: {
+                    size: 12,
+                }
+            }
+        },
+        x: { 
+            grid: { display: false },
+            ticks: {
+                padding: 10,
+            }
+        }
     },
     plugins: { 
         legend: { display: false },
         tooltip: {
-            backgroundColor: '#1f2937', titleColor: '#fff', bodyColor: '#fff',
-            padding: 10, cornerRadius: 4, displayColors: true,
+            enabled: true,
+            backgroundColor: '#111827', // Tooltip mais escuro
+            titleColor: '#fff',
+            bodyColor: '#e5e7eb',
+            titleFont: { size: 14, weight: 'bold' },
+            bodyFont: { size: 12 },
+            padding: 12,
+            cornerRadius: 6,
+            displayColors: false, // Remove a pequena caixa de cor
             callbacks: {
                 title: (items) => `Data: ${formatDate(programSessionData[items[0].dataIndex].session_date)}`,
-                label: (context) => {
-                    const session = programSessionData[context.dataIndex];
-                    let label = `${session.is_baseline ? '[Linha de Base] ' : ''}Pontuação: ${context.parsed.y}%`;
-                    if (session.notes) {
-                        label += `\nObs: ${session.notes}`;
+                label: (context) => `Pontuação: ${context.parsed.y.toFixed(2)}%`,
+                afterBody: (items) => {
+                    const session = programSessionData[items[0].dataIndex];
+                    let details = [];
+                    if (session.is_baseline) {
+                        details.push('Tipo: Linha de Base');
                     }
-                    return label;
+                    if (session.notes) {
+                        details.push(`Obs: ${session.notes}`);
+                    }
+                    return details;
+                }
+            }
+        },
+        // Adiciona a linha de meta
+        annotation: {
+            annotations: {
+                goalLine: {
+                    type: 'line',
+                    yMin: 80,
+                    yMax: 80,
+                    borderColor: '#16a34a',
+                    borderWidth: 2,
+                    borderDash: [6, 6],
+                    label: {
+                        content: 'Meta (80%)',
+                        enabled: true,
+                        position: 'end',
+                        backgroundColor: 'rgba(22, 163, 74, 0.8)',
+                        font: {
+                            size: 10,
+                            weight: 'bold'
+                        },
+                        padding: {
+                            x: 6,
+                            y: 4
+                        },
+                        color: 'white',
+                        cornerRadius: 4,
+                    }
                 }
             }
         }
@@ -168,7 +231,6 @@ const SessionProgress = () => {
 
   return (
     <div className="md:col-span-1 lg:col-span-2 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-        {/* <<< CORREÇÃO APLICADA AQUI >>> */}
         <h3 className="text-lg font-semibold text-gray-700 mb-4">
             Registro de Sessão: <span className="text-indigo-600 font-bold">{programForProgress.title}</span>
         </h3>
@@ -212,7 +274,6 @@ const SessionProgress = () => {
                 <input id="session-is-baseline" type="checkbox" checked={isBaseline} onChange={e => setIsBaseline(e.target.checked)} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
                 <label htmlFor="session-is-baseline" className="ml-2 block text-sm font-medium text-gray-700">Marcar como Linha de Base</label>
               </div>
-              {/* <<< CORREÇÕES APLICADAS AQUI >>> */}
               <button type="submit" disabled={isSubmitting} className={`font-semibold py-2.5 px-6 rounded-lg text-sm transition-all duration-200 flex items-center justify-center w-40 shadow hover:shadow-lg disabled:opacity-60 active:scale-95 ${saveSuccess ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
                   <FontAwesomeIcon icon={isSubmitting ? faSpinner : (saveSuccess ? faCheck : faSave)} className={`mr-2 ${isSubmitting && 'fa-spin'}`} />
                   {isSubmitting ? 'Salvando...' : saveSuccess ? 'Salvo!' : 'Salvar Registro'}
@@ -228,7 +289,6 @@ const SessionProgress = () => {
                   <Line options={chartOptions} data={chartData} />
               ) : (
                   <div className="flex items-center justify-center h-full text-center text-gray-400 bg-gray-50 rounded-lg">
-                    {/* <<< CORREÇÃO APLICADA AQUI >>> */}
                     <p>Nenhum dado de sessão registrado para este programa.</p>
                   </div>
               )}
