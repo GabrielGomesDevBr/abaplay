@@ -70,13 +70,14 @@ const SessionProgress = () => {
   // Placeholder melhorado
   if (!programForProgress) {
     return (
-      // MELHORIA: Adicionado 'md:col-span-1 lg:col-span-2' para o placeholder se ajustar
       <div className="md:col-span-1 lg:col-span-2 bg-white p-6 rounded-xl shadow-lg border border-gray-200 flex items-center justify-center h-full">
         <div className="text-center text-gray-500">
           <FontAwesomeIcon icon={faTasks} className="text-5xl mb-4 text-gray-300" />
-          <p className="text-lg font-semibold text-gray-700">Registo de Sessão</p>
+          {/* <<< CORREÇÃO APLICADA AQUI >>> */}
+          <p className="text-lg font-semibold text-gray-700">Registro de Sessão</p>
           <p className="text-sm mt-1">
-            Selecione um programa na lista ao lado para ver o progresso e registar uma nova sessão.
+            {/* <<< CORREÇÃO APLICADA AQUI >>> */}
+            Selecione um programa na lista ao lado para ver o progresso e registrar uma nova sessão.
           </p>
         </div>
       </div>
@@ -111,7 +112,7 @@ const SessionProgress = () => {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000);
     } catch (err) {
-        setError(err.message || 'Ocorreu um erro ao guardar a sessão.');
+        setError(err.message || 'Ocorreu um erro ao salvar a sessão.');
     } finally {
         setIsSubmitting(false);
     }
@@ -166,11 +167,11 @@ const SessionProgress = () => {
 
 
   return (
-    // MELHORIA: Adicionado 'md:col-span-1 lg:col-span-2' para o componente se ajustar
     <div className="md:col-span-1 lg:col-span-2 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-700 mb-4">
-        Registo de Sessão: <span className="text-indigo-600 font-bold">{programForProgress.title}</span>
-      </h3>
+        {/* <<< CORREÇÃO APLICADA AQUI >>> */}
+        <h3 className="text-lg font-semibold text-gray-700 mb-4">
+            Registro de Sessão: <span className="text-indigo-600 font-bold">{programForProgress.title}</span>
+        </h3>
       
       <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm">
         <h5 className="font-semibold text-blue-800 mb-2 flex items-center">
@@ -211,9 +212,10 @@ const SessionProgress = () => {
                 <input id="session-is-baseline" type="checkbox" checked={isBaseline} onChange={e => setIsBaseline(e.target.checked)} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
                 <label htmlFor="session-is-baseline" className="ml-2 block text-sm font-medium text-gray-700">Marcar como Linha de Base</label>
               </div>
+              {/* <<< CORREÇÕES APLICADAS AQUI >>> */}
               <button type="submit" disabled={isSubmitting} className={`font-semibold py-2.5 px-6 rounded-lg text-sm transition-all duration-200 flex items-center justify-center w-40 shadow hover:shadow-lg disabled:opacity-60 active:scale-95 ${saveSuccess ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
                   <FontAwesomeIcon icon={isSubmitting ? faSpinner : (saveSuccess ? faCheck : faSave)} className={`mr-2 ${isSubmitting && 'fa-spin'}`} />
-                  {isSubmitting ? 'A Guardar...' : saveSuccess ? 'Guardado!' : 'Guardar Registo'}
+                  {isSubmitting ? 'Salvando...' : saveSuccess ? 'Salvo!' : 'Salvar Registro'}
               </button>
           </div>
           {error && <p className="text-sm text-red-500 text-center mt-2">{error}</p>}
@@ -226,7 +228,8 @@ const SessionProgress = () => {
                   <Line options={chartOptions} data={chartData} />
               ) : (
                   <div className="flex items-center justify-center h-full text-center text-gray-400 bg-gray-50 rounded-lg">
-                    <p>Nenhum dado de sessão registado para este programa.</p>
+                    {/* <<< CORREÇÃO APLICADA AQUI >>> */}
+                    <p>Nenhum dado de sessão registrado para este programa.</p>
                   </div>
               )}
           </div>

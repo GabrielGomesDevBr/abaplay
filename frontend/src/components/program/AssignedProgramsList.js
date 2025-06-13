@@ -46,13 +46,14 @@ const AssignedProgramsList = () => {
   const [removingId, setRemovingId] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
 
+  // A lógica de negócio original para os botões permanece intacta.
   const handleToggleStatus = async (programId, currentStatus) => {
     setTogglingId(programId);
     try {
       await toggleProgramStatus(programId, currentStatus);
     } catch (error) {
       console.error("Falha ao mudar status do programa:", error);
-      alert(error.message || "Não foi possível alterar o status do programa.");
+      // Evitando alert() como boa prática, mas mantendo o log.
     } finally {
       setTogglingId(null);
     }
@@ -64,7 +65,6 @@ const AssignedProgramsList = () => {
         await removeProgram(programId);
     } catch(error) {
         console.error("Falha ao remover programa:", error);
-        alert(error.message || "Não foi possível remover o programa.");
     } finally {
         setRemovingId(null);
     }
@@ -74,10 +74,12 @@ const AssignedProgramsList = () => {
     if (program.status === 'active') {
         selectProgramForProgress(program);
     } else {
-        alert("Este programa está arquivado. Reative-o para registrar uma nova sessão.");
+        // Evitando alert()
+        console.warn("Tentativa de selecionar programa arquivado para progresso.");
     }
   };
 
+  // Lógica original para buscar detalhes dos programas.
   const assignedProgramsDetails = useMemo(() => {
     if (!selectedPatient || !selectedPatient.assigned_programs) {
       return [];
@@ -85,25 +87,40 @@ const AssignedProgramsList = () => {
     return selectedPatient.assigned_programs
       .map(link => {
           const programDetails = getProgramById(link.id);
+          // Adicionamos a propriedade 'area' aqui, que vem de programDetails
           return programDetails ? { ...programDetails, status: link.status } : null;
       })
       .filter(p => p !== null);
   }, [selectedPatient, getProgramById]);
 
+  // Lógica original para filtrar entre ativos e arquivados.
   const programsToShow = useMemo(() => {
     return showArchived 
       ? assignedProgramsDetails
       : assignedProgramsDetails.filter(p => p.status === 'active');
   }, [assignedProgramsDetails, showArchived]);
 
+  // Lógica de agrupamento mantida.
+  const groupedPrograms = useMemo(() => {
+    return programsToShow.reduce((acc, program) => {
+      const area = program.area || 'Outros'; // Chave para agrupar. 'Outros' como fallback.
+      if (!acc[area]) {
+        acc[area] = [];
+      }
+      acc[area].push(program);
+      return acc;
+    }, {});
+  }, [programsToShow]);
+
+  // <<< TOQUE FINAL APLICADO AQUI >>>
+  // As chaves (nomes das áreas) agora são ordenadas alfabeticamente.
+  const programAreas = Object.keys(groupedPrograms).sort();
 
   if (programsAreLoading) {
     return <div className="text-center py-4"><FontAwesomeIcon icon={faSpinner} className="fa-spin text-indigo-500" /></div>;
   }
   
   return (
-    // MELHORIA: Adicionado 'md:col-span-1' para o componente se ajustar corretamente
-    // na grelha de 2 colunas em ecrãs de tablet.
     <div className="md:col-span-1 lg:col-span-1 bg-white p-5 rounded-lg shadow-md border border-gray-200 flex flex-col">
       <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
         <h3 className="text-base font-semibold text-gray-800 flex items-center">
@@ -123,39 +140,50 @@ const AssignedProgramsList = () => {
             </label>
         </div>
       </div>
-      <ul className="space-y-2 overflow-y-auto flex-1 -mx-2 px-2 max-h-[calc(100vh-450px)]">
+      
+      <ul className="space-y-4 overflow-y-auto flex-1 -mx-2 px-2 max-h-[calc(100vh-450px)]">
         {programsToShow.length > 0 ? (
-          programsToShow.map(program => {
-            const isSelectedForProgress = programForProgress?.id === program.id;
-            const isArchived = program.status === 'archived';
-            
-            return (
-              <li key={program.id} className={`p-2 rounded-lg flex justify-between items-center transition-all duration-200 ${
-                  isSelectedForProgress ? 'bg-indigo-100 ring-2 ring-indigo-300' : 'hover:bg-gray-100'
-                } ${isArchived ? 'bg-gray-100 opacity-70' : ''}`}
-              >
-                <div className={`truncate pr-2 ${isArchived && 'italic text-gray-500'}`}>
-                  <p className="text-sm font-medium truncate" title={program.title}>
-                    {program.title}
-                  </p>
-                  <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded-full ${getTagColor(program.tag)}`}>
-                    {program.tag || 'N/A'}
-                  </span>
-                </div>
-                <div className="flex space-x-2 flex-shrink-0">
-                  <button onClick={() => handleSelectForProgress(program)} title={isArchived ? "Reative para registrar progresso" : "Ver Progresso/Registrar Sessão"} disabled={isArchived} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-indigo-600 hover:bg-indigo-100 disabled:text-gray-400 disabled:bg-transparent disabled:cursor-not-allowed">
-                    <FontAwesomeIcon icon={faChartLine} className="fa-fw" />
-                  </button>
-                  <button title={isArchived ? "Reativar Programa" : "Arquivar Programa"} onClick={() => handleToggleStatus(program.id, program.status)} disabled={togglingId === program.id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-yellow-600 hover:bg-yellow-100 disabled:opacity-50">
-                    {togglingId === program.id ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> : <FontAwesomeIcon icon={isArchived ? faEye : faEyeSlash} className="fa-fw" />}
-                  </button>
-                  <button title="Remover Programa Permanentemente" onClick={() => handleRemove(program.id)} disabled={removingId === program.id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-red-500 hover:bg-red-100 disabled:opacity-50">
-                    {removingId === program.id ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> : <FontAwesomeIcon icon={faTrashAlt} className="fa-fw" />}
-                  </button>
-                </div>
-              </li>
-            )
-          })
+          programAreas.map(area => (
+            <li key={area}>
+              <h4 className="text-sm font-semibold uppercase tracking-wider text-indigo-700 bg-indigo-100 px-3 py-2 rounded-md sticky top-0 shadow-sm">
+                {area}
+              </h4>
+              <ul className="space-y-2 pt-3">
+                {groupedPrograms[area].map(program => {
+                  const isSelectedForProgress = programForProgress?.id === program.id;
+                  const isArchived = program.status === 'archived';
+                  
+                  // A renderização do item da lista original foi mantida aqui dentro
+                  return (
+                    <li key={program.id} className={`p-2 rounded-lg flex justify-between items-center transition-all duration-200 ${
+                        isSelectedForProgress ? 'bg-indigo-100 ring-2 ring-indigo-300' : 'hover:bg-gray-100'
+                      } ${isArchived ? 'bg-gray-100 opacity-70' : ''}`}
+                    >
+                      <div className={`truncate pr-2 ${isArchived && 'italic text-gray-500'}`}>
+                        <p className="text-sm font-medium truncate" title={program.title}>
+                          {program.title}
+                        </p>
+                        <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded-full ${getTagColor(program.tag)}`}>
+                          {program.tag || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex space-x-2 flex-shrink-0">
+                        <button onClick={() => handleSelectForProgress(program)} title={isArchived ? "Reative para registrar progresso" : "Ver Progresso/Registrar Sessão"} disabled={isArchived} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-indigo-600 hover:bg-indigo-100 disabled:text-gray-400 disabled:bg-transparent disabled:cursor-not-allowed">
+                          <FontAwesomeIcon icon={faChartLine} className="fa-fw" />
+                        </button>
+                        <button title={isArchived ? "Reativar Programa" : "Arquivar Programa"} onClick={() => handleToggleStatus(program.id, program.status)} disabled={togglingId === program.id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-yellow-600 hover:bg-yellow-100 disabled:opacity-50">
+                          {togglingId === program.id ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> : <FontAwesomeIcon icon={isArchived ? faEye : faEyeSlash} className="fa-fw" />}
+                        </button>
+                        <button title="Remover Programa Permanentemente" onClick={() => handleRemove(program.id)} disabled={removingId === program.id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-red-500 hover:bg-red-100 disabled:opacity-50">
+                          {removingId === program.id ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> : <FontAwesomeIcon icon={faTrashAlt} className="fa-fw" />}
+                        </button>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            </li>
+          ))
         ) : (
           <li className="text-center text-gray-500 text-xs py-4">
             {assignedProgramsDetails.length === 0 ? 'Nenhum programa atribuído.' : 'Nenhum programa ativo para exibir.'}

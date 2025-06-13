@@ -1,10 +1,12 @@
 import React from 'react';
 import { usePatients } from '../../context/PatientContext';
+import { useAuth } from '../../context/AuthContext';
 import { usePrograms } from '../../context/ProgramContext'; 
 import { generateProgramGradePDF, generateWeeklyRecordSheetPDF } from '../../utils/pdfGenerator'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTrashAlt, faFilePdf, faClipboardList, faChartPie } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faTrashAlt, faFilePdf, faClipboardList, faChartPie, faCalendarAlt, faNotesMedical } from '@fortawesome/free-solid-svg-icons';
 
+// A função de formatação de data original é mantida.
 const formatDate = (dateString) => {
   if (!dateString) return 'Não informado';
   try {
@@ -21,88 +23,117 @@ const formatDate = (dateString) => {
   }
 };
 
+// Componente auxiliar para padronizar a exibição dos detalhes.
+const DetailItem = ({ icon, label, value }) => (
+    <div>
+        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center">
+            <FontAwesomeIcon icon={icon} className="mr-2 text-indigo-400" />
+            {label}
+        </h4>
+        <p className="text-sm text-gray-800 mt-1">{value || 'Não informado'}</p>
+    </div>
+);
+
+const ActionButton = ({ icon, title, description, onClick, disabled, iconClassName }) => (
+    <button 
+        onClick={onClick} 
+        disabled={disabled}
+        className="text-left p-3 flex items-start space-x-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 w-full transition-colors duration-150 disabled:opacity-50 disabled:cursor-wait disabled:hover:bg-gray-50"
+    >
+        <FontAwesomeIcon icon={icon} className={`fa-lg mt-1 ${iconClassName || 'text-gray-400'}`} />
+        <div>
+            <h5 className="font-semibold text-sm text-gray-800">{title}</h5>
+            <p className="text-xs text-gray-600">{description}</p>
+        </div>
+    </button>
+);
+
+
 const PatientDetails = () => {
   const { selectedPatient, openPatientForm, removePatient, openReportModal } = usePatients();
-  // 1. Obtém o estado de carregamento do contexto dos programas
-  const { getProgramById, allProgramsData, isLoading: programsAreLoading } = usePrograms();
+  const { user } = useAuth();
+  
+  // <<< CORREÇÃO APLICADA AQUI >>>
+  // Reintroduzimos o getProgramById que vem do hook usePrograms.
+  const { allProgramsData, isLoading: programsAreLoading, getProgramById } = usePrograms();
 
   if (!selectedPatient) {
-    return null;
+    return (
+        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 text-center">
+            <h3 className="text-lg font-semibold text-gray-700">Nenhum Cliente Selecionado</h3>
+            <p className="text-sm text-gray-500 mt-2">Por favor, selecione um cliente na lista à esquerda para ver os detalhes.</p>
+        </div>
+    );
   }
-  
-  const handleEdit = () => {
-    openPatientForm(selectedPatient);
-  };
 
-  const handleDelete = () => {
-    removePatient(selectedPatient.id);
-  };
-
-  const handleGenerateGradePdf = () => {
-    generateProgramGradePDF(selectedPatient, allProgramsData);
-  };
+  const handleEdit = () => openPatientForm(selectedPatient);
+  const handleDelete = () => removePatient(selectedPatient.id);
+  const handleGenerateGradePdf = () => generateProgramGradePDF(selectedPatient, allProgramsData);
   
-  const handleGenerateRecordSheet = () => {
-    // Passa 'allProgramsData' para a função, em vez de 'getProgramById'
-    generateWeeklyRecordSheetPDF(selectedPatient, getProgramById, allProgramsData);
-  };
+  // <<< CORREÇÃO APLICADA AQUI >>>
+  // Agora passamos a função getProgramById corretamente.
+  const handleGenerateRecordSheet = () => generateWeeklyRecordSheetPDF(selectedPatient, getProgramById, allProgramsData);
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-800">{selectedPatient.name}</h2>
-          <p className="text-xs text-gray-500 mt-1">ID: <span className="font-mono">{selectedPatient.id}</span></p>
+    <div className="bg-white p-5 rounded-lg shadow-md border border-gray-200 flex flex-col h-full">
+        <div className="flex justify-between items-start pb-4 border-b border-gray-200 mb-4">
+            <div>
+                <h2 className="text-xl font-bold text-gray-800">{selectedPatient.name}</h2>
+                <p className="text-xs text-gray-500 mt-1">ID: <span className="font-mono">{selectedPatient.id}</span></p>
+            </div>
+            <div className="flex space-x-2">
+                <button onClick={handleEdit} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-blue-600 hover:bg-blue-100" title="Editar Cliente">
+                    <FontAwesomeIcon icon={faEdit} />
+                </button>
+                <button onClick={handleDelete} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-red-600 hover:bg-red-100" title="Excluir Cliente">
+                    <FontAwesomeIcon icon={faTrashAlt} />
+                </button>
+            </div>
         </div>
-        <div className="flex space-x-2 no-print">
-          <button onClick={handleEdit} title="Editar Cliente" className="text-gray-500 hover:text-indigo-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
-            <FontAwesomeIcon icon={faEdit} className="fa-fw" />
-          </button>
-          <button onClick={handleDelete} title="Excluir Cliente" className="text-gray-500 hover:text-red-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
-            <FontAwesomeIcon icon={faTrashAlt} className="fa-fw" />
-          </button>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 mb-4">
+            <DetailItem icon={faCalendarAlt} label="Data de Nascimento" value={formatDate(selectedPatient.dob)} />
+            <DetailItem icon={faNotesMedical} label="Diagnóstico" value={selectedPatient.diagnosis} />
         </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm mb-5 border-t border-gray-100 pt-4">
-        <div>
-          <strong className="text-gray-500 font-medium block mb-0.5">Data Nasc.:</strong>
-          <span className="text-gray-700">{formatDate(selectedPatient.dob)}</span>
+
+        {selectedPatient.general_notes && (
+            <div className="mb-5 flex-1">
+                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Anotações Gerais</h4>
+                 <div className="bg-gray-50 p-3 rounded-md border border-gray-200 h-full">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedPatient.general_notes}</p>
+                 </div>
+            </div>
+        )}
+        
+        <div className="mt-auto border-t border-gray-100 pt-4">
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Documentos e Relatórios</h4>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <ActionButton 
+                    icon={faFilePdf}
+                    title="Grade de Programas"
+                    description="Gera um PDF com a lista dos programas atribuídos."
+                    onClick={handleGenerateGradePdf}
+                    disabled={programsAreLoading}
+                    iconClassName="text-red-500"
+                />
+                <ActionButton 
+                    icon={faClipboardList}
+                    title="Folha de Registro"
+                    description="Cria uma folha de registro para anotações manuais."
+                    onClick={handleGenerateRecordSheet}
+                    disabled={programsAreLoading}
+                    iconClassName="text-blue-500"
+                />
+                <ActionButton 
+                    icon={faChartPie}
+                    title="Geração de Relatório"
+                    description="Abre o modal para gerar um relatório de progresso."
+                    onClick={openReportModal}
+                    disabled={programsAreLoading}
+                    iconClassName="text-green-500"
+                />
+            </div>
         </div>
-        <div>
-          <strong className="text-gray-500 font-medium block mb-0.5">Diagnóstico:</strong>
-          <span className="text-gray-700">{selectedPatient.diagnosis || 'Não informado'}</span>
-        </div>
-        <div className="col-span-1 md:col-span-2">
-          <strong className="text-gray-500 font-medium block mb-0.5">Anotações Gerais:</strong>
-          <span className="block mt-1 text-gray-700 whitespace-pre-wrap text-xs leading-relaxed">
-            {selectedPatient.general_notes || 'Sem anotações'}
-          </span>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-3 border-t border-gray-100 pt-4 no-print">
-        {/* 2. Adiciona a propriedade 'disabled' aos botões de PDF */}
-        <button 
-            onClick={handleGenerateGradePdf} 
-            disabled={programsAreLoading}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-1.5 px-4 rounded-md text-xs transition duration-150 ease-in-out flex items-center space-x-1.5 border border-gray-300 shadow-sm disabled:opacity-50 disabled:cursor-wait">
-          <FontAwesomeIcon icon={faFilePdf} className="text-red-500" />
-          <span>Grade PDF</span>
-        </button>
-        <button 
-            onClick={handleGenerateRecordSheet} 
-            disabled={programsAreLoading}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-1.5 px-4 rounded-md text-xs transition duration-150 ease-in-out flex items-center space-x-1.5 border border-gray-300 shadow-sm disabled:opacity-50 disabled:cursor-wait">
-          <FontAwesomeIcon icon={faClipboardList} className="text-blue-500" />
-          <span>Registo PDF</span>
-        </button>
-        <button 
-            onClick={openReportModal} 
-            disabled={programsAreLoading}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-1.5 px-4 rounded-md text-xs transition duration-150 ease-in-out flex items-center space-x-1.5 border border-gray-300 shadow-sm disabled:opacity-50 disabled:cursor-wait">
-          <FontAwesomeIcon icon={faChartPie} className="text-green-500" />
-          <span>Relatório Geral</span>
-        </button>
-      </div>
     </div>
   );
 };

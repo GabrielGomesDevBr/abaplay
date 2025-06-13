@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { usePatients } from '../../context/PatientContext';
 import { usePrograms } from '../../context/ProgramContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// <<< NOVO: Adicionado ícone para o painel de admin >>>
+// Ícones importados
 import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faChartLine, faPuzzlePiece, faChild, faGraduationCap, faMusic, faCommentDots, faUserShield } from '@fortawesome/free-solid-svg-icons';
 
 const Navbar = () => {
@@ -72,14 +72,25 @@ const Navbar = () => {
 
     return (
       <>
-        {/* <<< NOVO: Link para o painel de admin, visível apenas para admins >>> */}
         {user?.is_admin && (
             <NavLink to="/admin" className={getLinkClass} onClick={onLinkClick}>
                 <FontAwesomeIcon icon={faUserShield} className="fa-fw mr-2" /> Admin
             </NavLink>
         )}
         <NavLink to="/dashboard" className={getLinkClass} onClick={onLinkClick}><FontAwesomeIcon icon={faTachometerAlt} className="fa-fw mr-2" /> Dashboard</NavLink>
-        <NavLink to="/" end className={getLinkClass} onClick={onLinkClick}><FontAwesomeIcon icon={faUsers} className="fa-fw mr-2" /> Clientes</NavLink>
+        
+        {/* <<< CORREÇÃO DEFINITIVA APLICADA AQUI >>> */}
+        {/* O link agora aponta diretamente para '/clients' para corresponder ao redirecionamento final. */}
+        {!user?.is_admin && (
+          <NavLink 
+            to="/clients"
+            className={getLinkClass}
+            onClick={onLinkClick}
+          >
+            <FontAwesomeIcon icon={faUsers} className="fa-fw mr-2" /> Clientes
+          </NavLink>
+        )}
+
         {programAreas.map(area => {
             const areaName = area.replace(/([A-Z])/g, ' $1').trim();
             return (

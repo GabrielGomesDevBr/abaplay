@@ -2,10 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { usePatients } from '../../context/PatientContext';
 import { useAuth } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserPlus, faUser, faSpinner, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faSpinner, faSearch } from '@fortawesome/free-solid-svg-icons';
 
 const Sidebar = () => {
-  const { patients, selectedPatient, selectPatient, openPatientForm, isLoading } = usePatients();
+  const { patients, selectedPatient, selectPatient, isLoading } = usePatients();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -13,9 +13,7 @@ const Sidebar = () => {
     selectPatient(patient);
   };
 
-  const handleNewPatient = () => {
-    openPatientForm(null); // Apenas admins podem chamar isto, mas a lógica está aqui
-  };
+  // A função handleNewPatient e o ícone faUserPlus foram removidos por não serem mais utilizados.
 
   const filteredPatients = useMemo(() => {
     if (!searchTerm) {
@@ -35,7 +33,6 @@ const Sidebar = () => {
   }
 
   const renderPatientCount = () => {
-      // Se for admin, mostra o limite da clínica
       if (user?.is_admin) {
           return (
             <p className="text-xs text-gray-500">
@@ -44,7 +41,6 @@ const Sidebar = () => {
             </p>
           );
       }
-      // Se for terapeuta, mostra apenas os atribuídos
       if (user?.role === 'terapeuta') {
           return (
             <p className="text-xs text-gray-500">
@@ -52,7 +48,6 @@ const Sidebar = () => {
             </p>
           );
       }
-      // Para outros papéis (como pais), não mostra nada
       return null;
   }
 
@@ -61,7 +56,6 @@ const Sidebar = () => {
       <div className="p-4 border-b border-gray-200 space-y-4">
         <h2 className="text-lg font-semibold text-gray-800">Clientes</h2>
         
-        {/* <<< MELHORIA: A contagem agora é renderizada com base na função >>> */}
         {renderPatientCount()}
 
         <div className="relative">
@@ -102,17 +96,9 @@ const Sidebar = () => {
         )}
       </div>
 
-      {user?.is_admin && (
-        <div className="p-4 border-t border-gray-200">
-          <button
-            onClick={handleNewPatient}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md text-sm transition-all duration-200 flex items-center justify-center shadow hover:shadow-lg active:scale-95"
-          >
-            <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
-            Adicionar Paciente
-          </button>
-        </div>
-      )}
+      {/* <<< ALTERAÇÃO APLICADA AQUI >>> 
+        O bloco de código que renderizava o botão "Adicionar Paciente" no rodapé para administradores foi completamente removido.
+      */}
     </div>
   );
 };
