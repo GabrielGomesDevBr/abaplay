@@ -7,7 +7,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 // Ícones importados
 import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faChartLine, faPuzzlePiece, faChild, faGraduationCap, faMusic, faCommentDots, faUserShield } from '@fortawesome/free-solid-svg-icons';
 
-const Navbar = () => {
+// O componente agora recebe a prop 'toggleSidebar' do MainLayout.
+const Navbar = ({ toggleSidebar }) => {
   const { user, logout } = useAuth();
   const { selectedPatient } = usePatients();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -38,25 +39,23 @@ const Navbar = () => {
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   };
 
+  // <<< NOVO: Condição para mostrar o botão da sidebar >>>
+  const shouldShowSidebarToggle = user?.role !== 'pai' && !user?.is_admin;
+
   const NavLinks = ({ isMobile = false, onLinkClick = () => {} }) => {
     const { allProgramsData } = usePrograms();
     const programAreas = Object.keys(allProgramsData).sort();
     const location = useLocation();
-
     const currentArea = new URLSearchParams(location.search).get('area');
-
     const baseClasses = "flex items-center font-medium transition-colors duration-200";
     const mobileClasses = "px-4 py-3 rounded-lg text-base";
     const desktopClasses = "px-3 py-2 rounded-md text-sm";
-
     const getLinkClass = ({ isActive }) => 
         `${baseClasses} ${isMobile ? mobileClasses : desktopClasses} ${isActive ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-indigo-600'}`;
-    
     const getProgramLinkClass = (area) => {
         const isActive = location.pathname === '/programs' && currentArea === area;
         return `${baseClasses} ${isMobile ? mobileClasses : desktopClasses} ${isActive ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-indigo-600'}`;
     }
-
     const areaIcons = {
         Psicologia: faFolderOpen,
         TerapiaOcupacional: faPuzzlePiece,
@@ -79,8 +78,6 @@ const Navbar = () => {
         )}
         <NavLink to="/dashboard" className={getLinkClass} onClick={onLinkClick}><FontAwesomeIcon icon={faTachometerAlt} className="fa-fw mr-2" /> Dashboard</NavLink>
         
-        {/* <<< CORREÇÃO DEFINITIVA APLICADA AQUI >>> */}
-        {/* O link agora aponta diretamente para '/clients' para corresponder ao redirecionamento final. */}
         {!user?.is_admin && (
           <NavLink 
             to="/clients"
@@ -112,9 +109,20 @@ const Navbar = () => {
   };
 
   return (
-    <header className="bg-white/95 backdrop-blur-sm sticky top-0 z-30 w-full flex-shrink-0 border-b border-gray-200">
+    <header className="bg-white/95 backdrop-blur-sm sticky top-0 z-10 w-full flex-shrink-0 border-b border-gray-200">
       <div className="flex items-center justify-between px-4 sm:px-6 h-16">
         <div className="flex items-center">
+            {/* <<< NOVO BOTÃO DE MENU PARA A SIDEBAR >>> */}
+            {shouldShowSidebarToggle && (
+                 <button 
+                    onClick={toggleSidebar} 
+                    className="lg:hidden mr-3 p-2 rounded-md text-gray-500 hover:text-white hover:bg-indigo-600"
+                    aria-label="Abrir menu de clientes"
+                >
+                    <FontAwesomeIcon icon={faBars} className="h-6 w-6" />
+                </button>
+            )}
+
           <NavLink to="/" className="text-2xl font-bold text-indigo-600 flex items-center mr-2">
             <FontAwesomeIcon icon={faBrain} className="mr-2" />
             <span>ABAplay</span>
@@ -140,6 +148,7 @@ const Navbar = () => {
             </button>
           </div>
 
+          {/* Este botão continua a controlar o menu de navegação em mobile */}
           <div className="lg:hidden flex items-center">
             <button ref={buttonRef} onClick={toggleMobileMenu} type="button" className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-white hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" aria-controls="mobile-menu" aria-expanded={isMobileMenuOpen}>
               <span className="sr-only">Abrir menu</span>
@@ -149,6 +158,7 @@ const Navbar = () => {
         </div>
       </div>
       
+      {/* Este menu continua a ser o menu de links de navegação em mobile */}
       <div 
         ref={menuRef} 
         className={`lg:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-sm shadow-lg transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'transform translate-y-0' : 'transform -translate-y-full'}`} 

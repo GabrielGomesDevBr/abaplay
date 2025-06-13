@@ -24,6 +24,7 @@ const ClientsPage = () => {
     closeReportModal
   } = usePatients();
 
+  // A sua lógica de negócio para guardar pacientes permanece intacta.
   const handleSavePatient = async (patientData) => {
     if (patientToEdit) {
       await editPatient(patientData);
@@ -47,12 +48,25 @@ const ClientsPage = () => {
   return (
     <>
       {selectedPatient ? (
-        <div className="space-y-6">
+        // <<< LAYOUT PRINCIPAL REESTRUTURADO >>>
+        // Este container agora usa Flexbox para gerir a altura e o layout dos seus filhos,
+        // garantindo que eles usem o espaço disponível de forma correta.
+        <div className="flex flex-col h-full gap-6">
+          
+          {/* O PatientDetails fica no topo, como antes. */}
           <PatientDetails />
-          {/* MELHORIA: A grelha agora adapta-se a partir de ecrãs médios (md) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          
+          {/* A grelha agora é um item flexível, o que resolve problemas de overflow e altura. */}
+          {/* min-h-0 é uma correção crucial para evitar que a grelha cresça para além do seu contentor em layouts flex. */}
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
+            
+            {/* O AssignedProgramsList já tem 'lg:col-span-1' e vai-se encaixar aqui. */}
             <AssignedProgramsList />
-            <SessionProgress />
+            
+            {/* O SessionProgress já tem 'lg:col-span-2' e vai-se encaixar aqui. */}
+            <div className="lg:col-span-2 min-h-0">
+                 <SessionProgress />
+            </div>
           </div>
         </div>
       ) : (
@@ -65,7 +79,7 @@ const ClientsPage = () => {
         </div>
       )}
 
-      {/* Renderiza o modal do formulário do paciente */}
+      {/* Os seus modais permanecem inalterados. */}
       <PatientForm
         isOpen={isPatientFormOpen}
         onClose={closePatientForm}
