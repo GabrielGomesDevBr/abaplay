@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { usePatients } from '../context/PatientContext';
 import { usePrograms } from '../context/ProgramContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faExclamationCircle, faChartLine, faStickyNote } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faExclamationCircle, faChartLine, faStickyNote, faCalendarAlt, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -44,7 +44,6 @@ const formatDate = (dateString, format = 'long') => {
     return adjustedDate.toLocaleDateString('pt-BR', options);
 };
 
-// <<< COMPONENTE PARENTCHART ATUALIZADO >>>
 const ParentChart = ({ program, sessionData }) => {
     const programSessionData = (sessionData || [])
       .filter(session => session.program_id === program.id)
@@ -77,10 +76,10 @@ const ParentChart = ({ program, sessionData }) => {
         scales: { 
             y: { 
                 beginAtZero: true, 
-                max: 105, // Margem superior para não cortar
+                max: 105,
                 ticks: { 
                     font: { size: 9 },
-                    callback: (value) => value + '%' // Adiciona '%'
+                    callback: (value) => value + '%'
                 } 
             }, 
             x: { 
@@ -89,7 +88,7 @@ const ParentChart = ({ program, sessionData }) => {
         },
         plugins: { 
             legend: { display: false },
-            tooltip: { // Tooltip simplificado para pais
+            tooltip: {
                 enabled: true,
                 backgroundColor: '#111827',
                 titleColor: '#fff',
@@ -100,7 +99,6 @@ const ParentChart = ({ program, sessionData }) => {
                 callbacks: {
                     title: (items) => `Data: ${formatDate(programSessionData[items[0].dataIndex].session_date)}`,
                     label: (context) => `Pontuação: ${context.parsed.y.toFixed(2)}%`,
-                    // afterBody callback foi removido para não mostrar as anotações
                 }
             } 
         }
@@ -117,6 +115,30 @@ const ParentChart = ({ program, sessionData }) => {
 const ParentDashboardPage = () => {
     const { selectedPatient, isLoading, error } = usePatients();
     const { getProgramById, isLoading: programsAreLoading } = usePrograms();
+    
+    // <<< ESTADOS PARA O FILTRO DE DATA >>>
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
+    // <<< LÓGICA PARA FILTRAR OS DADOS DA SESSÃO >>>
+    const filteredSessionData = useMemo(() => {
+        if (!selectedPatient?.sessionData) return [];
+        
+        const start = startDate ? new Date(startDate + 'T00:00:00') : null;
+        const end = endDate ? new Date(endDate + 'T23:59:59') : null;
+
+        return selectedPatient.sessionData.filter(session => {
+            const sessionDate = new Date(session.session_date);
+            if (start && sessionDate < start) return false;
+            if (end && sessionDate > end) return false;
+            return true;
+        });
+    }, [selectedPatient, startDate, endDate]);
+
+    const clearFilter = () => {
+        setStartDate('');
+        setEndDate('');
+    };
 
     if (isLoading || programsAreLoading) {
         return (
@@ -164,11 +186,23 @@ const ParentDashboardPage = () => {
 
     return (
         <div className="p-4 md:p-6">
-            <div className="mb-6">
-                <h1 className="text-2xl font-semibold text-gray-800 mb-2">
-                    Acompanhamento de {selectedPatient.name}
-                </h1>
-                <p className="text-sm text-gray-600">Progresso nos programas de intervenção.</p>
+            <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+                <div>
+                    <h1 className="text-2xl font-semibold text-gray-800 mb-2">
+                        Acompanhamento de {selectedPatient.name}
+                    </h1>
+                    <p className="text-sm text-gray-600">Progresso nos programas de intervenção.</p>
+                </div>
+                {/* <<< COMPONENTE DE FILTRO DE DATA ADICIONADO >>> */}
+                <div className="bg-white p-2 rounded-lg shadow-sm border flex flex-wrap items-center gap-2 text-sm">
+                    <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400 ml-2" />
+                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="p-1 border rounded-md text-xs" />
+                    <span className="text-gray-500">até</span>
+                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="p-1 border rounded-md text-xs" />
+                    <button onClick={clearFilter} className="text-xs text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-gray-100" title="Limpar filtro">
+                        <FontAwesomeIcon icon={faTimesCircle} />
+                    </button>
+                </div>
             </div>
             
             <div className="mb-8">
@@ -193,12 +227,12 @@ const ParentDashboardPage = () => {
                             <h4 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-300">
                                 {area}
                             </h4>
-                            {/* <<< ALTERAÇÃO NA GRELHA APLICADA AQUI >>> */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 {programsByArea[area].map(program => (
                                     <div key={program.id} className="border border-gray-200 rounded-md p-4 bg-gray-50 flex flex-col items-center shadow-sm">
                                         <h5 className="text-sm font-medium text-gray-600 mb-2 text-center">{program.title}</h5>
-                                        <ParentChart program={program} sessionData={selectedPatient.sessionData} />
+                                        {/* Passa os dados já filtrados para o componente do gráfico */}
+                                        <ParentChart program={program} sessionData={filteredSessionData} />
                                     </div>
                                 ))}
                             </div>
