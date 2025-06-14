@@ -10,11 +10,15 @@ const MainLayout = () => {
     const location = useLocation();
     const { user, isAuthenticated, isLoading } = useAuth();
     
-    // 1. NOVO ESTADO: Controla se a barra lateral está visível em mobile.
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-    const isAdminPage = location.pathname.startsWith('/admin');
-    const hideSidebarForRole = isAdminPage || user?.role === 'pai';
+    // <<< LÓGICA DE VISIBILIDADE ATUALIZADA >>>
+
+    // 1. Verifica se a página atual é o painel de administração principal.
+    const isAdminPanelPage = location.pathname.startsWith('/admin');
+    
+    // 2. A barra lateral deve existir para todos, exceto para o perfil 'pai'.
+    const userHasSidebarAccess = user?.role !== 'pai';
 
     // Esconde a barra lateral em mobile sempre que a rota muda.
     useEffect(() => {
@@ -34,16 +38,16 @@ const MainLayout = () => {
     }
     
     return (
-        // O div principal agora tem uma posição relativa para conter a barra lateral em mobile.
         <div className="relative h-screen flex flex-col bg-gray-50">
-            {/* 2. A função para abrir a barra lateral será passada para a Navbar na Fase 2. */}
             <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
             
-            <div className="flex-1 flex overflow-hidden">
-                {/* 3. Lógica da Barra Lateral Responsiva */}
-                {!hideSidebarForRole && (
+            {/* O layout da grelha em desktop agora depende da página, não apenas do perfil. */}
+            <div className={`flex-1 flex overflow-hidden lg:grid ${isAdminPanelPage || !userHasSidebarAccess ? 'lg:grid-cols-1' : 'lg:grid-cols-[280px_1fr]'}`}>
+                
+                {/* A barra lateral é renderizada para todos os que têm acesso, permitindo o seu uso em mobile. */}
+                {userHasSidebarAccess && (
                     <>
-                        {/* Overlay para ecrãs pequenos: aparece quando o menu está aberto e fecha-o ao clicar. */}
+                        {/* Overlay para ecrãs pequenos */}
                         {isSidebarOpen && (
                             <div 
                                 className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden" 
@@ -53,10 +57,11 @@ const MainLayout = () => {
                         )}
 
                         {/* A própria barra lateral */}
+                        {/* A sua visibilidade em desktop agora também depende da página atual. */}
                         <aside 
                             className={`
                                 fixed inset-y-0 left-0 z-30 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
-                                lg:static lg:translate-x-0 lg:w-72
+                                ${isAdminPanelPage ? 'lg:hidden' : 'lg:static lg:translate-x-0'}
                                 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
                             `}
                         >
@@ -65,7 +70,6 @@ const MainLayout = () => {
                     </>
                 )}
 
-                {/* 4. Conteúdo Principal */}
                 <main className="flex-1 overflow-y-auto p-4 sm:p-6">
                     <Outlet />
                 </main>

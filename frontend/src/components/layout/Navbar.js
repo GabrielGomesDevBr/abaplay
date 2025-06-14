@@ -39,8 +39,9 @@ const Navbar = ({ toggleSidebar }) => {
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   };
 
-  // Condição para mostrar o botão da sidebar
-  const shouldShowSidebarToggle = user?.role !== 'pai' && !user?.is_admin;
+  // <<< LÓGICA DE VISIBILIDADE CORRIGIDA >>>
+  // O botão agora aparece para qualquer perfil que não seja 'pai'.
+  const shouldShowSidebarToggle = user?.role !== 'pai';
 
   const NavLinks = ({ isMobile = false, onLinkClick = () => {} }) => {
     const { allProgramsData } = usePrograms();
@@ -112,6 +113,7 @@ const Navbar = ({ toggleSidebar }) => {
     <header className="bg-white/95 backdrop-blur-sm sticky top-0 z-10 w-full flex-shrink-0 border-b border-gray-200">
       <div className="flex items-center justify-between px-4 sm:px-6 h-16">
         <div className="flex items-center">
+            {/* Agora este botão aparecerá para o admin em mobile */}
             {shouldShowSidebarToggle && (
                  <button 
                     onClick={toggleSidebar} 
@@ -142,15 +144,11 @@ const Navbar = ({ toggleSidebar }) => {
             <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm" title={user?.full_name || user?.username}>
               {getInitials(user?.full_name || user?.username)}
             </div>
-            {/* <<< CORREÇÃO APLICADA AQUI >>> */}
-            {/* As classes 'hidden' e 'md:block' foram removidas para tornar o botão sempre visível. */}
             <button onClick={logout} title="Sair" className="text-gray-500 hover:text-red-600 transition-colors duration-150 p-2 rounded-full hover:bg-red-50">
               <FontAwesomeIcon icon={faSignOutAlt} className="fa-fw" />
             </button>
           </div>
 
-          {/* Este botão para o menu de navegação é redundante em mobile se o botão de sair já está visível. */}
-          {/* Poderíamos escondê-lo ou alterar a sua função, mas vamos manter por agora para não quebrar a lógica existente. */}
           <div className="lg:hidden flex items-center">
             <button ref={buttonRef} onClick={toggleMobileMenu} type="button" className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-white hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" aria-controls="mobile-menu" aria-expanded={isMobileMenuOpen}>
               <span className="sr-only">Abrir menu</span>
@@ -175,7 +173,6 @@ const Navbar = ({ toggleSidebar }) => {
                         <div className="text-base font-medium leading-none text-gray-800">{user?.full_name || user?.username}</div>
                         <div className="text-sm font-medium leading-none text-gray-500">{user?.role}</div>
                     </div>
-                    {/* O botão de sair no dropdown torna-se um pouco redundante, mas pode ser mantido ou removido no futuro. */}
                     <button onClick={logout} className="ml-auto flex-shrink-0 bg-gray-100 p-2 rounded-full text-gray-500 hover:text-red-600 hover:bg-red-50 focus:outline-none">
                         <span className="sr-only">Sair</span>
                         <FontAwesomeIcon icon={faSignOutAlt} />
