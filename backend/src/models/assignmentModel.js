@@ -60,6 +60,24 @@ const AssignmentModel = {
       client.release();
     }
   },
+
+  // <<< NOVA FUNÇÃO ADICIONADA >>>
+  /**
+   * Apaga todas as atribuições associadas a um terapeuta específico.
+   * Essencial para ser chamada antes de apagar um utilizador que é terapeuta.
+   * @param {number} therapistId - O ID do terapeuta.
+   * @returns {Promise<void>}
+   */
+  async deleteAssignmentsByTherapistId(therapistId) {
+    const query = 'DELETE FROM therapist_patient_assignments WHERE therapist_id = $1';
+    try {
+        await pool.query(query, [therapistId]);
+        // Não precisamos de retornar nada, apenas garantir que a operação foi executada.
+    } catch (error) {
+        console.error(`Erro ao apagar atribuições para o terapeuta com ID ${therapistId}:`, error);
+        throw error;
+    }
+  }
 };
 
 module.exports = AssignmentModel;

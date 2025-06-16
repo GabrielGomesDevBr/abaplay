@@ -78,7 +78,6 @@ const UserModel = {
 
   /**
    * Define ou atualiza a senha de um utilizador.
-   * Essencial para o fluxo de "primeiro login".
    * @param {number} userId - O ID do utilizador a ter a senha atualizada.
    * @param {string} hashedPassword - O novo hash da senha.
    * @returns {Promise<boolean>} True se a atualização for bem-sucedida, false caso contrário.
@@ -108,9 +107,71 @@ const UserModel = {
     `;
     const { rows } = await pool.query(query, [clinicId]);
     return rows;
-  }
+  },
 
-  // Outras funções de atualização e remoção serão adicionadas conforme necessário.
+  /**
+   * Atualiza os dados de um utilizador existente.
+   * @param {number} userId - O ID do utilizador a ser atualizado.
+   * @param {object} updateData - Um objeto com os campos a serem atualizados.
+   * @param {number} clinicId - O ID da clínica do admin para verificação de permissão.
+   * @returns {Promise<object|undefined>} O objeto do utilizador atualizado.
+   */
+  async update(userId, updateData, clinicId) {
+    const { full_name, username, role, associated_patient_id, password_hash } = updateData;
+    const fields = [];
+    const values = [];
+    let queryIndex = 1;
+
+    if (full_name !== undefined) { fields.push(`full_name = $${queryIndex++}`); values.push(full_name); }
+    if (username !== undefined) { fields.push(`username = $${queryIndex++}`); values.push(username); }
+    if (role !== undefined) { fields.push(`role = $${queryIndex++}`); values.push(role); }
+    
+    // <<< CORREÇÃO APLICADA AQUI >>>
+    // Agora, verificamos se associated_patient_id foi passado. Se for um valor "falsy"
+    // (como uma string vazia ""), ele será convertido para null, o que é válido para a base de dados.
+    if (associated_patient_id !== undefined) { 
+      fields.push(`associated_patient_id = $${queryIndex++}`); 
+      values.push(associated_patient_id || null);
+    }
+    
+    if (password_hash !== undefined) { fields.push(`password_hash = $${queryIndex++}`); values.push(password_hash); }
+
+    if (fields.length === 0) {
+      return this.findById(userId); // Retorna o utilizador sem alterações se nada for passado
+    }
+
+    const query = `
+      UPDATE users
+      SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $${queryIndex++} AND clinic_id = $${queryIndex++}
+      RETURNING id, clinic_id, username, full_name, role, is_admin, created_at
+    `;
+    
+    values.push(userId, clinicId);
+
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  },
+  
+  /**
+   * Apaga um utilizador do banco de dados, verificando a sua clínica.
+   * @param {number} userId - O ID do utilizador a ser apagado.
+   * @param {number} clinicId - O ID da clínica do admin para verificação de permissão.
+   * @returns {Promise<number>} O número de linhas afetadas (0 ou 1).
+   */
+  async delete(userId, clinicId) {
+    const query = `
+      DELETE FROM users 
+      WHERE id = $1 AND clinic_id = $2
+    `;
+    try {
+      const { rowCount } = await pool.query(query, [userId, clinicId]);
+      return rowCount;
+    } catch (error) {
+      console.error(`Erro ao apagar utilizador com ID ${userId} da clínica ${clinicId}:`, error);
+      throw error;
+    }
+  }
 };
 
 module.exports = UserModel;
