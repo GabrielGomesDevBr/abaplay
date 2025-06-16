@@ -16,10 +16,8 @@ import {
   Legend,
   Filler,
 } from 'chart.js/auto';
-// <<< PLUGIN DE ANOTAÇÃO IMPORTADO >>>
 import annotationPlugin from 'chartjs-plugin-annotation';
 
-// <<< PLUGIN DE ANOTAÇÃO REGISTADO >>>
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, annotationPlugin);
 
 const StatCard = ({ title, value, icon, colorClass }) => (
@@ -34,15 +32,29 @@ const StatCard = ({ title, value, icon, colorClass }) => (
   </div>
 );
 
+// <<< FUNÇÃO DE DATA ATUALIZADA PARA INCLUIR HORA >>>
 const formatDate = (dateString, format = 'long') => {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return 'Data inválida';
   const userTimezoneOffset = date.getTimezoneOffset() * 60000;
   const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
-  const options = format === 'short' 
-      ? { day: '2-digit', month: '2-digit' } 
-      : { day: '2-digit', month: '2-digit', year: 'numeric' };
+  
+  const options = { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+  };
+  
+  if (format === 'short') {
+      return adjustedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  }
+  
+  if (format === 'datetime') {
+      options.hour = '2-digit';
+      options.minute = '2-digit';
+  }
+
   return adjustedDate.toLocaleDateString('pt-BR', options);
 };
 
@@ -169,14 +181,17 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData, allProgramsData })
                     padding: 12,
                     cornerRadius: 6,
                     displayColors: false,
+                    // <<< TOOLTIP ATUALIZADO >>>
                     callbacks: {
-                        title: (items) => `Data: ${formatDate(programSessionData[items[0].dataIndex].session_date)}`,
+                        title: (items) => `Data da Sessão: ${formatDate(programSessionData[items[0].dataIndex].session_date)}`,
                         label: (context) => `Pontuação: ${context.parsed.y.toFixed(2)}%`,
                         afterBody: (items) => {
                             const session = programSessionData[items[0].dataIndex];
                             let details = [];
                             if (session.is_baseline) details.push('Tipo: Linha de Base');
                             if (session.notes) details.push(`Obs: ${session.notes}`);
+                            // Adiciona a data de criação do registo
+                            if (session.created_at) details.push(`Registrado em: ${formatDate(session.created_at, 'datetime')}`);
                             return details;
                         }
                     }
@@ -217,7 +232,6 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData, allProgramsData })
                             <FontAwesomeIcon icon={faFolderOpen} className="mr-3 text-gray-400" />
                             {area.replace(/([A-Z])/g, ' $1').trim()}
                         </h2>
-                        {/* <<< ALTERAÇÃO APLICADA AQUI >>> */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {programsByArea[area].map(program => (
                                 <div key={program.id} className="bg-white p-4 rounded-lg shadow border border-gray-200 flex flex-col">
