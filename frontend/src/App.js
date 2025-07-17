@@ -8,15 +8,20 @@ import { ProgramProvider } from './context/ProgramContext';
 // Importa todas as páginas necessárias
 import LoginPage from './pages/LoginPage';
 import MainLayout from './components/layout/MainLayout';
-import HomePage from './pages/HomePage'; // <<< A nossa nova página inicial
+import HomePage from './pages/HomePage';
 import ClientsPage from './pages/ClientsPage';
 import ProgramsPage from './pages/ProgramsPage';
 import NotesPage from './pages/NotesPage';
 import DashboardPage from './pages/DashboardPage';
-import ParentDashboardPage from './pages/ParentDashboardPage'; // Importa o dashboard dos pais
-import AdminPage from './pages/AdminPage'; // Importa a página de admin
+import ParentDashboardPage from './pages/ParentDashboardPage';
+import AdminPage from './pages/AdminPage';
+// --- INÍCIO DA NOVA ADIÇÃO ---
+// 1. Importa a nova página de discussão de caso.
+import CaseDiscussionPage from './pages/CaseDiscussionPage';
+// --- FIM DA NOVA ADIÇÃO ---
 
-// Componente de Guarda para Rotas de Admin (permanece o mesmo)
+
+// Componente de Guarda para Rotas de Admin
 const AdminRoute = ({ children }) => {
   const { user } = useAuth();
   if (!user || !user.is_admin) {
@@ -38,8 +43,6 @@ function App() {
                 
                 {/* O MainLayout agora envolve todas as páginas autenticadas */}
                 <Route path="/" element={<MainLayout />}>
-                  {/* <<< ATUALIZADO: A rota principal agora é a HomePage >>> */}
-                  {/* Ela irá redirecionar para a página correta com base na função */}
                   <Route index element={<HomePage />} />
 
                   {/* Rotas específicas para cada função */}
@@ -59,6 +62,12 @@ function App() {
                   <Route path="notes" element={<NotesPage />} />
                   <Route path="dashboard" element={<DashboardPage />} />
                   
+                  {/* --- INÍCIO DA NOVA ADIÇÃO --- */}
+                  {/* 2. Adiciona a rota para a página de discussão. */}
+                  {/* O caminho inclui o :patientId para sabermos de qual paciente é a discussão. */}
+                  <Route path="patient/:patientId/discussion" element={<CaseDiscussionPage />} />
+                  {/* --- FIM DA NOVA ADIÇÃO --- */}
+
                 </Route>
 
                 {/* Redireciona qualquer outra rota para a página inicial */}

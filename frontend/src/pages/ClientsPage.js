@@ -1,13 +1,18 @@
 import React from 'react';
+// --- INÍCIO DA NOVA ADIÇÃO ---
+import { Link } from 'react-router-dom'; // Para criar o link de navegação
+// --- FIM DA NOVA ADIÇÃO ---
 import { usePatients } from '../context/PatientContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserCircle, faSpinner } from '@fortawesome/free-solid-svg-icons';
+// --- INÍCIO DA NOVA ADIÇÃO ---
+import { faUserCircle, faSpinner, faComments } from '@fortawesome/free-solid-svg-icons'; // Importa o ícone de comentários
+// --- FIM DA NOVA ADIÇÃO ---
+
 
 import PatientDetails from '../components/patient/PatientDetails';
 import PatientForm from '../components/patient/PatientForm';
 import AssignedProgramsList from '../components/program/AssignedProgramsList';
 import SessionProgress from '../components/program/SessionProgress';
-
 import ConsolidatedReportModal from '../components/patient/ConsolidatedReportModal';
 
 
@@ -47,21 +52,24 @@ const ClientsPage = () => {
   return (
     <>
       {selectedPatient ? (
-        // <<< LAYOUT SIMPLIFICADO E MAIS ROBUSTO >>>
-        // Removemos o layout flex complexo. Agora é um simples container
-        // com espaçamento vertical, permitindo um scroll natural da página.
         <div className="space-y-6">
           
-          {/* O PatientDetails fica no topo. */}
           <PatientDetails />
+
+          {/* --- INÍCIO DA NOVA ADIÇÃO --- */}
+          {/* Botão para acessar a página de discussão do caso */}
+          <div className="flex justify-start">
+            <Link
+              to={`/patient/${selectedPatient.id}/discussion`}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <FontAwesomeIcon icon={faComments} className="mr-2 -ml-1 h-5 w-5" />
+              Discussão de Caso
+            </Link>
+          </div>
+          {/* --- FIM DA NOVA ADIÇÃO --- */}
           
-          {/* A grelha agora é um elemento de layout normal. */}
-          {/* Em mobile (por defeito), é uma coluna (grid-cols-1). */}
-          {/* Em ecrãs grandes (lg:), torna-se uma grelha de 3 colunas. */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Estes componentes já têm as classes de 'span' corretas para desktop (lg:col-span-1, etc.) */}
-            {/* e irão ocupar a largura total em mobile. */}
             <div className="lg:col-span-1">
                 <AssignedProgramsList />
             </div>
@@ -81,7 +89,6 @@ const ClientsPage = () => {
         </div>
       )}
 
-      {/* Os seus modais permanecem inalterados. */}
       <PatientForm
         isOpen={isPatientFormOpen}
         onClose={closePatientForm}

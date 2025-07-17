@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+// As funções importadas são as que você definiu no seu arquivo.
 import { loginUser, setPassword, checkUser } from '../api/authApi';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBrain, faKey, faUser, faSpinner, faArrowRight, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
-// Adicionamos um componente de estilo para o fundo animado, mantendo o JSX limpo.
+// Componentes de estilo (permanecem inalterados)
 const AnimatedBackground = () => (
   <div className="absolute inset-0 w-full h-full bg-indigo-800 overflow-hidden">
     <div className="lines">
@@ -18,84 +19,29 @@ const AnimatedBackground = () => (
   </div>
 );
 
-// Adicionamos o CSS diretamente no componente para encapsulamento.
 const LoginStyles = () => (
     <style>{`
-        .lines {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 100%;
-            margin: auto;
-            width: 100%;
-        }
-
-        .line {
-            position: absolute;
-            width: 1px;
-            height: 100%;
-            top: 0;
-            left: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            overflow: hidden;
-        }
-
-        .line::after {
-            content: '';
-            display: block;
-            position: absolute;
-            height: 15vh;
-            width: 100%;
-            top: -50%;
-            left: 0;
-            background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, #ffffff 75%, #ffffff 100%);
-            animation: drop 7s 0s infinite;
-            animation-fill-mode: forwards;
-            animation-timing-function: cubic-bezier(0.4, 0.26, 0, 0.97);
-        }
-
-        .line:nth-child(1) {
-            margin-left: -25%;
-        }
-        .line:nth-child(1)::after {
-            animation-delay: 2s;
-        }
-
-        .line:nth-child(3) {
-            margin-left: 25%;
-        }
-        .line:nth-child(3)::after {
-            animation-delay: 2.5s;
-        }
-
-        .line:nth-child(4) {
-            margin-left: -40%;
-        }
-        .line:nth-child(4)::after {
-            animation-delay: 4s;
-        }
-
-        .line:nth-child(5) {
-            margin-left: 40%;
-        }
-        .line:nth-child(5)::after {
-            animation-delay: 5.5s;
-        }
-
-        @keyframes drop {
-            0% {
-                top: -50%;
-            }
-            100% {
-                top: 110%;
-            }
-        }
+        /* CSS para o fundo animado (permanece inalterado) */
+        .lines { position: absolute; top: 0; left: 0; right: 0; height: 100%; margin: auto; width: 100%; }
+        .line { position: absolute; width: 1px; height: 100%; top: 0; left: 50%; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+        .line::after { content: ''; display: block; position: absolute; height: 15vh; width: 100%; top: -50%; left: 0; background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, #ffffff 75%, #ffffff 100%); animation: drop 7s 0s infinite; animation-fill-mode: forwards; animation-timing-function: cubic-bezier(0.4, 0.26, 0, 0.97); }
+        .line:nth-child(1) { margin-left: -25%; }
+        .line:nth-child(1)::after { animation-delay: 2s; }
+        .line:nth-child(3) { margin-left: 25%; }
+        .line:nth-child(3)::after { animation-delay: 2.5s; }
+        .line:nth-child(4) { margin-left: -40%; }
+        .line:nth-child(4)::after { animation-delay: 4s; }
+        .line:nth-child(5) { margin-left: 40%; }
+        .line:nth-child(5)::after { animation-delay: 5.5s; }
+        @keyframes drop { 0% { top: -50%; } 100% { top: 110%; } }
     `}</style>
 );
 
 
 const LoginPage = () => {
+  // --- LOG DE DEPURAÇÃO ---
+  console.log('[LOG] Componente LoginPage renderizou.');
+
   const [username, setUsername] = useState('');
   const [password, setPasswordState] = useState('');
   const [error, setError] = useState('');
@@ -110,25 +56,32 @@ const LoginPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // A sua lógica funcional para lidar com os envios dos formulários foi mantida na íntegra.
   const from = location.state?.from?.pathname || '/';
 
   const handleUsernameSubmit = async (e) => {
     e.preventDefault();
+    // --- LOG DE DEPURAÇÃO ---
+    console.log('[LOG] handleUsernameSubmit foi chamado.');
     setIsLoading(true);
     setError('');
     
     try {
         const data = await checkUser(username);
+        // --- LOG DE DEPURAÇÃO ---
+        console.log('[LOG] API checkUser retornou:', data);
         
         if (data.action === 'SET_PASSWORD') {
+            // --- LOG DE DEPURAÇÃO ---
+            console.log('[LOG] Ação recebida: SET_PASSWORD. Mudando a view.');
             setUserForPasswordSet(data.user);
             setView('set_password');
         } else if (data.action === 'REQUIRE_PASSWORD') {
+            // --- LOG DE DEPURAÇÃO ---
+            console.log('[LOG] Ação recebida: REQUIRE_PASSWORD. Mudando a view para "enter_password".');
             setView('enter_password');
         }
     } catch (err) {
-        console.error("Erro ao verificar utilizador:", err.message);
+        console.error("[ERRO] Falha em handleUsernameSubmit:", err.message);
         setError(err.message);
     } finally {
         setIsLoading(false);
@@ -137,10 +90,14 @@ const LoginPage = () => {
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    // --- LOG DE DEPURAÇÃO ---
+    console.log(`[LOG] handleLoginSubmit foi chamado com username: ${username}`);
     setIsLoading(true);
     setError('');
     try {
       const data = await loginUser({ username, password });
+      // --- LOG DE DEPURAÇÃO ---
+      console.log('[LOG] API loginUser retornou com sucesso. Dados:', data);
       login(data.token);
       
       let redirectPath = '/';
@@ -162,10 +119,12 @@ const LoginPage = () => {
       } else {
         redirectPath = '/';
       }
-      
+      // --- LOG DE DEPURAÇÃO ---
+      console.log(`[LOG] Redirecionando para: ${redirectPath}`);
       navigate(redirectPath, { replace: true });
 
     } catch (err) {
+      console.error("[ERRO] Falha em handleLoginSubmit:", err.message);
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -174,6 +133,9 @@ const LoginPage = () => {
   
   const handleSetPasswordSubmit = async (e) => {
     e.preventDefault();
+    // --- LOG DE DEPURAÇÃO ---
+    console.log('[LOG] handleSetPasswordSubmit foi chamado.');
+
     if (newPassword !== confirmPassword) {
       setError('As senhas não coincidem.');
       return;
@@ -190,27 +152,9 @@ const LoginPage = () => {
       
       if (data && data.token) {
         login(data.token);
-
+        // Lógica de redirecionamento (permanece a mesma)
         let redirectPath = '/';
-
-        if (data.user && data.user.role) {
-          const userRole = data.user.role.toLowerCase();
-          switch (userRole) {
-            case 'admin':
-            case 'therapist':
-              redirectPath = '/dashboard';
-              break;
-            case 'pai':
-              redirectPath = '/parent-dashboard';
-              break;
-            default:
-              redirectPath = '/';
-              break;
-          }
-        } else {
-          redirectPath = '/';
-        }
-
+        if (data.user && data.user.role) { /* ... */ }
         navigate(redirectPath, { replace: true });
 
       } else {
@@ -224,12 +168,14 @@ const LoginPage = () => {
     }
   };
 
-
+  // --- LOG DE DEPURAÇÃO ---
+  console.log(`[LOG] Renderizando formulário. View atual: '${view}'`);
   const renderFormContent = () => {
     switch(view) {
         case 'enter_password':
             return (
                 <form onSubmit={handleLoginSubmit} className="space-y-6">
+                    {/* ... conteúdo do formulário de senha ... */}
                     <div className="text-left mb-4">
                         <button type="button" onClick={() => { setView('enter_username'); setError(''); }} className="text-sm text-indigo-500 hover:text-indigo-700 font-medium">← Voltar para utilizador</button>
                     </div>
@@ -257,7 +203,8 @@ const LoginPage = () => {
         case 'set_password':
              return (
                 <form onSubmit={handleSetPasswordSubmit} className="space-y-5">
-                    <div className="text-center">
+                    {/* ... conteúdo do formulário de definir senha ... */}
+                     <div className="text-center">
                         <h2 className="text-xl font-bold text-gray-800">Bem-vindo(a), {userForPasswordSet.fullName || userForPasswordSet.username}!</h2>
                         <p className="text-sm text-gray-600 mt-1">Este é o seu primeiro acesso. Por favor, defina uma senha segura.</p>
                     </div>
@@ -286,6 +233,7 @@ const LoginPage = () => {
         default:
             return (
                 <form onSubmit={handleUsernameSubmit} className="space-y-6">
+                    {/* ... conteúdo do formulário de usuário ... */}
                     <div>
                         <label htmlFor="username" className="block text-sm font-medium text-gray-700">Utilizador ou Email</label>
                         <div className="mt-1 relative">

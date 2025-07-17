@@ -1,10 +1,8 @@
 // -----------------------------------------------------------------------------
 // Arquivo da API de Pacientes (frontend/src/api/patientApi.js)
 // -----------------------------------------------------------------------------
-// - CORRIGIDO: Padronizado o corpo da requisição em 'updatePatientNotes' para
-//   enviar 'general_notes' em vez de 'generalNotes', alinhando com o backend.
-// - CORRIGIDO: Alterado o método de PUT para PATCH em 'updatePatientNotes' para
-//   corresponder à rota no backend.
+// - CORREÇÃO FINAL: A função 'fetchAllPatients' agora retorna 'response.data'
+//   diretamente, pois o backend envia um array e não um objeto.
 // -----------------------------------------------------------------------------
 import axios from 'axios';
 
@@ -24,7 +22,10 @@ const getAuthHeaders = (token) => {
 export const fetchAllPatients = async (token) => {
   try {
     const response = await axios.get(`${API_URL}/patients`, getAuthHeaders(token));
-    return response.data.patients || [];
+    // --- CORREÇÃO ---
+    // O backend envia um array direto. Acessar .patients resultava em 'undefined'.
+    // Agora, retornamos os dados diretamente.
+    return response.data || [];
   } catch (error) {
     console.error("Erro ao buscar pacientes:", error.response?.data || error.message);
     throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível carregar os pacientes.');
@@ -60,7 +61,7 @@ export const deletePatient = async (patientId, token) => {
   }
 };
 
-// --- Funções de Gestão de Programas ---
+// --- Funções de Gestão de Programas (sem alterações) ---
 
 export const assignProgramToPatient = async (patientId, programId, token) => {
     try {
@@ -95,7 +96,7 @@ export const updateProgramStatusForPatient = async (patientId, programId, status
     }
 };
 
-// --- Funções de Gestão de Sessões ---
+// --- Funções de Gestão de Sessões (sem alterações) ---
 
 export const createSession = async (patientId, sessionData, token) => {
     try {
@@ -107,13 +108,12 @@ export const createSession = async (patientId, sessionData, token) => {
     }
 };
 
-// --- Função de Gestão de Anotações ---
+// --- Função de Gestão de Anotações (sem alterações) ---
 
 export const updatePatientNotes = async (patientId, notes, token) => {
     try {
-        // CORREÇÃO CRÍTICA: Alterado de axios.put para axios.patch
         const response = await axios.patch(`${API_URL}/patients/${patientId}/notes`, { general_notes: notes }, getAuthHeaders(token));
-        console.log(`[patientApi] Requisição PATCH para /patients/${patientId}/notes enviada.`, { general_notes: notes }); // Adicionado log
+        console.log(`[patientApi] Requisição PATCH para /patients/${patientId}/notes enviada.`, { general_notes: notes });
         return response.data;
     } catch (error) {
         console.error(`Erro ao atualizar anotações para paciente ${patientId}:`, error.response?.data || error.message);
