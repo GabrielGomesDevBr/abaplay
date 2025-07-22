@@ -1,0 +1,148 @@
+/* Estilização principal do container do chat */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 600px; /* Altura fixa para o container do chat */
+  max-height: 70vh; /* Limita a altura em telas menores */
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #f9f9f9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Cabeçalho do chat */
+.chat-header {
+  padding: 1rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.chat-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+/* Área principal das mensagens */
+.chat-messages {
+  flex-grow: 1;
+  overflow-y: auto; /* Permite rolagem vertical */
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem; /* Espaçamento entre as bolhas de mensagem */
+}
+
+/* Bolha de mensagem individual */
+.message-bubble {
+  max-width: 70%;
+  padding: 0.6rem 0.9rem;
+  border-radius: 18px;
+  word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Mensagens recebidas (de outros usuários) */
+.message-bubble.received {
+  background-color: #ffffff;
+  border: 1px solid #e9e9e9;
+  align-self: flex-start; /* Alinha à esquerda */
+  border-top-left-radius: 4px;
+}
+
+/* Mensagens enviadas (pelo usuário logado) */
+.message-bubble.sent {
+  background-color: #007bff; /* Cor primária, pode ajustar para a cor da sua aplicação */
+  color: white;
+  align-self: flex-end; /* Alinha à direita */
+  border-top-right-radius: 4px;
+}
+
+.message-sender {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #666;
+}
+
+.message-bubble.sent .message-sender {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.message-content {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.message-timestamp {
+  font-size: 0.75rem;
+  text-align: right;
+  margin-top: 5px;
+  opacity: 0.8;
+}
+
+/* Área de input da mensagem */
+.chat-input-area {
+  padding: 0.75rem;
+  background-color: #ffffff;
+  border-top: 1px solid #e0e0e0;
+}
+
+.chat-form {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.chat-input {
+  flex-grow: 1;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  outline: none;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.chat-input:focus {
+  border-color: #007bff;
+}
+
+.send-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.send-button:hover {
+  background-color: #0056b3;
+}
+
+.send-button:disabled {
+  background-color: #a0a0a0;
+  cursor: not-allowed;
+}
+
+/* Mensagens de status (carregando, erro, etc.) */
+.chat-info {
+  text-align: center;
+  color: #888;
+  padding: 1rem;
+}
+
+.chat-info.error {
+  color: #d9534f;
+  font-weight: 500;
+}

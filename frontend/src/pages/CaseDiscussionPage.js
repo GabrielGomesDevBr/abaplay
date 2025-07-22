@@ -2,18 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePatients } from '../context/PatientContext';
-import { getMessages, createMessage } from '../api/caseDiscussionApi';
+// 1. Importar os nomes corretos das funções da API
+import { getDiscussionMessages, createDiscussionMessage } from '../api/caseDiscussionApi';
 
 const CaseDiscussionPage = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
   
-  const { token, user } = useAuth(); 
+  // O token não é mais necessário aqui, pois a API o gerencia
+  const { user } = useAuth(); 
   
-  // --- CORREÇÃO CRÍTICA ---
-  // Obtemos a lista completa de pacientes do contexto.
   const { patients } = usePatients();
-  // --- FIM DA CORREÇÃO ---
 
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -29,30 +28,22 @@ const CaseDiscussionPage = () => {
 
   useEffect(() => {
     const loadData = async () => {
-      if (!token) {
-        navigate('/login');
-        return;
-      }
+      // A verificação de token foi removida, pois o contexto AuthContext já lida com isso
       try {
         setLoading(true);
         
-        // --- CORREÇÃO CRÍTICA ---
-        // Encontramos o paciente usando a função .find() no array 'patients'.
-        // O patientId da URL é uma string, então convertemos para número.
         const patientDetails = patients.find(p => p.id === parseInt(patientId, 10));
-        // --- FIM DA CORREÇÃO ---
         
         if (patientDetails) {
           setPatient(patientDetails);
         } else {
-           // Apenas mostra um erro se a lista de pacientes já foi carregada.
            if (patients.length > 0) {
                throw new Error("Paciente não encontrado na sua lista.");
            }
-           // Se a lista de pacientes ainda não carregou, esperamos.
         }
         
-        const fetchedMessages = await getMessages(patientId, token);
+        // 2. Usar o novo nome da função da API
+        const fetchedMessages = await getDiscussionMessages(patientId);
         setMessages(fetchedMessages);
         setError('');
       } catch (err) {
@@ -62,12 +53,10 @@ const CaseDiscussionPage = () => {
       }
     };
 
-    // Só executa a função se a lista de pacientes já estiver disponível.
     if (patients.length > 0) {
         loadData();
     }
-    // Adicionada a dependência 'patients' para que o hook reaja quando a lista for carregada.
-  }, [patientId, token, navigate, patients]);
+  }, [patientId, navigate, patients]);
 
   useEffect(() => {
     scrollToBottom();
@@ -78,7 +67,8 @@ const CaseDiscussionPage = () => {
     if (!newMessage.trim()) return;
 
     try {
-      const createdMsg = await createMessage(patientId, newMessage, token);
+      // 3. Usar o novo nome da função da API
+      const createdMsg = await createDiscussionMessage(patientId, newMessage);
       setMessages(prevMessages => [...prevMessages, createdMsg]);
       setNewMessage('');
     } catch (err) {
@@ -86,7 +76,6 @@ const CaseDiscussionPage = () => {
     }
   };
 
-  // Se os pacientes ainda não foram carregados, exibe uma mensagem de loading.
   if (!patient && patients.length === 0) {
       return (
           <div className="container mx-auto p-4 max-w-4xl text-center">

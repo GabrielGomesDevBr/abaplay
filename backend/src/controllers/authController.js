@@ -6,7 +6,6 @@ const dbConfig = require('../config/db.config.js');
 
 const authController = {};
 
-// A função checkUserStatus permanece a mesma.
 authController.checkUserStatus = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -42,7 +41,6 @@ authController.checkUserStatus = async (req, res) => {
     }
 };
 
-// --- FUNÇÃO DE LOGIN CORRIGIDA ---
 authController.loginUser = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -64,16 +62,17 @@ authController.loginUser = async (req, res) => {
             return res.status(401).json({ errors: [{ msg: 'Credenciais inválidas.' }] });
         }
 
-        // --- CORREÇÃO CRÍTICA ---
-        // O payload do token agora inclui o 'clinic_id', que é essencial
-        // para as verificações de segurança em outras partes da aplicação.
+        // --- CORREÇÃO APLICADA AQUI ---
+        // O payload do token agora inclui o 'associated_patient_id',
+        // que é essencial para o login dos pais.
         const payload = {
             id: user.id,
             username: user.username,
-            name: user.full_name, // Usando a coluna correta 'full_name'
+            name: user.full_name,
             role: user.role,
             is_admin: user.is_admin,
-            clinic_id: user.clinic_id // Adicionando o clinic_id ao token
+            clinic_id: user.clinic_id,
+            associated_patient_id: user.associated_patient_id || null // LINHA ADICIONADA
         };
 
         const token = jwt.sign(
@@ -93,7 +92,6 @@ authController.loginUser = async (req, res) => {
     }
 };
 
-// A função setPassword também é corrigida para incluir clinic_id no token.
 authController.setPassword = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -112,18 +110,21 @@ authController.setPassword = async (req, res) => {
             return res.status(400).json({ errors: [{ msg: 'A senha para este utilizador já foi definida.' }] });
         }
 
-        await User.updatePassword(userId, password);
+        // NOTA: A função original chamava 'updatePassword', que pode não existir.
+        // Usando 'setPassword' que já foi definido no UserModel.
+        await User.setPassword(userId, await bcrypt.hash(password, 10));
         
         const loggedInUser = await User.findById(userId);
         
-        // --- CORREÇÃO CRÍTICA ---
+        // --- CORREÇÃO APLICADA AQUI TAMBÉM ---
         const payload = {
             id: loggedInUser.id,
             username: loggedInUser.username,
             name: loggedInUser.full_name,
             role: loggedInUser.role,
             is_admin: loggedInUser.is_admin,
-            clinic_id: loggedInUser.clinic_id // Adicionando o clinic_id ao token
+            clinic_id: loggedInUser.clinic_id,
+            associated_patient_id: loggedInUser.associated_patient_id || null // LINHA ADICIONADA
         };
 
         const token = jwt.sign(

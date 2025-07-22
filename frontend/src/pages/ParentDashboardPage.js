@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { usePatients } from '../context/PatientContext';
 import { usePrograms } from '../context/ProgramContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faExclamationCircle, faChartLine, faStickyNote, faCalendarAlt, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
+// 1. Importar o novo ícone de chat
+import { faSpinner, faExclamationCircle, faChartLine, faCalendarAlt, faTimesCircle, faComments } from '@fortawesome/free-solid-svg-icons';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -15,6 +16,9 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
+// 2. Importar o nosso novo componente de chat
+import ParentTherapistChat from '../components/chat/ParentTherapistChat';
+
 
 // Regista os componentes do Chart.js que vamos usar
 ChartJS.register(
@@ -116,11 +120,9 @@ const ParentDashboardPage = () => {
     const { selectedPatient, isLoading, error } = usePatients();
     const { getProgramById, isLoading: programsAreLoading } = usePrograms();
     
-    // <<< ESTADOS PARA O FILTRO DE DATA >>>
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
-    // <<< LÓGICA PARA FILTRAR OS DADOS DA SESSÃO >>>
     const filteredSessionData = useMemo(() => {
         if (!selectedPatient?.sessionData) return [];
         
@@ -193,7 +195,6 @@ const ParentDashboardPage = () => {
                     </h1>
                     <p className="text-sm text-gray-600">Progresso nos programas de intervenção.</p>
                 </div>
-                {/* <<< COMPONENTE DE FILTRO DE DATA ADICIONADO >>> */}
                 <div className="bg-white p-2 rounded-lg shadow-sm border flex flex-wrap items-center gap-2 text-sm">
                     <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400 ml-2" />
                     <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="p-1 border rounded-md text-xs" />
@@ -205,14 +206,16 @@ const ParentDashboardPage = () => {
                 </div>
             </div>
             
+            {/* 3. Bloco de "Observações" substituído pelo novo componente de Chat */}
             <div className="mb-8">
                 <h3 className="text-xl font-semibold text-gray-700 mb-3 pb-2 border-b border-gray-200 flex items-center">
-                    <FontAwesomeIcon icon={faStickyNote} className="mr-3 text-yellow-500" />
-                    Observações do Terapeuta
+                    <FontAwesomeIcon icon={faComments} className="mr-3 text-blue-500" />
+                    Comunicação com a Equipe
                 </h3>
-                <div className="bg-white p-4 rounded-lg shadow border border-gray-200 text-sm text-gray-600 whitespace-pre-wrap min-h-[100px]">
-                    {selectedPatient.general_notes || <p className="text-gray-400 italic">Nenhuma observação recente.</p>}
-                </div>
+                <ParentTherapistChat 
+                    patientId={selectedPatient.id} 
+                    patientName={selectedPatient.name} 
+                />
             </div>
 
             <div>
@@ -231,7 +234,6 @@ const ParentDashboardPage = () => {
                                 {programsByArea[area].map(program => (
                                     <div key={program.id} className="border border-gray-200 rounded-md p-4 bg-gray-50 flex flex-col items-center shadow-sm">
                                         <h5 className="text-sm font-medium text-gray-600 mb-2 text-center">{program.title}</h5>
-                                        {/* Passa os dados já filtrados para o componente do gráfico */}
                                         <ParentChart program={program} sessionData={filteredSessionData} />
                                     </div>
                                 ))}

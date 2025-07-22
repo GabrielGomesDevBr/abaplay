@@ -1,13 +1,15 @@
-import React from 'react';
-// <<< CAMINHOS DE IMPORTAÇÃO CORRIGIDOS >>>
+import React, { useState } from 'react';
 import { usePatients } from '../../context/PatientContext';
-// A importação 'useAuth' foi removida, pois não era utilizada.
 import { usePrograms } from '../../context/ProgramContext'; 
 import { generateProgramGradePDF, generateWeeklyRecordSheetPDF } from '../../utils/pdfGenerator'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTrashAlt, faFilePdf, faClipboardList, faChartPie, faCalendarAlt, faNotesMedical } from '@fortawesome/free-solid-svg-icons';
+import { 
+    faEdit, faTrashAlt, faFilePdf, faClipboardList, faChartPie, 
+    faCalendarAlt, faNotesMedical, faComments, faUsers 
+} from '@fortawesome/free-solid-svg-icons';
+import ParentTherapistChat from '../chat/ParentTherapistChat';
+import CaseDiscussionChat from '../chat/CaseDiscussionChat';
 
-// A função de formatação de data original é mantida.
 const formatDate = (dateString) => {
   if (!dateString) return 'Não informado';
   try {
@@ -24,7 +26,6 @@ const formatDate = (dateString) => {
   }
 };
 
-// Componente auxiliar para padronizar a exibição dos detalhes.
 const DetailItem = ({ icon, label, value }) => (
     <div>
         <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center">
@@ -49,10 +50,11 @@ const ActionButton = ({ icon, title, description, onClick, disabled, iconClassNa
     </button>
 );
 
-
 const PatientDetails = () => {
   const { selectedPatient, openPatientForm, removePatient, openReportModal } = usePatients();
   const { allProgramsData, isLoading: programsAreLoading, getProgramById } = usePrograms();
+  const [isParentChatVisible, setIsParentChatVisible] = useState(false);
+  const [isDiscussionChatVisible, setIsDiscussionChatVisible] = useState(false);
 
   if (!selectedPatient) {
     return (
@@ -67,9 +69,20 @@ const PatientDetails = () => {
   const handleDelete = () => removePatient(selectedPatient.id);
   const handleGenerateGradePdf = () => generateProgramGradePDF(selectedPatient, allProgramsData);
   const handleGenerateRecordSheet = () => generateWeeklyRecordSheetPDF(selectedPatient, getProgramById, allProgramsData);
+  
+  const handleToggleParentChat = () => {
+    setIsDiscussionChatVisible(false);
+    setIsParentChatVisible(prevState => !prevState);
+  };
+
+  const handleToggleDiscussionChat = () => {
+    setIsParentChatVisible(false);
+    setIsDiscussionChatVisible(prevState => !prevState);
+  };
 
   return (
     <div className="bg-white p-5 rounded-lg shadow-md border border-gray-200 flex flex-col">
+        {/* Seção de Cabeçalho - Inalterada */}
         <div className="flex justify-between items-start pb-4 border-b border-gray-200 mb-4">
             <div>
                 <h2 className="text-xl font-bold text-gray-800">{selectedPatient.name}</h2>
@@ -85,11 +98,13 @@ const PatientDetails = () => {
             </div>
         </div>
 
+        {/* Seção de Detalhes - Inalterada */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 mb-4">
             <DetailItem icon={faCalendarAlt} label="Data de Nascimento" value={formatDate(selectedPatient.dob)} />
             <DetailItem icon={faNotesMedical} label="Diagnóstico" value={selectedPatient.diagnosis} />
         </div>
 
+        {/* Seção de Anotações - Inalterada */}
         {selectedPatient.general_notes && (
             <div className="mb-5">
                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Anotações Gerais</h4>
@@ -99,7 +114,58 @@ const PatientDetails = () => {
             </div>
         )}
         
-        <div className="mt-auto border-t border-gray-100 pt-4">
+        {/* Seção de Ações com a lógica final e unificada */}
+        <div className="my-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Botão para Discussão de Caso - Abre o novo chat */}
+            <div>
+                <button
+                    onClick={handleToggleDiscussionChat}
+                    className="w-full flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-md shadow-sm hover:bg-indigo-700 transition-colors"
+                >
+                    <FontAwesomeIcon icon={faUsers} className="mr-2" />
+                    <span className="font-medium text-sm">Discussão de Caso</span>
+                </button>
+                <p className="text-xs text-gray-500 mt-1 text-center">
+                    {isDiscussionChatVisible ? 'Clique para fechar o chat' : 'Abrir o chat interno da equipe.'}
+                </p>
+            </div>
+
+            {/* Botão para Comunicação com os Pais */}
+            <div>
+                <button
+                    onClick={handleToggleParentChat}
+                    className="w-full flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-md shadow-sm hover:bg-indigo-700 transition-colors"
+                >
+                    <FontAwesomeIcon icon={faComments} className="mr-2" />
+                    <span className="font-medium text-sm">Comunicação com os Pais</span>
+                </button>
+                <p className="text-xs text-gray-500 mt-1 text-center">
+                    {isParentChatVisible ? 'Clique para fechar o chat' : 'Abrir o chat com os responsáveis.'}
+                </p>
+            </div>
+        </div>
+
+        {/* Renderização condicional para AMBOS os chats */}
+        {isDiscussionChatVisible && (
+            <div className="my-5 animate-fade-in max-w-4xl mx-auto w-full">
+                <CaseDiscussionChat 
+                    patientId={selectedPatient.id} 
+                    patientName={selectedPatient.name} 
+                />
+            </div>
+        )}
+
+        {isParentChatVisible && (
+            <div className="my-5 animate-fade-in max-w-4xl mx-auto w-full">
+                <ParentTherapistChat 
+                    patientId={selectedPatient.id} 
+                    patientName={selectedPatient.name} 
+                />
+            </div>
+        )}
+
+        {/* Seção de Documentos - O botão antigo foi removido daqui e de todo o arquivo */}
+        <div className="mt-auto border-t border-gray-200 pt-4">
             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Documentos e Relatórios</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 <ActionButton 

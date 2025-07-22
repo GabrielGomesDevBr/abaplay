@@ -1,66 +1,51 @@
-// Define a URL base da nossa API. Em um ambiente de produção,
-// isso viria de uma variável de ambiente.
+import axios from 'axios';
+
 const API_URL = 'http://localhost:3000/api/discussions';
 
 /**
- * Busca as mensagens da discussão de um paciente específico.
- * @param {string} patientId - O ID do paciente.
- * @param {string} token - O token JWT para autenticação.
- * @returns {Promise<Array<object>>} - Uma promessa que resolve para a lista de mensagens.
+ * Cria e retorna os cabeçalhos de autenticação com o token do usuário.
+ * @returns {object} Objeto com os cabeçalhos de autorização.
  */
-export const getMessages = async (patientId, token) => {
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    console.error("Token de autenticação não encontrado.");
+    return {};
+  }
+  return { headers: { Authorization: `Bearer ${token}` } };
+};
+
+/**
+ * Busca as mensagens da discussão de um paciente específico.
+ * @param {string|number} patientId - O ID do paciente.
+ * @returns {Promise<Array>} Uma promessa que resolve para a lista de mensagens.
+ */
+export const getDiscussionMessages = async (patientId) => {
+  if (!patientId) throw new Error("O ID do Paciente é obrigatório.");
+  
   try {
-    const response = await fetch(`${API_URL}/patient/${patientId}`, {
-      method: 'GET',
-      headers: {
-        // O cabeçalho 'Authorization' é essencial para o middleware de autenticação no backend.
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    // Se a resposta não for 'OK' (status 200-299), lança um erro.
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.errors[0]?.msg || 'Falha ao buscar mensagens.');
-    }
-
-    // Retorna os dados da resposta em formato JSON.
-    return await response.json();
+    const response = await axios.get(`${API_URL}/patient/${patientId}`, getAuthHeaders());
+    return response.data;
   } catch (error) {
-    console.error('Erro na API ao buscar mensagens:', error);
-    // Lança o erro para que o componente que chamou a função possa tratá-lo.
-    throw error;
+    console.error('Erro na API ao buscar mensagens da discussão:', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro no servidor ao buscar mensagens da discussão.');
   }
 };
 
 /**
  * Posta uma nova mensagem na discussão de um caso.
- * @param {string} patientId - O ID do paciente.
+ * @param {string|number} patientId - O ID do paciente.
  * @param {string} content - O conteúdo da mensagem.
- * @param {string} token - O token JWT para autenticação.
- * @returns {Promise<object>} - Uma promessa que resolve para o objeto da nova mensagem criada.
+ * @returns {Promise<object>} Uma promessa que resolve para o objeto da nova mensagem criada.
  */
-export const createMessage = async (patientId, content, token) => {
+export const createDiscussionMessage = async (patientId, content) => {
+  if (!patientId || !content) throw new Error("ID do Paciente e conteúdo são obrigatórios.");
+
   try {
-    const response = await fetch(`${API_URL}/patient/${patientId}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      // O corpo da requisição contém os dados da nova mensagem.
-      body: JSON.stringify({ content }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.errors[0]?.msg || 'Falha ao criar mensagem.');
-    }
-
-    return await response.json();
+    const response = await axios.post(`${API_URL}/patient/${patientId}`, { content }, getAuthHeaders());
+    return response.data;
   } catch (error) {
-    console.error('Erro na API ao criar mensagem:', error);
-    throw error;
+    console.error('Erro na API ao postar mensagem na discussão:', error.response?.data || error.message);
+    throw error.response?.data || new Error('Erro no servidor ao postar mensagem na discussão.');
   }
 };

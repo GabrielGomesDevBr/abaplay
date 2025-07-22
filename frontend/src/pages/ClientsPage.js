@@ -1,13 +1,8 @@
 import React from 'react';
-// --- INÍCIO DA NOVA ADIÇÃO ---
-import { Link } from 'react-router-dom'; // Para criar o link de navegação
-// --- FIM DA NOVA ADIÇÃO ---
+// A importação do 'Link' e do ícone 'faComments' foi removida pois não são mais necessários aqui.
 import { usePatients } from '../context/PatientContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// --- INÍCIO DA NOVA ADIÇÃO ---
-import { faUserCircle, faSpinner, faComments } from '@fortawesome/free-solid-svg-icons'; // Importa o ícone de comentários
-// --- FIM DA NOVA ADIÇÃO ---
-
+import { faUserCircle, faSpinner } from '@fortawesome/free-solid-svg-icons';
 
 import PatientDetails from '../components/patient/PatientDetails';
 import PatientForm from '../components/patient/PatientForm';
@@ -56,18 +51,9 @@ const ClientsPage = () => {
           
           <PatientDetails />
 
-          {/* --- INÍCIO DA NOVA ADIÇÃO --- */}
-          {/* Botão para acessar a página de discussão do caso */}
-          <div className="flex justify-start">
-            <Link
-              to={`/patient/${selectedPatient.id}/discussion`}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              <FontAwesomeIcon icon={faComments} className="mr-2 -ml-1 h-5 w-5" />
-              Discussão de Caso
-            </Link>
-          </div>
-          {/* --- FIM DA NOVA ADIÇÃO --- */}
+          {/* --- CORREÇÃO APLICADA AQUI --- */}
+          {/* O botão antigo de "Discussão de Caso" foi completamente removido deste local. */}
+          {/* A funcionalidade agora está centralizada dentro do componente PatientDetails. */}
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
