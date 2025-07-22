@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { getMessages, postMessage } from '../../api/parentChatApi';
-// 1. A importação foi corrigida para usar 'useAuth'
 import { useAuth } from '../../context/AuthContext';
 import './ParentTherapistChat.css';
 
@@ -24,7 +23,6 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // 2. O hook 'useAuth' é usado para obter o usuário
   const { user } = useAuth();
 
   const messagesEndRef = useRef(null);
@@ -37,7 +35,12 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
     if (!patientId) return;
 
     const socket = io(SOCKET_URL);
-    socket.emit('joinRoom', patientId);
+
+    // --- CORREÇÃO APLICADA AQUI ---
+    // Agora, enviamos o nome completo da sala para o servidor,
+    // garantindo que a comunicação em tempo real funcione corretamente.
+    const roomName = `patient-${patientId}`;
+    socket.emit('joinRoom', roomName);
 
     socket.on('newMessage', (incomingMessage) => {
       setMessages((prevMessages) => [...prevMessages, incomingMessage]);
@@ -95,7 +98,6 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
         {!loading && messages.length === 0 && (
           <p className="chat-info">Nenhuma mensagem ainda. Seja o primeiro a começar!</p>
         )}
-        {/* Adicionado um check para garantir que 'user' existe antes de renderizar */}
         {user && messages.map((msg) => (
           <div
             key={msg.id}

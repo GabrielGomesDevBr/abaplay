@@ -15,10 +15,8 @@ import NotesPage from './pages/NotesPage';
 import DashboardPage from './pages/DashboardPage';
 import ParentDashboardPage from './pages/ParentDashboardPage';
 import AdminPage from './pages/AdminPage';
-// --- INÍCIO DA NOVA ADIÇÃO ---
-// 1. Importa a nova página de discussão de caso.
-import CaseDiscussionPage from './pages/CaseDiscussionPage';
-// --- FIM DA NOVA ADIÇÃO ---
+// --- CORREÇÃO ---
+// A importação da CaseDiscussionPage antiga foi removida, pois não é mais utilizada.
 
 
 // Componente de Guarda para Rotas de Admin
@@ -62,11 +60,9 @@ function App() {
                   <Route path="notes" element={<NotesPage />} />
                   <Route path="dashboard" element={<DashboardPage />} />
                   
-                  {/* --- INÍCIO DA NOVA ADIÇÃO --- */}
-                  {/* 2. Adiciona a rota para a página de discussão. */}
-                  {/* O caminho inclui o :patientId para sabermos de qual paciente é a discussão. */}
-                  <Route path="patient/:patientId/discussion" element={<CaseDiscussionPage />} />
-                  {/* --- FIM DA NOVA ADIÇÃO --- */}
+                  {/* --- CORREÇÃO --- */}
+                  {/* A rota para a página de discussão antiga foi removida. */}
+                  {/* A funcionalidade agora é um componente dentro da PatientDetails. */}
 
                 </Route>
 
