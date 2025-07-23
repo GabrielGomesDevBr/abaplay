@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const http = require('http');
+const http = require('http' );
 const { Server } = require('socket.io');
 
 // Importação das rotas
@@ -12,13 +12,13 @@ const caseDiscussionRoutes = require('./routes/caseDiscussionRoutes');
 const parentChatRoutes = require('./routes/parentChatRoutes');
 
 const app = express();
-const server = http.createServer(app);
+const server = http.createServer(app );
 
 // --- INÍCIO DA CONFIGURAÇÃO DO SOCKET.IO ---
 
 const io = new Server(server, {
   cors: {
-    origin: "*", // ATENÇÃO: Em produção, restrinja para o URL do seu frontend.
+    origin: process.env.FRONTEND_URL, // ATENÇÃO: Em produção, restrinja para o URL do seu frontend.
     methods: ["GET", "POST"]
   }
 });
