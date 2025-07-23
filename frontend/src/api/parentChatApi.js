@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 // URL base para os nossos novos endpoints do chat.
-const API_URL = 'http://localhost:3000/api/parent-chat';
+import config from "../config";
+
+const API_URL = `${config.API_BASE_URL}/parent-chat`;
 
 /**
  * Cria e retorna os cabeçalhos de autenticação com o token do usuário.

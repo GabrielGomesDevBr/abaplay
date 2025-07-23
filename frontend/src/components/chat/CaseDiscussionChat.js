@@ -4,7 +4,9 @@ import { getDiscussionMessages, createDiscussionMessage } from '../../api/caseDi
 import { useAuth } from '../../context/AuthContext';
 import './ParentTherapistChat.css'; // Reutilizando o mesmo CSS!
 
-const SOCKET_URL = 'http://localhost:3000';
+import config from "../../config";
+
+const SOCKET_URL = config.SOCKET_URL;
 
 const SendIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">

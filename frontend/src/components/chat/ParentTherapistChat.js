@@ -4,7 +4,9 @@ import { getMessages, postMessage } from '../../api/parentChatApi';
 import { useAuth } from '../../context/AuthContext';
 import './ParentTherapistChat.css';
 
-const SOCKET_URL = 'http://localhost:3000';
+import config from "../../config";
+
+const SOCKET_URL = config.SOCKET_URL;
 
 const SendIcon = () => (
   <svg
