@@ -43,8 +43,8 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
     // garantindo que a comunicação em tempo real funcione corretamente.
     const roomName = `patient-${patientId}`;
     socket.emit('joinRoom', roomName);
-
     socket.on('newMessage', (incomingMessage) => {
+      console.log('Mensagem recebida via Socket.IO:', incomingMessage);
       setMessages((prevMessages) => [...prevMessages, incomingMessage]);
     });
 

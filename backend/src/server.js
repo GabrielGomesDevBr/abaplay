@@ -10,6 +10,10 @@ const patientRoutes = require('./routes/patientRoutes');
 const parentRoutes = require('./routes/parentRoutes');
 const caseDiscussionRoutes = require('./routes/caseDiscussionRoutes');
 const parentChatRoutes = require('./routes/parentChatRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+
+// Importa o middleware de autenticação
+const { verifyToken } = require('./middleware/authMiddleware');
 
 const app = express();
 const server = http.createServer(app );
@@ -33,15 +37,11 @@ app.use((req, res, next) => {
 io.on('connection', (socket) => {
   console.log(`[Socket.IO] Novo cliente conectado: ${socket.id}`);
 
-  // --- CORREÇÃO DEFINITIVA APLICADA AQUI ---
-  // O evento 'joinRoom' agora aceita qualquer 'roomName' enviado pelo cliente.
-  // Isso torna o servidor flexível para lidar com 'patient-123', 'discussion-123', etc.
   socket.on('joinRoom', (roomName) => {
     socket.join(roomName);
     console.log(`[Socket.IO] Cliente ${socket.id} entrou na sala: ${roomName}`);
   });
 
-  // Lógica para quando o cliente se desconectar
   socket.on('disconnect', () => {
     console.log(`[Socket.IO] Cliente desconectado: ${socket.id}`);
   });
@@ -60,13 +60,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// Configuração das Rotas da API
+// Aplica o middleware de autenticação a todas as rotas /api/* que precisam dele
+// Isso garante que req.user estará disponível nos controllers
+app.use('/api/admin', verifyToken, adminRoutes);
+app.use('/api/patients', verifyToken, patientRoutes);
+app.use('/api/parent', verifyToken, parentRoutes);
+app.use('/api/discussions', verifyToken, caseDiscussionRoutes);
+app.use('/api/parent-chat', verifyToken, parentChatRoutes);
+app.use('/api/notifications', verifyToken, notificationRoutes);
+
+// Rotas que não precisam de autenticação (como authRoutes)
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/patients', patientRoutes);
-app.use('/api/parent', parentRoutes);
-app.use('/api/discussions', caseDiscussionRoutes);
-app.use('/api/parent-chat', parentChatRoutes);
 
 const PORT = process.env.PORT || 3000;
 

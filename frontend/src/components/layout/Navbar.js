@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { usePatients } from '../../context/PatientContext';
 import { usePrograms } from '../../context/ProgramContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import NotificationBadge from '../notifications/NotificationBadge';
+import NotificationPanel from '../notifications/NotificationPanel';
 // Ícones importados
 import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faChartLine, faPuzzlePiece, faChild, faGraduationCap, faMusic, faCommentDots, faUserShield } from '@fortawesome/free-solid-svg-icons';
 
@@ -12,11 +14,30 @@ const Navbar = ({ toggleSidebar }) => {
   const { user, logout } = useAuth();
   const { selectedPatient } = usePatients();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isNotificationPanelOpen, setNotificationPanelOpen] = useState(false);
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
+  const notificationBadgeRef = useRef(null);
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const toggleNotificationPanel = () => {
+    setNotificationPanelOpen(!isNotificationPanelOpen);
+  };
+
+  const handleNotificationClick = (notification) => {
+    // Atualiza o badge de notificações
+    if (notificationBadgeRef.current && notificationBadgeRef.current.updateCount) {
+      notificationBadgeRef.current.updateCount();
+    }
+    
+    // Fecha o painel
+    setNotificationPanelOpen(false);
+    
+    // Aqui você pode adicionar lógica para navegar para o chat específico
+    console.log('Notificação clicada:', notification);
   };
 
   useEffect(() => {
@@ -141,6 +162,17 @@ const Navbar = ({ toggleSidebar }) => {
             {user?.role === 'pai' && ( <span className="font-medium text-indigo-700">Acompanhamento</span> )}
           </div>
           <div className="relative flex items-center space-x-3">
+            {/* Badge de Notificações - apenas para usuários autenticados que não sejam pais */}
+            {user && user.role !== 'pai' && (
+              <button
+                onClick={toggleNotificationPanel}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                title="Notificações"
+              >
+                <NotificationBadge ref={notificationBadgeRef} />
+              </button>
+            )}
+            
             <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm" title={user?.full_name || user?.username}>
               {getInitials(user?.full_name || user?.username)}
             </div>
@@ -180,6 +212,13 @@ const Navbar = ({ toggleSidebar }) => {
                 </div>
             </div>
       </div>
+      
+      {/* Painel de Notificações */}
+      <NotificationPanel
+        isOpen={isNotificationPanelOpen}
+        onClose={() => setNotificationPanelOpen(false)}
+        onNotificationClick={handleNotificationClick}
+      />
     </header>
   );
 };
