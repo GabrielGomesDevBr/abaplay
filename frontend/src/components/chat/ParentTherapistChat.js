@@ -45,7 +45,24 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
     socket.emit('joinRoom', roomName);
     socket.on('newMessage', (incomingMessage) => {
       console.log('Mensagem recebida via Socket.IO:', incomingMessage);
-      setMessages((prevMessages) => [...prevMessages, incomingMessage]);
+      setMessages((prevMessages) => {
+        // Se a mensagem recebida via Socket.IO tem um clientId, significa que é a nossa própria mensagem
+        // que foi confirmada pelo servidor. Substituímos a versão otimista.
+        if (incomingMessage.clientId) {
+          return prevMessages.map(msg => 
+            msg.id === incomingMessage.clientId 
+              ? { ...incomingMessage, isOptimistic: false } 
+              : msg
+          );
+        } else {
+          // Se não tem clientId, é uma mensagem de outro usuário ou uma mensagem que não foi otimista.
+          // Adicionamos apenas se não houver uma mensagem com o mesmo ID real.
+          if (prevMessages.some(msg => msg.id === incomingMessage.id)) {
+            return prevMessages;
+          }
+          return [...prevMessages, incomingMessage];
+        }
+      });
     });
 
     const fetchMessages = async () => {
@@ -73,11 +90,38 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
     e.preventDefault();
     if (newMessage.trim() === '' || !user) return;
 
+    let clientId; // Usar clientId para correlacionar mensagens otimistas
+
     try {
-      await postMessage(patientId, newMessage);
+      clientId = Date.now().toString(); // Gerar um clientId único
+      const messageToSend = {
+        id: clientId, // Usar clientId como id temporário
+        sender_id: user.id,
+        sender_name: user.name,
+        message: newMessage,
+        created_at: new Date().toISOString(),
+        patient_id: patientId,
+        isOptimistic: true, // Marcar como otimista
+      };
+
+      setMessages((prevMessages) => [...prevMessages, messageToSend]);
       setNewMessage('');
+
+      const createdMessage = await postMessage(patientId, newMessage, clientId); // Enviar clientId
+
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === clientId ? { ...createdMessage, sender_name: user.name, isOptimistic: false } : msg
+        )
+      );
+
+      window.dispatchEvent(new CustomEvent('messageSentOrReceived'));
+
     } catch (err) {
       setError('Falha ao enviar mensagem.');
+      if (clientId) {
+        setMessages((prevMessages) => prevMessages.filter(msg => msg.id !== clientId));
+      }
     }
   };
 

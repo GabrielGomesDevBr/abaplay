@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell } from '@fortawesome/free-solid-svg-icons';
 import notificationApi from '../../api/notificationApi';
 
-const NotificationBadge = ({ className = '' }) => {
+const NotificationBadge = React.forwardRef(({ className = '' }, ref) => {
   const [totalUnread, setTotalUnread] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -24,8 +24,14 @@ const NotificationBadge = ({ className = '' }) => {
     
     // Atualiza a cada 30 segundos
     const interval = setInterval(fetchTotalUnread, 30000);
+
+    // Escuta o evento personalizado para atualizar as notificações
+    window.addEventListener('messageSentOrReceived', fetchTotalUnread);
     
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('messageSentOrReceived', fetchTotalUnread);
+    };
   }, []);
 
   // Função para atualizar o contador externamente
@@ -34,7 +40,7 @@ const NotificationBadge = ({ className = '' }) => {
   };
 
   // Expõe a função updateCount para componentes pais
-  React.useImperativeHandle(React.forwardRef(), () => ({
+  React.useImperativeHandle(ref, () => ({
     updateCount
   }));
 
@@ -61,7 +67,6 @@ const NotificationBadge = ({ className = '' }) => {
       )}
     </div>
   );
-};
+});
 
 export default NotificationBadge;
-

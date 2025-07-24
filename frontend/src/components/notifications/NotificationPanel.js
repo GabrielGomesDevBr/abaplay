@@ -24,6 +24,13 @@ const NotificationPanel = ({ isOpen, onClose, onNotificationClick }) => {
     if (isOpen) {
       fetchNotifications();
     }
+
+    // Escuta o evento personalizado para atualizar as notificações
+    window.addEventListener('messageSentOrReceived', fetchNotifications);
+    
+    return () => {
+      window.removeEventListener('messageSentOrReceived', fetchNotifications);
+    };
   }, [isOpen]);
 
   const handleMarkAsRead = async (notification) => {

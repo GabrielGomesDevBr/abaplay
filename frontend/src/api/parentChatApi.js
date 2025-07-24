@@ -44,11 +44,11 @@ export const getMessages = async (patientId) => {
  * @param {string} message - O conteúdo da mensagem a ser enviada.
  * @returns {Promise<object>} Uma promessa que resolve para o objeto da nova mensagem criada.
  */
-export const postMessage = async (patientId, message) => {
+export const postMessage = async (patientId, message, clientId) => {
   if (!patientId || !message) throw new Error("ID do Paciente e conteúdo da mensagem são obrigatórios.");
 
   try {
-    const response = await axios.post(`${API_URL}/${patientId}`, { message }, getAuthHeaders());
+    const response = await axios.post(`${API_URL}/${patientId}`, { message, clientId }, getAuthHeaders());
     return response.data;
   } catch (error) {
     console.error('Erro na API ao postar mensagem no chat:', error.response?.data || error.message);

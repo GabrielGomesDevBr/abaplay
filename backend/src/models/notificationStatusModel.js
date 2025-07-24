@@ -94,7 +94,7 @@ NotificationStatus.getByUser = async (userId, patientId = null, chatType = null)
   let query = `
     SELECT 
       ns.*,
-      p.full_name as patient_name
+      p.name as patient_name
     FROM notificationstatus ns
     JOIN patients p ON ns."patientId" = p.id
     WHERE ns."userId" = $1
@@ -111,7 +111,7 @@ NotificationStatus.getByUser = async (userId, patientId = null, chatType = null)
     values.push(chatType);
   }
 
-  query += ` ORDER BY ns."unreadCount" DESC, p.full_name ASC`;
+  query += ` ORDER BY ns."unreadCount" DESC, p.name ASC`;
 
   try {
     const result = await pool.query(query, values);

@@ -22,7 +22,7 @@ const server = http.createServer(app );
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL, // ATENÇÃO: Em produção, restrinja para o URL do seu frontend.
+    origin: "http://localhost:3001", // Permitir acesso do frontend em desenvolvimento
     methods: ["GET", "POST"]
   }
 });

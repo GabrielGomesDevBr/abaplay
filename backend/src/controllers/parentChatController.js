@@ -33,7 +33,7 @@ parentChatController.getMessages = async (req, res) => {
 parentChatController.postMessage = async (req, res) => {
   try {
     const { patientId } = req.params;
-    const { message } = req.body;
+    const { message, clientId } = req.body;
     const sender_id = req.user.id; // O ID do usuário logado é injetado pelo middleware.
 
     if (!message || message.trim() === '') {
@@ -47,6 +47,11 @@ parentChatController.postMessage = async (req, res) => {
     };
 
     const createdMessage = await ParentChatMessage.create(newMessageData);
+
+    // Adiciona o clientId à mensagem criada antes de emitir e responder
+    if (clientId) {
+      createdMessage.clientId = clientId;
+    }
 
     // --- LÓGICA DE NOTIFICAÇÕES ---
     // Busca todos os usuários que participam do chat deste paciente (exceto o remetente)
