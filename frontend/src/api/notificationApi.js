@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+import config from '../config';
+
+const API_BASE_URL = config.API_BASE_URL;
 
 // Cria uma instância do axios com configurações padrão
 const api = axios.create({
@@ -25,7 +27,7 @@ const notificationApi = {
   // Busca todas as notificações do usuário
   getUserNotifications: async () => {
     try {
-      const response = await api.get('/api/notifications');
+      const response = await api.get('/notifications');
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar notificações:', error);
@@ -36,7 +38,7 @@ const notificationApi = {
   // Busca o total de mensagens não lidas
   getTotalUnreadCount: async () => {
     try {
-      const response = await api.get('/api/notifications/total-unread');
+      const response = await api.get('/notifications/total-unread');
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar total de não lidas:', error);
@@ -47,7 +49,7 @@ const notificationApi = {
   // Marca mensagens como lidas
   markAsRead: async (patientId, chatType) => {
     try {
-      const response = await api.post('/api/notifications/mark-read', {
+      const response = await api.post('/notifications/mark-read', {
         patientId,
         chatType
       });
@@ -61,7 +63,7 @@ const notificationApi = {
   // Busca notificações específicas de um paciente e tipo de chat
   getNotificationsByPatientAndType: async (patientId, chatType) => {
     try {
-      const response = await api.get(`/api/notifications/patient/${patientId}?chatType=${chatType}`);
+      const response = await api.get(`/notifications/patient/${patientId}?chatType=${chatType}`);
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar notificações específicas:', error);
