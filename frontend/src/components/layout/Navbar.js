@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import NotificationBadge from '../notifications/NotificationBadge';
 import NotificationPanel from '../notifications/NotificationPanel';
 // Ícones importados
-import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faChartLine, faPuzzlePiece, faChild, faGraduationCap, faMusic, faCommentDots, faUserShield } from '@fortawesome/free-solid-svg-icons';
+import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faChartLine, faPuzzlePiece, faChild, faGraduationCap, faMusic, faCommentDots, faUserShield, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 
 // O componente agora recebe a prop 'toggleSidebar' do MainLayout.
 const Navbar = ({ toggleSidebar }) => {
@@ -15,8 +15,10 @@ const Navbar = ({ toggleSidebar }) => {
   const { selectedPatient } = usePatients();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isNotificationPanelOpen, setNotificationPanelOpen] = useState(false);
+  const [isProgramsMenuOpen, setProgramsMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
+  const programsMenuRef = useRef(null);
   const notificationBadgeRef = useRef(null);
 
   const toggleMobileMenu = () => {
@@ -50,6 +52,9 @@ const Navbar = ({ toggleSidebar }) => {
       ) {
         setMobileMenuOpen(false);
       }
+      if (programsMenuRef.current && !programsMenuRef.current.contains(event.target)) {
+        setProgramsMenuOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -66,7 +71,7 @@ const Navbar = ({ toggleSidebar }) => {
 
   const NavLinks = ({ isMobile = false, onLinkClick = () => {} }) => {
     const { allProgramsData } = usePrograms();
-    const programAreas = Object.keys(allProgramsData).sort();
+    const programAreas = allProgramsData ? Object.keys(allProgramsData).sort() : [];
     const location = useLocation();
     const currentArea = new URLSearchParams(location.search).get('area');
     const baseClasses = "flex items-center font-medium transition-colors duration-200";
@@ -110,21 +115,41 @@ const Navbar = ({ toggleSidebar }) => {
           </NavLink>
         )}
 
-        {programAreas.map(area => {
-            const areaName = area.replace(/([A-Z])/g, ' $1').trim();
-            return (
-                <NavLink
-                    key={area}
-                    to={`/programs?area=${area}`}
-                    className={getProgramLinkClass(area)}
-                    onClick={onLinkClick}
-                    title={areaName}
-                >
-                    <FontAwesomeIcon icon={areaIcons[area] || faFolderOpen} className="fa-fw mr-2" />
-                    {isMobile ? areaName : area.substring(0, 10)}
-                </NavLink>
-            )
-        })}
+        <div className="relative" ref={programsMenuRef}>
+          <button
+            onClick={() => setProgramsMenuOpen(!isProgramsMenuOpen)}
+            className={`${baseClasses} ${desktopClasses} ${location.pathname === '/programs' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-indigo-600'}`}
+          >
+            <FontAwesomeIcon icon={faPuzzlePiece} className="fa-fw mr-2" />
+            Programas
+            <FontAwesomeIcon icon={faChevronDown} className={`ml-2 h-3 w-3 transition-transform ${isProgramsMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {isProgramsMenuOpen && (
+            <div className="absolute mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
+              <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                {programAreas.map(area => {
+                  const areaName = area.replace(/([A-Z])/g, ' $1').trim();
+                  return (
+                    <NavLink
+                      key={area}
+                      to={`/programs?area=${area}`}
+                      className={({ isActive }) => `block px-4 py-2 text-sm ${isActive ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700'} hover:bg-gray-100 hover:text-gray-900`}
+                      onClick={() => {
+                        setProgramsMenuOpen(false);
+                        onLinkClick();
+                      }}
+                      role="menuitem"
+                    >
+                      <FontAwesomeIcon icon={areaIcons[area] || faFolderOpen} className="fa-fw mr-2" />
+                      {areaName}
+                    </NavLink>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
         <NavLink to="/notes" className={getLinkClass} onClick={onLinkClick}><FontAwesomeIcon icon={faPencilAlt} className="fa-fw mr-2" /> Anotações</NavLink>
       </>
     );

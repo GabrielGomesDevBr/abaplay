@@ -11,6 +11,7 @@ const parentRoutes = require('./routes/parentRoutes');
 const caseDiscussionRoutes = require('./routes/caseDiscussionRoutes');
 const parentChatRoutes = require('./routes/parentChatRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const programRoutes = require('./routes/programRoutes');
 
 // Importa o middleware de autenticação
 const { verifyToken } = require('./middleware/authMiddleware');
@@ -71,6 +72,7 @@ app.use('/api/notifications', verifyToken, notificationRoutes);
 
 // Rotas que não precisam de autenticação (como authRoutes)
 app.use('/api/auth', authRoutes);
+app.use('/api/programs', programRoutes);
 
 const PORT = process.env.PORT || 3000;
 

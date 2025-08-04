@@ -1,16 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell } from '@fortawesome/free-solid-svg-icons';
-import notificationApi from '../../api/notificationApi';
+import { getNotifications } from '../../api/notificationApi';
+import { useAuth } from '../../context/AuthContext'; // Importa o useAuth
 
 const NotificationBadge = React.forwardRef(({ className = '' }, ref) => {
   const [totalUnread, setTotalUnread] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth(); // Obtém o usuário do contexto
 
   const fetchTotalUnread = async () => {
+    if (!user?.id) return; // <<< CORREÇÃO: Não faz a chamada se não houver ID de usuário
+
     try {
-      const data = await notificationApi.getTotalUnreadCount();
-      setTotalUnread(data.totalUnread || 0);
+      // A API agora retorna um objeto com a contagem, então precisamos acessá-la
+      const data = await getNotifications(user.id);
+      // A resposta da API é um array, então contamos os itens com unreadCount > 0
+      const unreadCount = data.filter(n => n.unreadCount > 0).length;
+      setTotalUnread(unreadCount || 0);
     } catch (error) {
       console.error('Erro ao buscar total de não lidas:', error);
       setTotalUnread(0);
@@ -20,19 +27,19 @@ const NotificationBadge = React.forwardRef(({ className = '' }, ref) => {
   };
 
   useEffect(() => {
-    fetchTotalUnread();
-    
-    // Atualiza a cada 30 segundos
-    const interval = setInterval(fetchTotalUnread, 30000);
-
-    // Escuta o evento personalizado para atualizar as notificações
-    window.addEventListener('messageSentOrReceived', fetchTotalUnread);
-    
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('messageSentOrReceived', fetchTotalUnread);
-    };
-  }, []);
+    // Executa a função apenas se o usuário estiver logado
+    if (user?.id) {
+      fetchTotalUnread();
+      
+      const interval = setInterval(fetchTotalUnread, 30000);
+      window.addEventListener('messageSentOrReceived', fetchTotalUnread);
+      
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('messageSentOrReceived', fetchTotalUnread);
+      };
+    }
+  }, [user]); // <<< CORREÇÃO: Adiciona 'user' como dependência do useEffect
 
   // Função para atualizar o contador externamente
   const updateCount = () => {

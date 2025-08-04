@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
-import { getDiscussionMessages, createDiscussionMessage } from '../../api/caseDiscussionApi';
+import { getCaseDiscussionMessages, postCaseDiscussionMessage } from '../../api/caseDiscussionApi';
 import { useAuth } from '../../context/AuthContext';
 import './ParentTherapistChat.css'; // Reutilizando o mesmo CSS!
 
-import config from "../../config";
 
-const SOCKET_URL = config.SOCKET_URL;
+
+
 
 const SendIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
@@ -43,7 +43,7 @@ const CaseDiscussionChat = ({ patientId, patientName }) => {
     const fetchMessages = async () => {
       try {
         setLoading(true);
-        const initialMessages = await getDiscussionMessages(patientId);
+        const initialMessages = await getCaseDiscussionMessages(patientId);
         setMessages(initialMessages);
         setError(null);
       } catch (err) {
@@ -67,7 +67,7 @@ const CaseDiscussionChat = ({ patientId, patientName }) => {
 
     try {
       // A API agora se chama 'createDiscussionMessage' e o payload é 'content'
-      await createDiscussionMessage(patientId, newMessage);
+      await postCaseDiscussionMessage(patientId, newMessage);
       setNewMessage('');
     } catch (err) {
       setError('Falha ao enviar mensagem.');

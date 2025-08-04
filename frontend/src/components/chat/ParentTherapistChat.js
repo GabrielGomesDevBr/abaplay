@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
-import { getMessages, postMessage } from '../../api/parentChatApi';
+import { getChatMessages, postChatMessage } from '../../api/parentChatApi';
 import { useAuth } from '../../context/AuthContext';
 import './ParentTherapistChat.css';
 
 import config from "../../config";
 
-const SOCKET_URL = config.SOCKET_URL;
+
 
 const SendIcon = () => (
   <svg
@@ -68,7 +68,7 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
     const fetchMessages = async () => {
       try {
         setLoading(true);
-        const initialMessages = await getMessages(patientId);
+        const initialMessages = await getChatMessages(patientId);
         setMessages(initialMessages);
         setError(null);
       } catch (err) {
@@ -107,7 +107,7 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
       setMessages((prevMessages) => [...prevMessages, messageToSend]);
       setNewMessage('');
 
-      const createdMessage = await postMessage(patientId, newMessage, clientId); // Enviar clientId
+            const createdMessage = await postChatMessage({ patient_id: patientId, message: newMessage, sender_id: user.id, client_id: clientId }); // Enviar clientId
 
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>

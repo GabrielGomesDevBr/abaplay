@@ -1,18 +1,10 @@
-// -----------------------------------------------------------------------------
-// Arquivo da Página de Programas (frontend/src/pages/ProgramsPage.js)
-// -----------------------------------------------------------------------------
-// - CORRIGIDO: A lógica para verificar se um programa está atribuído ('isAssigned')
-//   foi atualizada para usar a nova estrutura de dados `selectedPatient.assigned_programs`,
-//   que é um array de objetos. Isto restaura o feedback visual correto do botão.
-// -----------------------------------------------------------------------------
-
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { usePrograms } from '../context/ProgramContext';
 import { usePatients } from '../context/PatientContext';
-import ProgramCard from '../components/program/ProgramCard';
+import ProgramLibrary from '../components/program/ProgramLibrary';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faBookOpen } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 
 const ProgramsPage = () => {
   const { allProgramsData, isLoading: programsAreLoading } = usePrograms();
@@ -23,15 +15,12 @@ const ProgramsPage = () => {
   const queryParams = new URLSearchParams(location.search);
   
   const activeArea = queryParams.get('area') || 'Psicologia'; 
-  const activeProgramId = queryParams.get('programId');
   const searchTerm = queryParams.get('search') || '';
 
   let programsInArea = allProgramsData[activeArea] || [];
   let programsToShow = [];
 
-  if (activeProgramId) {
-    programsToShow = programsInArea.filter(p => p.id === activeProgramId);
-  } else if (searchTerm) {
+  if (searchTerm) {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     programsToShow = programsInArea.filter(p => 
         p.title.toLowerCase().includes(lowerCaseSearchTerm) ||
@@ -78,36 +67,13 @@ const ProgramsPage = () => {
         </div>
       )}
 
-      {programsToShow.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {programsToShow.map(program => {
-            // CORREÇÃO: A verificação agora é feita no array de objetos `assigned_programs`.
-            const isAssigned = selectedPatient?.assigned_programs?.some(p => p.id === program.id);
-
-            return (
-              <ProgramCard
-                key={program.id}
-                program={program}
-                onAssign={handleAssign}
-                isAssigned={isAssigned}
-                isAssigning={assigningId === program.id}
-                isPatientSelected={!!selectedPatient}
-              />
-            )
-          })}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center text-center text-gray-500 p-10 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50 h-full">
-            <FontAwesomeIcon icon={faBookOpen} className="text-5xl text-gray-300 mb-4" />
-            <p className="text-lg font-medium text-gray-600">Nenhum programa encontrado</p>
-            <p className="mt-1 text-sm">
-              {searchTerm 
-                ? `A sua busca por "${searchTerm}" não encontrou resultados em ${formattedAreaName}.`
-                : `Não existem programas disponíveis para a área de ${formattedAreaName}.`
-              }
-            </p>
-        </div>
-      )}
+      <ProgramLibrary 
+        programs={programsToShow} 
+        onAssign={handleAssign} 
+        isPatientSelected={!!selectedPatient} 
+        assigningId={assigningId} 
+        assignedPrograms={selectedPatient?.assigned_programs} 
+      />
     </div>
   );
 };

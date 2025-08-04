@@ -1,9 +1,5 @@
 // frontend/src/api/authApi.js
-
-import axios from 'axios';
-
-// A URL base da nossa API backend
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+import { API_URL } from '../config';
 
 /**
  * <<< NOVA FUNÇÃO >>>
@@ -12,12 +8,18 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
  * @returns {Promise<object>} A resposta da API, contendo a ação a ser tomada.
  */
 export const checkUser = async (username) => {
-    try {
-        const response = await axios.post(`${API_URL}/auth/check-user`, { username });
-        return response.data; // ex: { action: 'SET_PASSWORD', user: {...} } ou { action: 'REQUIRE_PASSWORD' }
-    } catch (error) {
-        throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao verificar utilizador.');
-    }
+  const response = await fetch(`${API_URL}/api/auth/check-user`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({})); // Tenta parsear o erro, senão usa objeto vazio
+    throw new Error(errorData?.errors?.[0]?.msg || 'Erro ao verificar utilizador.');
+  }
+
+  return response.json();
 };
 
 /**
@@ -26,13 +28,18 @@ export const checkUser = async (username) => {
  * @returns {Promise<object>} A resposta da API.
  */
 export const loginUser = async (credentials) => {
-  try {
-    const response = await axios.post(`${API_URL}/auth/login`, credentials);
-    return response.data;
-  } catch (error) {
-    // Retorna a mensagem de erro específica do backend
-    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao tentar fazer login.');
+  const response = await fetch(`${API_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.errors?.[0]?.msg || 'Erro ao tentar fazer login.');
   }
+
+  return response.json();
 };
 
 /**
@@ -42,10 +49,16 @@ export const loginUser = async (credentials) => {
  * @returns {Promise<object>} A resposta da API.
  */
 export const setPassword = async (userId, password) => {
-    try {
-        const response = await axios.post(`${API_URL}/auth/set-password`, { userId, password });
-        return response.data;
-    } catch (error) {
-        throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível definir a senha.');
-    }
+  const response = await fetch(`${API_URL}/api/auth/set-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, password }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.errors?.[0]?.msg || 'Não foi possível definir a senha.');
+  }
+
+  return response.json();
 };

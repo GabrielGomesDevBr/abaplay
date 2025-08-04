@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faComments, faUsers, faEye, faTimes } from '@fortawesome/free-solid-svg-icons';
-import notificationApi from '../../api/notificationApi';
+import { getNotifications, markAsRead } from '../../api/notificationApi';
 
 const NotificationPanel = ({ isOpen, onClose, onNotificationClick }) => {
   const [notifications, setNotifications] = useState([]);
@@ -10,7 +10,7 @@ const NotificationPanel = ({ isOpen, onClose, onNotificationClick }) => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const data = await notificationApi.getUserNotifications();
+      const data = await getNotifications();
       setNotifications(data || []);
     } catch (error) {
       console.error('Erro ao buscar notificações:', error);
@@ -35,7 +35,7 @@ const NotificationPanel = ({ isOpen, onClose, onNotificationClick }) => {
 
   const handleMarkAsRead = async (notification) => {
     try {
-      await notificationApi.markAsRead(notification.patientId, notification.chatType);
+      await markAsRead(notification.patientId, notification.chatType);
       
       // Atualiza a lista de notificações
       setNotifications(prev => 

@@ -94,7 +94,7 @@ export const PatientProvider = ({ children }) => {
         const reSelected = patientData.find(p => p.id === initialSelectedPatientId);
         if (reSelected) {
           newSelectedPatient = reSelected;
-          console.log(`[PatientContext] Paciente ID ${initialSelectedPatientId} re-selecionado.`);
+          console.log(`[PatientContext] Paciente ID ${initialSelectedPatientId} re-selecionado. Conteúdo:`, newSelectedPatient);
         } else {
           console.log(`[PatientContext] Paciente ID ${initialSelectedPatientId} NÃO encontrado na nova lista. Seleção limpa.`);
         }
@@ -106,9 +106,9 @@ export const PatientProvider = ({ children }) => {
       // 'selectedPatient' aqui também vem do closure
       if (selectedPatient?.id !== newSelectedPatient?.id || selectedPatient !== newSelectedPatient) {
           setSelectedPatient(newSelectedPatient);
-          console.log(`[PatientContext] selectedPatient atualizado (nova referência ou ID diferente).`);
+          console.log(`[PatientContext] selectedPatient atualizado (nova referência ou ID diferente). Novo selectedPatient:`, newSelectedPatient);
       } else {
-          console.log(`[PatientContext] selectedPatient inalterado (mesma referência ou ID). Evitando re-render.`);
+          console.log(`[PatientContext] selectedPatient inalterado (mesma referência ou ID). Evitando re-render. Current selectedPatient:`, selectedPatient);
       }
 
     } catch (err) {
