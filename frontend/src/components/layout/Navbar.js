@@ -2,14 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePatients } from '../../context/PatientContext';
-import { usePrograms } from '../../context/ProgramContext';
+import { getProgramAreas } from '../../api/programApi'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import NotificationBadge from '../notifications/NotificationBadge';
 import NotificationPanel from '../notifications/NotificationPanel';
-// Ícones importados
 import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faChartLine, faPuzzlePiece, faChild, faGraduationCap, faMusic, faCommentDots, faUserShield, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 
-// O componente agora recebe a prop 'toggleSidebar' do MainLayout.
 const Navbar = ({ toggleSidebar }) => {
   const { user, logout } = useAuth();
   const { selectedPatient } = usePatients();
@@ -30,15 +28,10 @@ const Navbar = ({ toggleSidebar }) => {
   };
 
   const handleNotificationClick = (notification) => {
-    // Atualiza o badge de notificações
     if (notificationBadgeRef.current && notificationBadgeRef.current.updateCount) {
       notificationBadgeRef.current.updateCount();
     }
-    
-    // Fecha o painel
     setNotificationPanelOpen(false);
-    
-    // Aqui você pode adicionar lógica para navegar para o chat específico
     console.log('Notificação clicada:', notification);
   };
 
@@ -65,31 +58,37 @@ const Navbar = ({ toggleSidebar }) => {
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   };
 
-  // <<< LÓGICA DE VISIBILIDADE CORRIGIDA >>>
-  // O botão agora aparece para qualquer perfil que não seja 'pai'.
   const shouldShowSidebarToggle = user?.role !== 'pai';
 
   const NavLinks = ({ isMobile = false, onLinkClick = () => {} }) => {
-    const { allProgramsData } = usePrograms();
-    const programAreas = allProgramsData ? Object.keys(allProgramsData).sort() : [];
+    const [programAreas, setProgramAreas] = useState([]);
+    useEffect(() => {
+        const fetchAreas = async () => {
+            try {
+                const areaNames = await getProgramAreas();
+                setProgramAreas(areaNames);
+            } catch (error) {
+                console.error("Erro ao buscar áreas dos programas:", error);
+            }
+        };
+        fetchAreas();
+    }, []);
+    
     const location = useLocation();
-    const currentArea = new URLSearchParams(location.search).get('area');
+    // CORREÇÃO: A variável 'currentArea' foi removida pois não estava sendo utilizada neste componente.
     const baseClasses = "flex items-center font-medium transition-colors duration-200";
     const mobileClasses = "px-4 py-3 rounded-lg text-base";
     const desktopClasses = "px-3 py-2 rounded-md text-sm";
     const getLinkClass = ({ isActive }) => 
         `${baseClasses} ${isMobile ? mobileClasses : desktopClasses} ${isActive ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-indigo-600'}`;
-    const getProgramLinkClass = (area) => {
-        const isActive = location.pathname === '/programs' && currentArea === area;
-        return `${baseClasses} ${isMobile ? mobileClasses : desktopClasses} ${isActive ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-indigo-600'}`;
-    }
+    
     const areaIcons = {
-        Psicologia: faFolderOpen,
-        TerapiaOcupacional: faPuzzlePiece,
-        Psicomotricidade: faChild,
-        Psicopedagogia: faGraduationCap,
-        Musicoterapia: faMusic,
-        Fonoaudiologia: faCommentDots
+        'Psicologia': faFolderOpen,
+        'Terapia Ocupacional': faPuzzlePiece,
+        'Psicomotricidade': faChild,
+        'Psicopedagogia': faGraduationCap,
+        'Musicoterapia': faMusic,
+        'Fonoaudiologia': faCommentDots
     };
 
     if (user?.role === 'pai') {
@@ -128,7 +127,6 @@ const Navbar = ({ toggleSidebar }) => {
             <div className="absolute mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
               <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                 {programAreas.map(area => {
-                  const areaName = area.replace(/([A-Z])/g, ' $1').trim();
                   return (
                     <NavLink
                       key={area}
@@ -141,7 +139,7 @@ const Navbar = ({ toggleSidebar }) => {
                       role="menuitem"
                     >
                       <FontAwesomeIcon icon={areaIcons[area] || faFolderOpen} className="fa-fw mr-2" />
-                      {areaName}
+                      {area}
                     </NavLink>
                   )
                 })}
@@ -159,7 +157,6 @@ const Navbar = ({ toggleSidebar }) => {
     <header className="bg-white/95 backdrop-blur-sm sticky top-0 z-10 w-full flex-shrink-0 border-b border-gray-200">
       <div className="flex items-center justify-between px-4 sm:px-6 h-16">
         <div className="flex items-center">
-            {/* Agora este botão aparecerá para o admin em mobile */}
             {shouldShowSidebarToggle && (
                  <button 
                     onClick={toggleSidebar} 
@@ -187,7 +184,6 @@ const Navbar = ({ toggleSidebar }) => {
             {user?.role === 'pai' && ( <span className="font-medium text-indigo-700">Acompanhamento</span> )}
           </div>
           <div className="relative flex items-center space-x-3">
-            {/* Badge de Notificações - apenas para usuários autenticados que não sejam pais */}
             {user && user.role !== 'pai' && (
               <button
                 onClick={toggleNotificationPanel}
@@ -238,7 +234,6 @@ const Navbar = ({ toggleSidebar }) => {
             </div>
       </div>
       
-      {/* Painel de Notificações */}
       <NotificationPanel
         isOpen={isNotificationPanelOpen}
         onClose={() => setNotificationPanelOpen(false)}

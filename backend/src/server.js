@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const http = require('http' );
+const http = require('http');
 const { Server } = require('socket.io');
 
 // Importação das rotas
@@ -12,12 +12,14 @@ const caseDiscussionRoutes = require('./routes/caseDiscussionRoutes');
 const parentChatRoutes = require('./routes/parentChatRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const programRoutes = require('./routes/programRoutes');
+// --- Adicionada a importação da nova rota ---
+const assignmentRoutes = require('./routes/assignmentRoutes');
 
 // Importa o middleware de autenticação
 const { verifyToken } = require('./middleware/authMiddleware');
 
 const app = express();
-const server = http.createServer(app );
+const server = http.createServer(app);
 
 // --- INÍCIO DA CONFIGURAÇÃO DO SOCKET.IO ---
 
@@ -69,10 +71,15 @@ app.use('/api/parent', verifyToken, parentRoutes);
 app.use('/api/discussions', verifyToken, caseDiscussionRoutes);
 app.use('/api/parent-chat', verifyToken, parentChatRoutes);
 app.use('/api/notifications', verifyToken, notificationRoutes);
+// --- A rota de programas agora também é protegida ---
+app.use('/api/programs', verifyToken, programRoutes);
+// --- Adicionada a nova rota de atribuições, devidamente protegida ---
+app.use('/api/assignments', verifyToken, assignmentRoutes);
 
-// Rotas que não precisam de autenticação (como authRoutes)
+
+// Rota de autenticação (não precisa de token)
 app.use('/api/auth', authRoutes);
-app.use('/api/programs', programRoutes);
+
 
 const PORT = process.env.PORT || 3000;
 

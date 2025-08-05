@@ -1,15 +1,8 @@
-// -----------------------------------------------------------------------------
-// Arquivo de Card de Programa (frontend/src/components/program/ProgramCard.js)
-// -----------------------------------------------------------------------------
-// - CORRIGIDO: Atualizada a lógica da prop 'isAssigned' para funcionar com a nova
-//   estrutura de dados `assigned_programs` (array de objetos), restaurando o
-//   feedback visual do botão de atribuição.
-// -----------------------------------------------------------------------------
-
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faCheck, faSpinner } from '@fortawesome/free-solid-svg-icons';
 
+// A função getTagColor é mantida caso você decida adicionar as tags de volta à API no futuro.
 const getTagColor = (tag) => {
     const colors = {
         "Mando": "bg-blue-100 text-blue-800", "Tato": "bg-green-100 text-green-800",
@@ -36,26 +29,44 @@ const getTagColor = (tag) => {
     return colors[tag] || "bg-gray-200 text-gray-700";
 }
 
-const ProgramCard = ({ program, onAssign, isAssigned, isAssigning, isPatientSelected }) => {
+// O componente agora é mais simples. Ele recebe o objeto 'program' completo da API.
+const ProgramCard = ({ program, onAssign, isAssigning, isPatientSelected }) => {
+  
+  // A verificação se o programa está atribuído agora vem diretamente do próprio objeto.
+  const isAssigned = program.is_assigned;
+
+  // Formata a lista de objetivos para exibição.
+  const objectivesText = program.objectives && program.objectives.length > 0
+    ? program.objectives.map(o => o.description).join('; ')
+    : 'Nenhum objetivo definido.';
+
   return (
     <div className="bg-white rounded-xl shadow-md flex flex-col justify-between transition-all duration-300 hover:shadow-lg hover:scale-[1.02] border border-gray-100">
       <div className="p-5">
         <div className="flex justify-between items-start mb-3">
+          {/* O título agora vem de 'program.name' */}
           <h3 className="text-base font-bold text-gray-800 leading-tight pr-2">
-            {program.title}
+            {program.name}
           </h3>
-          <span className={`tag text-xs font-semibold uppercase px-2 py-0.5 rounded-full ${getTagColor(program.tag)} flex-shrink-0`}>
-            {program.tag || 'N/A'}
-          </span>
+          {/* A exibição de 'tag' foi removida temporariamente pois a API atual não fornece este dado.
+            Para reativar, adicione 'p.tag' à query SQL no 'programController.js'
+            e descomente o span abaixo.
+            
+            <span className={`tag text-xs font-semibold uppercase px-2 py-0.5 rounded-full ${getTagColor(program.tag)} flex-shrink-0`}>
+              {program.tag || 'N/A'}
+            </span>
+          */}
         </div>
-        <p className="text-sm font-semibold text-indigo-700 mb-1">Objetivo:</p>
-        <p className="text-sm text-gray-600 mb-4 line-clamp-3" title={program.objective}>
-          {program.objective || 'Não definido'}
+        <p className="text-sm font-semibold text-indigo-700 mb-1">Objetivos:</p>
+        {/* Os objetivos agora vêm de 'program.objectives' */}
+        <p className="text-sm text-gray-600 mb-4 line-clamp-3" title={objectivesText}>
+          {objectivesText}
         </p>
       </div>
       <div className="program-card-actions bg-gray-50 px-5 py-3 rounded-b-xl border-t border-gray-100 text-right">
         <button
           onClick={() => onAssign(program.id)}
+          // A lógica de desabilitar o botão agora usa a flag 'isAssigned' derivada de 'program.is_assigned'.
           disabled={!isPatientSelected || isAssigned || isAssigning}
           title={!isPatientSelected ? 'Selecione um cliente para atribuir' : (isAssigned ? 'Programa já atribuído' : 'Atribuir ao cliente')}
           className={`text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-200 w-32 text-center shadow-sm 
