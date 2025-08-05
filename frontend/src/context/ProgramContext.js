@@ -1,44 +1,43 @@
-// frontend/src/contexts/ProgramContext.js
-import React, { createContext, useState, useContext } from 'react';
-// A importação de 'axios' e 'API_URL' foi removida, pois não são mais necessárias aqui.
+// frontend/src/context/ProgramContext.js
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { getProgramAreas } from '../api/programApi';
+import { useAuth } from './AuthContext';
 
-// 1. Cria o Contexto
-const ProgramContext = createContext(null);
+const ProgramContext = createContext();
 
-// 2. Cria o Provedor do Contexto (versão corrigida e segura)
 export const ProgramProvider = ({ children }) => {
-  // --- MODIFICAÇÃO IMPORTANTE ---
-  // A busca de dados automática via useEffect foi COMPLETAMENTE REMOVIDA.
-  // Isso elimina o erro 401 que estava bloqueando a aplicação.
-  // A responsabilidade de buscar os programas agora pertence exclusivamente à ProgramsPage.
-
-  // Mantemos os estados com valores iniciais seguros para não quebrar a aplicação.
-  const [programs, setPrograms] = useState([]);
-  const [programsByArea, setProgramsByArea] = useState({});
-  const [isLoading, setIsLoading] = useState(false); // Inicia como 'false'
+  const [areas, setAreas] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { isAuthenticated } = useAuth();
 
-  // A função useEffect que chamava a API foi removida.
+  useEffect(() => {
+    const fetchAreas = async () => {
+      if (!isAuthenticated) {
+        setAreas([]); // Limpa as áreas se o usuário não estiver autenticado
+        return;
+      }
+      
+      setIsLoading(true);
+      setError(null);
+      try {
+        const fetchedAreas = await getProgramAreas();
+        setAreas(fetchedAreas);
+      } catch (err) {
+        setError('Não foi possível carregar as áreas de programa.');
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Mantemos a função getProgramById para compatibilidade, mas ela operará
-  // com os dados que a ProgramsPage eventualmente carregar.
-  const getProgramById = (programId) => {
-    if (!programs || programs.length === 0) return null;
-    return programs.find(p => p.id === programId) || null;
-  };
+    fetchAreas();
+  }, [isAuthenticated]); // Recarrega as áreas quando o status de autenticação muda
 
-  // Adicionamos o estado 'selectedArea' que é necessário para a nova lógica de navegação.
-  const [selectedArea, setSelectedArea] = useState('Todos');
-
-  // O valor fornecido pelo contexto
   const value = {
-    programs,
-    allProgramsData: programsByArea, // Mantém o nome antigo para compatibilidade
+    areas,
     isLoading,
     error,
-    getProgramById,
-    selectedArea, // Adiciona o novo estado ao contexto
-    setSelectedArea, // Adiciona a função para atualizar o estado
   };
 
   return (
@@ -48,7 +47,6 @@ export const ProgramProvider = ({ children }) => {
   );
 };
 
-// 3. Hook customizado para facilitar o uso do contexto (mantido como no original)
 export const usePrograms = () => {
   const context = useContext(ProgramContext);
   if (context === null) {

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { usePatients } from '../../context/PatientContext';
-import { usePrograms } from '../../context/ProgramContext';
+// A importação do usePrograms não é mais necessária aqui.
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine, faEye, faEyeSlash, faTrashAlt, faSpinner, faArchive } from '@fortawesome/free-solid-svg-icons';
 
@@ -38,22 +38,20 @@ const AssignedProgramsList = () => {
     toggleProgramStatus, 
     removeProgram,
     selectProgramForProgress, 
-    programForProgress 
+    programForProgress,
+    isLoading: patientIsLoading // Pega o status de carregamento do paciente
   } = usePatients();
 
-  const { getProgramById, isLoading: programsAreLoading } = usePrograms();
   const [togglingId, setTogglingId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
 
-  // A lógica de negócio original para os botões permanece intacta.
   const handleToggleStatus = async (programId, currentStatus) => {
     setTogglingId(programId);
     try {
       await toggleProgramStatus(programId, currentStatus);
     } catch (error) {
       console.error("Falha ao mudar status do programa:", error);
-      // Evitando alert() como boa prática, mas mantendo o log.
     } finally {
       setTogglingId(null);
     }
@@ -74,36 +72,28 @@ const AssignedProgramsList = () => {
     if (program.status === 'active') {
         selectProgramForProgress(program);
     } else {
-        // Evitando alert()
         console.warn("Tentativa de selecionar programa arquivado para progresso.");
     }
   };
 
-  // Lógica original para buscar detalhes dos programas.
+  // CORREÇÃO: A lógica agora usa diretamente os dados do paciente selecionado.
   const assignedProgramsDetails = useMemo(() => {
     if (!selectedPatient || !selectedPatient.assigned_programs) {
       return [];
     }
-    return selectedPatient.assigned_programs
-      .map(link => {
-          const programDetails = getProgramById(link.id);
-          // Adicionamos a propriedade 'area' aqui, que vem de programDetails
-          return programDetails ? { ...programDetails, status: link.status } : null;
-      })
-      .filter(p => p !== null);
-  }, [selectedPatient, getProgramById]);
+    // Os detalhes já estão no objeto, apenas retornamos a lista.
+    return selectedPatient.assigned_programs;
+  }, [selectedPatient]);
 
-  // Lógica original para filtrar entre ativos e arquivados.
   const programsToShow = useMemo(() => {
     return showArchived 
       ? assignedProgramsDetails
       : assignedProgramsDetails.filter(p => p.status === 'active');
   }, [assignedProgramsDetails, showArchived]);
 
-  // Lógica de agrupamento mantida.
   const groupedPrograms = useMemo(() => {
     return programsToShow.reduce((acc, program) => {
-      const area = program.area || 'Outros'; // Chave para agrupar. 'Outros' como fallback.
+      const area = program.area || 'Outros';
       if (!acc[area]) {
         acc[area] = [];
       }
@@ -112,11 +102,10 @@ const AssignedProgramsList = () => {
     }, {});
   }, [programsToShow]);
 
-  // <<< TOQUE FINAL APLICADO AQUI >>>
-  // As chaves (nomes das áreas) agora são ordenadas alfabeticamente.
   const programAreas = Object.keys(groupedPrograms).sort();
 
-  if (programsAreLoading) {
+  // Usa o isLoading do PatientContext para exibir o spinner
+  if (patientIsLoading) {
     return <div className="text-center py-4"><FontAwesomeIcon icon={faSpinner} className="fa-spin text-indigo-500" /></div>;
   }
   

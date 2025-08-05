@@ -1,10 +1,10 @@
-const pool = require('../models/db');
+const pool = require("../models/db");
 
 const getAllPrograms = async (req, res) => {
   const { patientId } = req.query;
 
   if (!patientId) {
-    return res.status(400).json({ message: 'O ID do paciente é obrigatório.' });
+    return res.status(400).json({ message: "O ID do paciente é obrigatório." });
   }
 
   // --- QUERY SQL CORRIGIDA E FINAL ---
@@ -21,7 +21,7 @@ const getAllPrograms = async (req, res) => {
     JOIN
         public.objectives o ON a.id = o.area_id -- Junta Áreas diretamente com os Programas Detalhados (Objectives)
     LEFT JOIN
-        public.patient_programs pa ON o.id = pa.program_id AND pa.patient_id = $1
+        public.patient_programs pa ON o.legacy_id = pa.program_id AND pa.patient_id = $1
     ORDER BY
         a.name, o.description;
   `;
@@ -33,6 +33,10 @@ const getAllPrograms = async (req, res) => {
     const programsByArea = {};
 
     rows.forEach(row => {
+      // --- LOG DE DIAGNÓSTICO ---
+      console.log("Dados brutos do programa recebidos do DB:", row);
+      // --- FIM DO LOG ---
+
       const {
         area_name,
         program_id,
@@ -62,20 +66,20 @@ const getAllPrograms = async (req, res) => {
 
     res.status(200).json(programsByArea);
   } catch (error) {
-    console.error('Erro ao buscar e processar os programas:', error);
-    res.status(500).json({ message: 'Erro interno do servidor ao buscar programas.' });
+    console.error("Erro ao buscar e processar os programas:", error);
+    res.status(500).json({ message: "Erro interno do servidor ao buscar programas." });
   }
 };
 
 const getProgramAreas = async (req, res) => {
   try {
-    const query = 'SELECT name FROM public.areas ORDER BY name;';
+    const query = "SELECT name FROM public.areas ORDER BY name;";
     const result = await pool.query(query);
     const areaNames = result.rows.map(row => row.name);
     res.status(200).json(areaNames);
   } catch (error) {
-    console.error('Erro ao buscar áreas dos programas:', error);
-    res.status(500).json({ message: 'Erro interno do servidor ao buscar as áreas.' });
+    console.error("Erro ao buscar áreas dos programas:", error);
+    res.status(500).json({ message: "Erro interno do servidor ao buscar as áreas." });
   }
 };
 

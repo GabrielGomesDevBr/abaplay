@@ -131,14 +131,16 @@ export const PatientProvider = ({ children }) => {
   // --- Funções e estados que o contexto fornece ---
   
   const selectPatient = useCallback((patient) => {
-    if (selectedPatient?.id !== patient?.id || selectedPatient !== patient) { // 'selectedPatient' vem do closure
-        setSelectedPatient(patient);
-        setProgramForProgress(null); 
-        console.log(`[PatientContext] Paciente selecionado via selectPatient: ${patient?.id}`);
-    } else {
+    setSelectedPatient(currentSelected => {
+        if (currentSelected?.id !== patient?.id) {
+            console.log(`[PatientContext] Paciente selecionado via selectPatient: ${patient?.id}`);
+            setProgramForProgress(null); 
+            return patient;
+        }
         console.log(`[PatientContext] Tentativa de selecionar o mesmo paciente (ID: ${patient?.id}). Nenhuma mudança.`);
-    }
-  }, [selectedPatient]); // selectedPatient como dependência para a comparação correta
+        return currentSelected;
+    });
+  }, []); // <-- REMOVIDA A DEPENDÊNCIA [selectedPatient]
 
 
   // Outras funções de callback para evitar re-renders desnecessários

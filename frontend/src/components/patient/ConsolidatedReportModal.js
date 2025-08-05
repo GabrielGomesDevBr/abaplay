@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faFilePdf, faSpinner, faCalendarAlt, faTimesCircle, faChartLine } from '@fortawesome/free-solid-svg-icons';
 import { usePatients } from '../../context/PatientContext';
-import { usePrograms } from '../../context/ProgramContext';
+// A importação do usePrograms não é mais necessária.
 import { generateConsolidatedReportPDF } from '../../utils/pdfGenerator';
 import { Line } from 'react-chartjs-2';
 import {
@@ -105,7 +105,7 @@ const ReportChart = ({ program, sessionData }) => {
 
 const ConsolidatedReportModal = ({ isOpen, onClose }) => {
   const { selectedPatient } = usePatients();
-  const { getProgramById } = usePrograms();
+  // A chamada a usePrograms() foi removida.
 
   const [reportText, setReportText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -123,7 +123,6 @@ const ConsolidatedReportModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-  // Filtra os dados da sessão com base no intervalo de datas para usar na pré-visualização e no PDF
   const filteredSessionData = useMemo(() => {
     if (!selectedPatient?.sessionData) return [];
     const start = startDate ? new Date(startDate + 'T00:00:00') : null;
@@ -136,12 +135,11 @@ const ConsolidatedReportModal = ({ isOpen, onClose }) => {
       });
   }, [selectedPatient, startDate, endDate]);
 
+  // CORREÇÃO: A lógica agora usa diretamente os dados do paciente selecionado.
   const assignedPrograms = useMemo(() => {
     if (!selectedPatient?.assigned_programs) return [];
-    return selectedPatient.assigned_programs
-        .map(p => getProgramById(p.id))
-        .filter(p => p); // Garante que apenas programas válidos são incluídos
-  }, [selectedPatient, getProgramById]);
+    return selectedPatient.assigned_programs;
+  }, [selectedPatient]);
 
 
   const handleGenerate = () => {
@@ -150,7 +148,8 @@ const ConsolidatedReportModal = ({ isOpen, onClose }) => {
     setError('');
     try {
       const patientForReport = { ...selectedPatient, sessionData: filteredSessionData };
-      generateConsolidatedReportPDF(patientForReport, reportText, getProgramById);
+      // A função generate... não precisa mais de getProgramById
+      generateConsolidatedReportPDF(patientForReport, reportText);
       setTimeout(() => onClose(), 1000); 
     } catch (err) {
       setError(err.message || 'Ocorreu um erro ao gerar o relatório.');

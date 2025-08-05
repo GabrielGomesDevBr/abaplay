@@ -3,20 +3,20 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePatients } from '../../context/PatientContext';
 import { getProgramAreas } from '../../api/programApi'; 
+import { usePrograms } from '../../context/ProgramContext'; // Importa o novo hook
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import NotificationBadge from '../notifications/NotificationBadge';
 import NotificationPanel from '../notifications/NotificationPanel';
-import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faChartLine, faPuzzlePiece, faChild, faGraduationCap, faMusic, faCommentDots, faUserShield, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faChartLine, faPuzzlePiece, faChild, faGraduationCap, faMusic, faCommentDots, faUserShield } from '@fortawesome/free-solid-svg-icons'; // Remove faChevronDown
 
 const Navbar = ({ toggleSidebar }) => {
   const { user, logout } = useAuth();
   const { selectedPatient } = usePatients();
+  const { areas } = usePrograms(); // Usa o contexto para obter as áreas
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isNotificationPanelOpen, setNotificationPanelOpen] = useState(false);
-  const [isProgramsMenuOpen, setProgramsMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
-  const programsMenuRef = useRef(null);
   const notificationBadgeRef = useRef(null);
 
   const toggleMobileMenu = () => {
@@ -45,9 +45,6 @@ const Navbar = ({ toggleSidebar }) => {
       ) {
         setMobileMenuOpen(false);
       }
-      if (programsMenuRef.current && !programsMenuRef.current.contains(event.target)) {
-        setProgramsMenuOpen(false);
-      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -61,26 +58,19 @@ const Navbar = ({ toggleSidebar }) => {
   const shouldShowSidebarToggle = user?.role !== 'pai';
 
   const NavLinks = ({ isMobile = false, onLinkClick = () => {} }) => {
-    const [programAreas, setProgramAreas] = useState([]);
-    useEffect(() => {
-        const fetchAreas = async () => {
-            try {
-                const areaNames = await getProgramAreas();
-                setProgramAreas(areaNames);
-            } catch (error) {
-                console.error("Erro ao buscar áreas dos programas:", error);
-            }
-        };
-        fetchAreas();
-    }, []);
-    
     const location = useLocation();
-    // CORREÇÃO: A variável 'currentArea' foi removida pois não estava sendo utilizada neste componente.
     const baseClasses = "flex items-center font-medium transition-colors duration-200";
     const mobileClasses = "px-4 py-3 rounded-lg text-base";
     const desktopClasses = "px-3 py-2 rounded-md text-sm";
-    const getLinkClass = ({ isActive }) => 
-        `${baseClasses} ${isMobile ? mobileClasses : desktopClasses} ${isActive ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-indigo-600'}`;
+    
+    // A função getLinkClass agora verifica se o início do pathname corresponde para as rotas de programas
+    const getLinkClass = (path, isProgramLink = false) => {
+      const isActive = isProgramLink 
+        ? location.pathname.startsWith(path)
+        : location.pathname === path;
+
+      return `${baseClasses} ${isMobile ? mobileClasses : desktopClasses} ${isActive ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-indigo-600'}`;
+    };
     
     const areaIcons = {
         'Psicologia': faFolderOpen,
@@ -92,63 +82,42 @@ const Navbar = ({ toggleSidebar }) => {
     };
 
     if (user?.role === 'pai') {
-        return ( <NavLink to="/" className={getLinkClass} onClick={onLinkClick}><FontAwesomeIcon icon={faChartLine} className="fa-fw mr-2" /> Acompanhamento</NavLink> );
+        return ( <NavLink to="/" className={() => getLinkClass("/")} onClick={onLinkClick}><FontAwesomeIcon icon={faChartLine} className="fa-fw mr-2" /> Acompanhamento</NavLink> );
     }
 
     return (
       <>
         {user?.is_admin && (
-            <NavLink to="/admin" className={getLinkClass} onClick={onLinkClick}>
+            <NavLink to="/admin" className={() => getLinkClass("/admin")} onClick={onLinkClick}>
                 <FontAwesomeIcon icon={faUserShield} className="fa-fw mr-2" /> Admin
             </NavLink>
         )}
-        <NavLink to="/dashboard" className={getLinkClass} onClick={onLinkClick}><FontAwesomeIcon icon={faTachometerAlt} className="fa-fw mr-2" /> Dashboard</NavLink>
+        <NavLink to="/dashboard" className={() => getLinkClass("/dashboard")} onClick={onLinkClick}><FontAwesomeIcon icon={faTachometerAlt} className="fa-fw mr-2" /> Dashboard</NavLink>
         
         {!user?.is_admin && (
           <NavLink 
             to="/clients"
-            className={getLinkClass}
+            className={() => getLinkClass("/clients")}
             onClick={onLinkClick}
           >
             <FontAwesomeIcon icon={faUsers} className="fa-fw mr-2" /> Clientes
           </NavLink>
         )}
 
-        <div className="relative" ref={programsMenuRef}>
-          <button
-            onClick={() => setProgramsMenuOpen(!isProgramsMenuOpen)}
-            className={`${baseClasses} ${desktopClasses} ${location.pathname === '/programs' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-indigo-600'}`}
+        {/* Renderiza os links de programas dinamicamente */}
+        {areas.map(area => (
+          <NavLink
+            key={area}
+            to={`/programs/${encodeURIComponent(area)}`}
+            className={() => getLinkClass(`/programs/${encodeURIComponent(area)}`, true)}
+            onClick={onLinkClick}
           >
-            <FontAwesomeIcon icon={faPuzzlePiece} className="fa-fw mr-2" />
-            Programas
-            <FontAwesomeIcon icon={faChevronDown} className={`ml-2 h-3 w-3 transition-transform ${isProgramsMenuOpen ? 'rotate-180' : ''}`} />
-          </button>
-          {isProgramsMenuOpen && (
-            <div className="absolute mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
-              <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
-                {programAreas.map(area => {
-                  return (
-                    <NavLink
-                      key={area}
-                      to={`/programs?area=${area}`}
-                      className={({ isActive }) => `block px-4 py-2 text-sm ${isActive ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700'} hover:bg-gray-100 hover:text-gray-900`}
-                      onClick={() => {
-                        setProgramsMenuOpen(false);
-                        onLinkClick();
-                      }}
-                      role="menuitem"
-                    >
-                      <FontAwesomeIcon icon={areaIcons[area] || faFolderOpen} className="fa-fw mr-2" />
-                      {area}
-                    </NavLink>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </div>
+            <FontAwesomeIcon icon={areaIcons[area] || faPuzzlePiece} className="fa-fw mr-2" />
+            {area}
+          </NavLink>
+        ))}
 
-        <NavLink to="/notes" className={getLinkClass} onClick={onLinkClick}><FontAwesomeIcon icon={faPencilAlt} className="fa-fw mr-2" /> Anotações</NavLink>
+        <NavLink to="/notes" className={() => getLinkClass("/notes")} onClick={onLinkClick}><FontAwesomeIcon icon={faPencilAlt} className="fa-fw mr-2" /> Anotações</NavLink>
       </>
     );
   };

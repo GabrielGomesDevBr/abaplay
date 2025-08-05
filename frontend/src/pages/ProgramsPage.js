@@ -1,63 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { usePatients } from '../context/PatientContext'; // Usado apenas para obter o paciente selecionado
-import { getAllProgramsForPatient, assignProgram } from '../api/programApi'; // Nossas novas funções da API
+import { useParams, useLocation } from 'react-router-dom'; // Adiciona useParams
+import { usePatients } from '../context/PatientContext';
+import { getAllProgramsForPatient, assignProgram } from '../api/programApi';
 import ProgramLibrary from '../components/program/ProgramLibrary';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 
 const ProgramsPage = () => {
-  // Estado local para gerenciar os dados, carregamento e erros
   const [programsData, setProgramsData] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [assigningId, setAssigningId] = useState(null);
 
-  const { selectedPatient } = usePatients(); // Obter o paciente selecionado do contexto
+  const { selectedPatient } = usePatients();
+  const { areaName } = useParams(); // Obtém o nome da área da URL
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
-  
-  // A área ativa vem da URL, com um padrão para o primeiro link
-  const activeArea = queryParams.get('area') || 'Todos'; 
   const searchTerm = queryParams.get('search') || '';
 
-  // Efeito para buscar os programas sempre que o paciente selecionado mudar
+  // Efeito para buscar os programas sempre que o paciente ou a área mudar
   useEffect(() => {
-    if (selectedPatient) {
+    if (selectedPatient && areaName) {
       const fetchPrograms = async () => {
         setIsLoading(true);
         setError('');
         try {
+          // A API busca todos os programas do paciente, a filtragem ocorre no frontend
           const data = await getAllProgramsForPatient(selectedPatient.id);
           setProgramsData(data);
         } catch (err) {
           setError('Não foi possível carregar os programas. Verifique a conexão ou tente novamente.');
-          setProgramsData({}); // Limpa os dados em caso de erro
+          setProgramsData({});
         } finally {
           setIsLoading(false);
         }
       };
       fetchPrograms();
     } else {
-      // Se nenhum paciente estiver selecionado, limpa os dados.
       setProgramsData({});
     }
-  }, [selectedPatient]); // Dependência: re-executa quando selectedPatient muda
+  }, [selectedPatient, areaName]); // Dependências: executa quando o paciente ou a área muda
 
-  // Lógica de filtragem e exibição
-  const programsInArea = activeArea === 'Todos' 
-    ? Object.values(programsData).flat() // Se "Todos", junta os programas de todas as áreas
-    : programsData[activeArea] || []; // Senão, pega os programas da área ativa
+  // Lógica de filtragem e exibição simplificada
+  const programsForCurrentArea = programsData[areaName] || [];
 
-  let programsToShow = [];
-  if (searchTerm) {
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    programsToShow = programsInArea.filter(p => 
-        p.name.toLowerCase().includes(lowerCaseSearchTerm)
-    );
-  } else {
-    programsToShow = programsInArea;
-  }
+  const programsToShow = searchTerm
+    ? programsForCurrentArea.filter(p => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : programsForCurrentArea;
 
   // Função para lidar com a atribuição de um programa
   const handleAssign = async (programId) => {
@@ -67,15 +58,12 @@ const ProgramsPage = () => {
     try {
       await assignProgram(programId, selectedPatient.id);
       
-      // Atualização otimista: atualiza a UI sem precisar de um novo fetch
       setProgramsData(currentData => {
         const newData = { ...currentData };
-        for (const area in newData) {
-          const programIndex = newData[area].findIndex(p => p.id === programId);
+        if (newData[areaName]) {
+          const programIndex = newData[areaName].findIndex(p => p.id === programId);
           if (programIndex !== -1) {
-            // Cria um novo objeto de programa para garantir a re-renderização
-            newData[area][programIndex] = { ...newData[area][programIndex], is_assigned: true };
-            break;
+            newData[areaName][programIndex] = { ...newData[areaName][programIndex], is_assigned: true };
           }
         }
         return newData;
@@ -83,7 +71,6 @@ const ProgramsPage = () => {
 
     } catch (error) {
       console.error("Falha ao atribuir programa:", error);
-      // Opcional: Adicionar um toast/notificação de erro para o usuário
     } finally {
       setAssigningId(null);
     }
@@ -104,7 +91,7 @@ const ProgramsPage = () => {
   return (
     <div>
       <h1 className="text-2xl font-semibold text-gray-800 mb-6">
-        Biblioteca de Programas: {activeArea}
+        Biblioteca de Programas: {areaName}
       </h1>
       
       {/* Mensagens para o usuário */}

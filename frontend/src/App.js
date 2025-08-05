@@ -55,8 +55,8 @@ function App() {
                     } 
                   />
 
-                  {/* Rotas partilhadas */}
-                  <Route path="programs" element={<ProgramsPage />} />
+                  {/* Rota de programas atualizada para aceitar um parâmetro de área */}
+                  <Route path="programs/:areaName" element={<ProgramsPage />} />
                   <Route path="notes" element={<NotesPage />} />
                   <Route path="dashboard" element={<DashboardPage />} />
                   

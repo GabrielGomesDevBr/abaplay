@@ -138,16 +138,15 @@ export const generateProgramGradePDF = (patient, allProgramsData) => {
     doc.save(filename);
 };
 
-export const generateWeeklyRecordSheetPDF = (patient, getProgramById, allProgramsData) => {
+export const generateWeeklyRecordSheetPDF = (patient, allProgramsData) => {
     if (!patient) {
         alert("Nenhum cliente selecionado.");
         return;
     }
     
+    // CORREÇÃO: Usa os dados diretamente do paciente, sem chamar getProgramById.
     const activeAssignedPrograms = (patient.assigned_programs || [])
-        .filter(p => p.status === 'active')
-        .map(p => getProgramById(p.id))
-        .filter(Boolean);
+        .filter(p => p.status === 'active');
 
     if (activeAssignedPrograms.length === 0) {
         alert("Nenhum programa ativo para gerar a Folha de Registro.");
@@ -206,7 +205,7 @@ export const generateWeeklyRecordSheetPDF = (patient, getProgramById, allProgram
     doc.save(filename);
 };
 
-export const generateConsolidatedReportPDF = (patient, reportText, getProgramById) => {
+export const generateConsolidatedReportPDF = (patient, reportText) => {
      if (!patient) {
         alert("Nenhum cliente selecionado.");
         return;
@@ -281,10 +280,9 @@ export const generateConsolidatedReportPDF = (patient, reportText, getProgramByI
     doc.text('Progresso dos Programas Ativos', margin, y);
     y += 8;
 
+    // CORREÇÃO: Usa os dados diretamente do paciente, sem chamar getProgramById.
     const activeAssignedPrograms = (patient.assigned_programs || [])
-      .filter(p => p.status === 'active')
-      .map(p => getProgramById(p.id))
-      .filter(Boolean);
+      .filter(p => p.status === 'active');
     
     const chartPromises = activeAssignedPrograms.map(program => {
         const programSessionData = (patient.sessionData || [])
