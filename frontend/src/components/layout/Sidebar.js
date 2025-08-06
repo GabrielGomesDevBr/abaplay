@@ -13,13 +13,14 @@ const Sidebar = () => {
     selectPatient(patient);
   };
 
-  // A função handleNewPatient e o ícone faUserPlus foram removidos por não serem mais utilizados.
-
   const filteredPatients = useMemo(() => {
+    // --- CORREÇÃO ---
+    // Garante que 'patients' seja tratado como um array vazio se for undefined.
+    const patientList = patients || [];
     if (!searchTerm) {
-      return patients;
+      return patientList;
     }
-    return patients.filter(patient =>
+    return patientList.filter(patient =>
       patient.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [patients, searchTerm]);
@@ -33,10 +34,14 @@ const Sidebar = () => {
   }
 
   const renderPatientCount = () => {
+      // --- CORREÇÃO ---
+      // Garante que 'patients' seja um array antes de acessar '.length'.
+      const patientCount = patients ? patients.length : 0;
+
       if (user?.is_admin) {
           return (
             <p className="text-xs text-gray-500">
-                <span className="font-bold">{patients.length}</span> 
+                <span className="font-bold">{patientCount}</span> 
                 / <span className="font-bold">{user?.max_patients || 0}</span> em uso
             </p>
           );
@@ -44,7 +49,7 @@ const Sidebar = () => {
       if (user?.role === 'terapeuta') {
           return (
             <p className="text-xs text-gray-500">
-                <span className="font-bold">{patients.length}</span> cliente(s) atribuído(s)
+                <span className="font-bold">{patientCount}</span> cliente(s) atribuído(s)
             </p>
           );
       }
@@ -71,7 +76,7 @@ const Sidebar = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {filteredPatients.length > 0 ? (
+        {filteredPatients && filteredPatients.length > 0 ? (
           <ul className="py-2">
             {filteredPatients.map((patient) => (
               <li key={patient.id}>
@@ -95,10 +100,6 @@ const Sidebar = () => {
           </div>
         )}
       </div>
-
-      {/* <<< ALTERAÇÃO APLICADA AQUI >>> 
-        O bloco de código que renderizava o botão "Adicionar Paciente" no rodapé para administradores foi completamente removido.
-      */}
     </div>
   );
 };

@@ -1,7 +1,5 @@
-// frontend/src/context/PatientContext.js
-
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { useAuth } from './AuthContext'; // CORRIGIDO: Caminho de importação ajustado
+import { useAuth } from './AuthContext';
 import { fetchAllAdminPatients } from '../api/adminApi';
 import { fetchParentDashboardData } from '../api/parentApi';
 import { 
@@ -18,7 +16,7 @@ const PatientContext = createContext(null);
 export const PatientProvider = ({ children }) => {
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Começa carregando
   const [error, setError] = useState('');
   const { user, isAuthenticated, token } = useAuth();
 
@@ -27,152 +25,69 @@ export const PatientProvider = ({ children }) => {
   const [patientToEdit, setPatientToEdit] = useState(null);
   const [programForProgress, setProgramForProgress] = useState(null);
 
-  // loadDataForRole agora aceita um ID para re-seleção como argumento
-  // Removido selectedPatient e patients das dependências do useCallback para evitar loops
-  const loadDataForRole = useCallback(async (initialSelectedPatientId = null) => {
-    console.log("[PatientContext] Iniciando loadDataForRole...");
-    if (!isAuthenticated || !token || !user) {
-      console.log("[PatientContext] Não autenticado ou sem utilizador. Resetando estados.");
-      // Apenas reseta selectedPatient se já havia algo selecionado para evitar re-render desnecessário
-      if (selectedPatient !== null) setSelectedPatient(null); // Aqui 'selectedPatient' vem do closure
+  // Função para recarregar os dados. Agora só depende de 'user' e 'token'.
+  const refreshData = useCallback(async (patientIdToReselect = null) => {
+    if (!isAuthenticated || !user || !token) {
       setPatients([]);
-      setIsLoading(false); 
+      setSelectedPatient(null);
+      setIsLoading(false);
       return;
     }
-    
+
     setIsLoading(true);
-    setError(null);
-
-    console.log(`[PatientContext] ID do paciente para tentativa de re-seleção: ${initialSelectedPatientId}`);
-
+    setError('');
     try {
       let patientData = [];
-      let autoSelectPatient = null;
-
       if (user.is_admin) {
-        console.log("Contexto: A carregar dados para ADMIN.");
         patientData = await fetchAllAdminPatients(token);
       } else if (user.role === 'terapeuta') {
-        console.log("Contexto: A carregar dados para TERAPEUTA.");
-        const response = await fetchAllPatients(token);
-        
-        if (Array.isArray(response)) {
-            patientData = response;
-        } else if (response && Array.isArray(response.patients)) {
-            patientData = response.patients;
-        } else {
-            patientData = [];
-        }
-
+        patientData = await fetchAllPatients(token);
       } else if (user.role === 'pai') {
-        console.log("Contexto: A carregar dados para PAI.");
         const parentData = await fetchParentDashboardData(token);
         patientData = parentData.patient ? [parentData.patient] : [];
-        autoSelectPatient = parentData.patient || null;
-      }
-
-      console.log(`[PatientContext] Dados de pacientes carregados. Total: ${patientData.length}`);
-      
-      // Otimização: Atualiza 'patients' apenas se houver uma mudança real
-      // Comparações de objetos complexos com JSON.stringify podem ser custosas em grandes datasets.
-      // Para a maioria dos casos, comparar o comprimento e o ID do primeiro/último paciente pode ser suficiente
-      // ou aceitar que `setPatients` pode re-renderizar, mas a seleção é preservada.
-      // Vamos manter a comparação completa por enquanto, mas estar ciente.
-      if (JSON.stringify(patients) !== JSON.stringify(patientData)) { // 'patients' aqui vem do closure
-        setPatients(patientData || []);
-        console.log("[PatientContext] Lista de pacientes atualizada.");
-      } else {
-        console.log("[PatientContext] Lista de pacientes inalterada. Evitando re-render de 'patients'.");
-      }
-
-      // Lógica para re-selecionar o paciente após o carregamento
-      let newSelectedPatient = null;
-      if (user.role === 'pai' && autoSelectPatient) {
-        newSelectedPatient = autoSelectPatient;
-        console.log(`[PatientContext] Modo Pai: Paciente ${autoSelectPatient.id} selecionado automaticamente.`);
-      } else if (initialSelectedPatientId) { // Usa o ID passado como argumento
-        const reSelected = patientData.find(p => p.id === initialSelectedPatientId);
-        if (reSelected) {
-          newSelectedPatient = reSelected;
-          console.log(`[PatientContext] Paciente ID ${initialSelectedPatientId} re-selecionado. Conteúdo:`, newSelectedPatient);
-        } else {
-          console.log(`[PatientContext] Paciente ID ${initialSelectedPatientId} NÃO encontrado na nova lista. Seleção limpa.`);
+        if (parentData.patient) {
+          setSelectedPatient(parentData.patient);
         }
-      } else {
-        console.log(`[PatientContext] Nenhum paciente estava selecionado para re-seleção ou role diferente. Seleção limpa.`);
       }
+      setPatients(patientData);
 
-      // Apenas atualiza selectedPatient se o objeto de referência ou o ID realmente mudar
-      // 'selectedPatient' aqui também vem do closure
-      if (selectedPatient?.id !== newSelectedPatient?.id || selectedPatient !== newSelectedPatient) {
-          setSelectedPatient(newSelectedPatient);
-          console.log(`[PatientContext] selectedPatient atualizado (nova referência ou ID diferente). Novo selectedPatient:`, newSelectedPatient);
-      } else {
-          console.log(`[PatientContext] selectedPatient inalterado (mesma referência ou ID). Evitando re-render. Current selectedPatient:`, selectedPatient);
+      if (patientIdToReselect) {
+        const reSelected = patientData.find(p => p.id === patientIdToReselect);
+        setSelectedPatient(reSelected || null);
+      } else if (user.role !== 'pai') {
+        // Limpa a seleção se nenhum ID for passado e não for um pai (que tem auto-seleção)
+        setSelectedPatient(null);
       }
 
     } catch (err) {
-      console.error(`[PatientContext] Erro ao carregar dados para o papel '${user?.role}':`, err);
-      setError(err.message);
+      console.error(`[PatientContext] Erro ao carregar dados:`, err);
+      setError(err.message || 'Falha ao carregar dados.');
       setPatients([]);
       setSelectedPatient(null);
     } finally {
       setIsLoading(false);
-      console.log("[PatientContext] loadDataForRole finalizado.");
     }
-  }, [isAuthenticated, token, user]); // Dependências do useCallback: apenas o que REALMENTE faz a função mudar
+  // --- CORREÇÃO PRINCIPAL ---
+  // Removido 'patients' e 'selectedPatient' da lista de dependências para quebrar o loop infinito.
+  }, [isAuthenticated, user, token]);
 
-  // UseEffect que chama loadDataForRole na montagem ou quando dependências REALMENTE mudam
+  // Efeito que carrega os dados apenas quando o usuário muda.
   useEffect(() => {
-    // Na montagem inicial, não há patientId para re-selecionar, então passa null
-    loadDataForRole(null); 
-  }, [loadDataForRole]); 
+    refreshData();
+  }, [refreshData]); // Depende da função 'refreshData' que agora é estável.
 
-  // --- Funções e estados que o contexto fornece ---
-  
   const selectPatient = useCallback((patient) => {
-    setSelectedPatient(currentSelected => {
-        if (currentSelected?.id !== patient?.id) {
-            console.log(`[PatientContext] Paciente selecionado via selectPatient: ${patient?.id}`);
-            setProgramForProgress(null); 
-            return patient;
-        }
-        console.log(`[PatientContext] Tentativa de selecionar o mesmo paciente (ID: ${patient?.id}). Nenhuma mudança.`);
-        return currentSelected;
-    });
-  }, []); // <-- REMOVIDA A DEPENDÊNCIA [selectedPatient]
-
-
-  // Outras funções de callback para evitar re-renders desnecessários
-  const openPatientForm = useCallback((patient = null) => {
-    setPatientToEdit(patient);
-    setIsPatientFormOpen(true);
+    setSelectedPatient(patient);
+    setProgramForProgress(null);
   }, []);
 
-  const closePatientForm = useCallback(() => {
-    setPatientToEdit(null);
-    setIsPatientFormOpen(false);
-  }, []);
-  
-  const openReportModal = useCallback(() => setIsReportModalOpen(true), []);
-  const closeReportModal = useCallback(() => setIsReportModalOpen(false), []);
-  
-  const selectProgramForProgress = useCallback((program) => {
-    setProgramForProgress(program);
-  }, []);
-
-  const performActionAndReload = useCallback(async (action) => {
-    if (!token || !selectedPatient) { // 'selectedPatient' aqui é o closure, valor atual
-        console.error("[PatientContext] Erro: Tentativa de performActionAndReload sem token ou paciente selecionado.");
-        throw new Error("Nenhum paciente selecionado");
-    }
-    console.log(`[PatientContext] Executando ação e recarregando para paciente ID: ${selectedPatient.id}`);
-    // Executa a ação
+  // Ações que modificam dados e depois disparam um recarregamento.
+  const performActionAndReload = async (action) => {
+    if (!selectedPatient) throw new Error("Nenhum cliente selecionado.");
+    const patientId = selectedPatient.id;
     await action();
-    // Passa o ID do paciente atualmente selecionado para loadDataForRole
-    await loadDataForRole(selectedPatient.id); 
-  }, [token, selectedPatient, loadDataForRole]); // Dependências: token, selectedPatient para acessar o ID, loadDataForRole para chamar
-
+    await refreshData(patientId); // Recarrega e re-seleciona o paciente atual
+  };
 
   const assignProgram = (programId) => performActionAndReload(() => assignProgramToPatient(selectedPatient.id, programId, token));
   const removeProgram = (programId) => {
@@ -186,27 +101,20 @@ export const PatientProvider = ({ children }) => {
   };
   const addSession = (sessionData) => performActionAndReload(() => createSession(selectedPatient.id, sessionData, token));
   const saveNotes = (notes) => performActionAndReload(() => updatePatientNotes(selectedPatient.id, notes, token));
-  
+
   const value = {
-    patients, 
-    selectedPatient, 
-    isLoading, 
-    error,
-    selectPatient, 
-    isPatientFormOpen,
-    patientToEdit,
-    openPatientForm, 
-    closePatientForm, 
-    programForProgress, 
-    selectProgramForProgress, 
-    addSession,
-    saveNotes, 
-    isReportModalOpen, 
-    openReportModal, 
-    closeReportModal,
-    assignProgram,
-    removeProgram,
-    toggleProgramStatus
+    patients, selectedPatient, isLoading, error,
+    selectPatient,
+    isPatientFormOpen, patientToEdit,
+    openPatientForm: useCallback((patient = null) => { setPatientToEdit(patient); setIsPatientFormOpen(true); }, []),
+    closePatientForm: useCallback(() => { setPatientToEdit(null); setIsPatientFormOpen(false); }, []),
+    programForProgress,
+    selectProgramForProgress: useCallback((program) => setProgramForProgress(program), []),
+    isReportModalOpen,
+    openReportModal: useCallback(() => setIsReportModalOpen(true), []),
+    closeReportModal: useCallback(() => setIsReportModalOpen(false), []),
+    assignProgram, removeProgram, toggleProgramStatus, addSession, saveNotes,
+    refreshPatientData: refreshData
   };
 
   return (

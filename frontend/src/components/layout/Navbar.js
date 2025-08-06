@@ -2,17 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePatients } from '../../context/PatientContext';
-import { getProgramAreas } from '../../api/programApi'; 
-import { usePrograms } from '../../context/ProgramContext'; // Importa o novo hook
+// CORREÇÃO: Importa o hook usePrograms, mas não mais a função getProgramAreas
+import { usePrograms } from '../../context/ProgramContext'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import NotificationBadge from '../notifications/NotificationBadge';
 import NotificationPanel from '../notifications/NotificationPanel';
-import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faChartLine, faPuzzlePiece, faChild, faGraduationCap, faMusic, faCommentDots, faUserShield } from '@fortawesome/free-solid-svg-icons'; // Remove faChevronDown
+import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faChartLine, faPuzzlePiece, faChild, faGraduationCap, faMusic, faCommentDots, faUserShield } from '@fortawesome/free-solid-svg-icons';
 
 const Navbar = ({ toggleSidebar }) => {
   const { user, logout } = useAuth();
   const { selectedPatient } = usePatients();
-  const { areas } = usePrograms(); // Usa o contexto para obter as áreas
+  // CORREÇÃO: Pega 'disciplines' do contexto, em vez de 'areas'.
+  const { disciplines } = usePrograms(); 
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isNotificationPanelOpen, setNotificationPanelOpen] = useState(false);
   const menuRef = useRef(null);
@@ -63,7 +64,6 @@ const Navbar = ({ toggleSidebar }) => {
     const mobileClasses = "px-4 py-3 rounded-lg text-base";
     const desktopClasses = "px-3 py-2 rounded-md text-sm";
     
-    // A função getLinkClass agora verifica se o início do pathname corresponde para as rotas de programas
     const getLinkClass = (path, isProgramLink = false) => {
       const isActive = isProgramLink 
         ? location.pathname.startsWith(path)
@@ -72,6 +72,7 @@ const Navbar = ({ toggleSidebar }) => {
       return `${baseClasses} ${isMobile ? mobileClasses : desktopClasses} ${isActive ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-indigo-600'}`;
     };
     
+    // CORREÇÃO: O nome do objeto de ícones foi mantido, mas agora ele mapeia as disciplinas.
     const areaIcons = {
         'Psicologia': faFolderOpen,
         'Terapia Ocupacional': faPuzzlePiece,
@@ -104,16 +105,17 @@ const Navbar = ({ toggleSidebar }) => {
           </NavLink>
         )}
 
-        {/* Renderiza os links de programas dinamicamente */}
-        {areas.map(area => (
+        {/* CORREÇÃO: Mapeia sobre 'disciplines' em vez de 'areas'. */}
+        {/* Adicionada uma verificação para garantir que 'disciplines' não é undefined. */}
+        {disciplines && disciplines.map(discipline => (
           <NavLink
-            key={area}
-            to={`/programs/${encodeURIComponent(area)}`}
-            className={() => getLinkClass(`/programs/${encodeURIComponent(area)}`, true)}
+            key={discipline.id} // Usa o ID da disciplina como chave
+            to={`/programs/${encodeURIComponent(discipline.name)}`}
+            className={() => getLinkClass(`/programs/${encodeURIComponent(discipline.name)}`, true)}
             onClick={onLinkClick}
           >
-            <FontAwesomeIcon icon={areaIcons[area] || faPuzzlePiece} className="fa-fw mr-2" />
-            {area}
+            <FontAwesomeIcon icon={areaIcons[discipline.name] || faPuzzlePiece} className="fa-fw mr-2" />
+            {discipline.name}
           </NavLink>
         ))}
 

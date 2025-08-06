@@ -1,43 +1,49 @@
-// frontend/src/context/ProgramContext.js
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { getProgramAreas } from '../api/programApi';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+// CORREÇÃO: Importa a nova função 'getAllPrograms'
+import { getAllPrograms } from '../api/programApi';
 import { useAuth } from './AuthContext';
 
 const ProgramContext = createContext();
 
 export const ProgramProvider = ({ children }) => {
-  const [areas, setAreas] = useState([]);
+  // CORREÇÃO: O estado agora armazena 'disciplines', não mais 'areas'.
+  const [disciplines, setDisciplines] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const { isAuthenticated } = useAuth();
 
+  // A função de busca foi renomeada para maior clareza.
+  const fetchDisciplinesAndPrograms = useCallback(async () => {
+    if (!isAuthenticated) {
+      setDisciplines([]); // Limpa os dados se o usuário deslogar.
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      // CORREÇÃO: Chama a função correta da API.
+      const fetchedData = await getAllPrograms();
+      // Armazena a estrutura completa (que começa com disciplinas) no estado.
+      setDisciplines(fetchedData || []);
+    } catch (err) {
+      setError('Não foi possível carregar os programas.');
+      console.error("Erro em ProgramContext ao buscar dados:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated]);
+
   useEffect(() => {
-    const fetchAreas = async () => {
-      if (!isAuthenticated) {
-        setAreas([]); // Limpa as áreas se o usuário não estiver autenticado
-        return;
-      }
-      
-      setIsLoading(true);
-      setError(null);
-      try {
-        const fetchedAreas = await getProgramAreas();
-        setAreas(fetchedAreas);
-      } catch (err) {
-        setError('Não foi possível carregar as áreas de programa.');
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    fetchDisciplinesAndPrograms();
+  }, [fetchDisciplinesAndPrograms]);
 
-    fetchAreas();
-  }, [isAuthenticated]); // Recarrega as áreas quando o status de autenticação muda
-
+  // CORREÇÃO: Fornece 'disciplines' para os componentes filhos.
   const value = {
-    areas,
+    disciplines,
     isLoading,
     error,
+    refreshPrograms: fetchDisciplinesAndPrograms // Fornece uma função para recarregar os dados
   };
 
   return (
@@ -47,6 +53,7 @@ export const ProgramProvider = ({ children }) => {
   );
 };
 
+// O hook customizado agora retorna o contexto com os dados corretos.
 export const usePrograms = () => {
   const context = useContext(ProgramContext);
   if (context === null) {
