@@ -77,6 +77,7 @@ const PatientModel = {
     return getFullPatientData(patientId);
   },
   async findAllByTherapistId(therapistId) {
+    console.log(`[MODEL-LOG] findAllByTherapistId: Buscando pacientes para terapeuta ${therapistId}`);
     const query = `
       SELECT p.id
       FROM patients p
@@ -85,11 +86,18 @@ const PatientModel = {
       ORDER BY p.name ASC
     `;
     const result = await pool.query(query, [therapistId]);
+    console.log(`[MODEL-LOG] findAllByTherapistId: Query retornou ${result.rows.length} registros`);
+    
     if (result.rows.length === 0) {
+        console.log('[MODEL-LOG] findAllByTherapistId: Nenhum paciente encontrado');
         return [];
     }
+    
+    console.log('[MODEL-LOG] findAllByTherapistId: Carregando dados completos dos pacientes');
     const patientPromises = result.rows.map(row => getFullPatientData(row.id));
-    return Promise.all(patientPromises);
+    const patients = await Promise.all(patientPromises);
+    console.log(`[MODEL-LOG] findAllByTherapistId: ${patients.length} pacientes carregados com sucesso`);
+    return patients;
   },
   async findAllByClinicId(clinicId) {
     const query = `SELECT id FROM patients WHERE clinic_id = $1 ORDER BY name ASC`;

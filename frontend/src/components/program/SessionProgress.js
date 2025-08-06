@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faSpinner, faCheck, faBullseye, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faSpinner, faCheck, faBullseye } from '@fortawesome/free-solid-svg-icons';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -74,12 +74,17 @@ const SessionProgress = ({ program, assignment }) => {
   }, [assignment]);
 
   useEffect(() => {
+    if (!program || !assignment) {
+      console.log('[SESSION-PROGRESS-LOG] Programa ou assignment não fornecidos');
+      return;
+    }
+    
     fetchEvolutionHistory();
     // Define o primeiro passo como selecionado por defeito
     if (program?.steps?.length > 0) {
       setSelectedStepId(program.steps[0].step_id);
     }
-  }, [program, fetchEvolutionHistory]);
+  }, [program, assignment, fetchEvolutionHistory]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -148,6 +153,16 @@ const SessionProgress = ({ program, assignment }) => {
   
   const chartOptions = { /* ... (as suas excelentes opções de gráfico são mantidas aqui) ... */ };
 
+  // Renderização defensiva
+  if (!program && !assignment) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center text-gray-500 p-10 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+        <p className="text-lg font-medium text-gray-600">Selecione um programa</p>
+        <p className="mt-1 text-sm">Escolha um programa da lista para registrar progressão.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm">
@@ -155,7 +170,7 @@ const SessionProgress = ({ program, assignment }) => {
             <FontAwesomeIcon icon={faBullseye} className="mr-2" />
             Objetivo do Programa
         </h5>
-        <p className="text-blue-700 leading-relaxed">{program.objective}</p>
+        <p className="text-blue-700 leading-relaxed">{program?.objective || 'Nenhum programa selecionado'}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 mb-6 pb-6 border-b border-gray-200">
@@ -168,11 +183,11 @@ const SessionProgress = ({ program, assignment }) => {
                   <label htmlFor="program-step" className="block text-sm font-medium text-gray-700 mb-1.5">Passo do Programa</label>
                   <select id="program-step" value={selectedStepId} onChange={e => setSelectedStepId(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500">
                       <option value="" disabled>Selecione um passo</option>
-                      {program.steps?.map(step => (
+                      {program?.steps?.map(step => (
                           <option key={step.step_id} value={step.step_id}>
                               Passo {step.step_number}: {step.step_name}
                           </option>
-                      ))}
+                      )) || <option disabled>Nenhum passo disponível</option>}
                   </select>
               </div>
           </div>

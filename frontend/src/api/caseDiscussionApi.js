@@ -5,20 +5,39 @@ const CASE_DISCUSSION_API_URL = `${API_URL}/api/case-discussions`;
 
 export const getCaseDiscussionMessages = async (patientId) => {
   try {
-    const response = await axios.get(CASE_DISCUSSION_API_URL, { params: { patientId } });
+    console.log(`[CASE-DISCUSSION-LOG] getCaseDiscussionMessages: Buscando mensagens para paciente ${patientId}`);
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${CASE_DISCUSSION_API_URL}/patient/${patientId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    });
+    console.log(`[CASE-DISCUSSION-LOG] getCaseDiscussionMessages: ${response.data.length} mensagens carregadas`);
     return response.data;
   } catch (error) {
-    console.error('Erro ao buscar mensagens da discussão de caso:', error);
+    console.error('[CASE-DISCUSSION-LOG] getCaseDiscussionMessages: Erro -', error.response?.data || error.message);
     throw error;
   }
 };
 
-export const postCaseDiscussionMessage = async (message, userId, patientId) => {
+export const postCaseDiscussionMessage = async (patientId, content) => {
   try {
-    const response = await axios.post(CASE_DISCUSSION_API_URL, { message, userId, patientId });
+    console.log(`[CASE-DISCUSSION-LOG] postCaseDiscussionMessage: Enviando mensagem para paciente ${patientId}`);
+    const token = localStorage.getItem('token');
+    const response = await axios.post(`${CASE_DISCUSSION_API_URL}/patient/${patientId}`, 
+      { content },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+    console.log('[CASE-DISCUSSION-LOG] postCaseDiscussionMessage: Mensagem enviada com sucesso');
     return response.data;
   } catch (error) {
-    console.error('Erro ao postar mensagem na discussão de caso:', error);
+    console.error('[CASE-DISCUSSION-LOG] postCaseDiscussionMessage: Erro -', error.response?.data || error.message);
     throw error;
   }
 };

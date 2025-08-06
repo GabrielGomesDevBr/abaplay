@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { getChatMessages, postChatMessage } from '../../api/parentChatApi';
 import { useAuth } from '../../context/AuthContext';
+import { SOCKET_URL } from '../../config';
 import './ParentTherapistChat.css';
-
-import config from "../../config";
 
 
 

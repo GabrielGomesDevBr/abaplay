@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell } from '@fortawesome/free-solid-svg-icons';
 import { getNotifications } from '../../api/notificationApi';
@@ -39,7 +39,7 @@ const NotificationBadge = React.forwardRef(({ className = '' }, ref) => {
         window.removeEventListener('messageSentOrReceived', fetchTotalUnread);
       };
     }
-  }, [user]); // <<< CORREÇÃO: Adiciona 'user' como dependência do useEffect
+  }, [user, fetchTotalUnread]); // <<< CORREÇÃO: Adiciona 'user' e 'fetchTotalUnread' como dependência do useEffect
 
   // Função para atualizar o contador externamente
   const updateCount = () => {

@@ -20,6 +20,9 @@ router.get('/assignment/:assignmentId', authMiddleware.verifyToken, programContr
 // Rota para designar um programa a um paciente
 router.post('/assign', authMiddleware.verifyToken, programController.assignProgramToPatient);
 
+// Rota para remover um programa de um paciente
+router.delete('/assign/:patientId/:programId', authMiddleware.verifyToken, programController.removeProgramFromPatient);
+
 // Rota para buscar programas designados de um paciente
 router.get('/assigned/:patientId', authMiddleware.verifyToken, programController.getAssignedProgramsForPatient);
 

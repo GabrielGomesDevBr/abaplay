@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { getCaseDiscussionMessages, postCaseDiscussionMessage } from '../../api/caseDiscussionApi';
 import { useAuth } from '../../context/AuthContext';
+import { SOCKET_URL } from '../../config';
 import './ParentTherapistChat.css'; // Reutilizando o mesmo CSS!
 
 

@@ -32,17 +32,20 @@ const checkAccess = async (req) => {
 // Busca todos os pacientes para o terapeuta logado
 exports.getAllPatients = async (req, res, next) => {
     try {
-        const { id: userId, is_admin } = req.user;
+        const { id: userId, is_admin, role } = req.user;
+        console.log(`[BACKEND-LOG] getAllPatients: Iniciando busca - userId: ${userId}, role: ${role}, is_admin: ${is_admin}`);
 
         if (is_admin) {
-             // Admins devem usar a rota de admin
+             console.log('[BACKEND-LOG] getAllPatients: Admin detectado, retornando array vazio (deve usar rota admin)');
              return res.status(200).json([]);
         }
 
+        console.log(`[BACKEND-LOG] getAllPatients: Buscando pacientes para terapeuta ${userId}`);
         const patients = await PatientModel.findAllByTherapistId(userId);
+        console.log(`[BACKEND-LOG] getAllPatients: ${patients.length} pacientes encontrados`);
         res.status(200).json(patients);
     } catch (error) {
-        console.error('[ERRO] patientController: Erro em getAllPatients:', error);
+        console.error('[BACKEND-LOG] getAllPatients: ERRO -', error);
         next(error);
     }
 };

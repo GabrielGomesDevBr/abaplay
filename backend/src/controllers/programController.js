@@ -68,13 +68,41 @@ exports.assignProgramToPatient = async (req, res) => {
     const { patientId, programId } = req.body;
     const therapistId = req.user.id;
     try {
+        console.log(`[PROGRAM-CONTROLLER-LOG] assignProgramToPatient: Atribuindo programa ${programId} ao paciente ${patientId}`);
         const query = `INSERT INTO patient_program_assignments (patient_id, program_id, therapist_id) VALUES ($1, $2, $3) RETURNING *;`;
         const { rows } = await db.query(query, [patientId, programId, therapistId]);
+        console.log('[PROGRAM-CONTROLLER-LOG] assignProgramToPatient: Programa atribuído com sucesso');
         res.status(201).json(rows[0]);
     } catch (error) {
-        console.error('Erro ao designar programa:', error);
+        console.error('[PROGRAM-CONTROLLER-LOG] assignProgramToPatient: Erro -', error);
         if (error.code === '23505') { return res.status(409).send('Este programa já foi designado a este paciente.'); }
         res.status(500).send('Erro interno ao designar programa.');
+    }
+};
+
+exports.removeProgramFromPatient = async (req, res) => {
+    const { patientId, programId } = req.params;
+    const therapistId = req.user.id;
+    try {
+        console.log(`[PROGRAM-CONTROLLER-LOG] removeProgramFromPatient: Removendo programa ${programId} do paciente ${patientId}`);
+        
+        // Verifica se existe uma atribuição
+        const checkQuery = `SELECT id FROM patient_program_assignments WHERE patient_id = $1 AND program_id = $2`;
+        const checkResult = await db.query(checkQuery, [patientId, programId]);
+        
+        if (checkResult.rows.length === 0) {
+            return res.status(404).send('Programa não encontrado para este paciente.');
+        }
+        
+        // Remove a atribuição
+        const deleteQuery = `DELETE FROM patient_program_assignments WHERE patient_id = $1 AND program_id = $2 RETURNING *`;
+        const { rows } = await db.query(deleteQuery, [patientId, programId]);
+        
+        console.log('[PROGRAM-CONTROLLER-LOG] removeProgramFromPatient: Programa removido com sucesso');
+        res.status(200).json({ message: 'Programa removido com sucesso', assignment: rows[0] });
+    } catch (error) {
+        console.error('[PROGRAM-CONTROLLER-LOG] removeProgramFromPatient: Erro -', error);
+        res.status(500).send('Erro interno ao remover programa.');
     }
 };
 

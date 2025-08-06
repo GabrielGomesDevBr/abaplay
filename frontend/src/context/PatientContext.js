@@ -27,7 +27,11 @@ export const PatientProvider = ({ children }) => {
 
   // Função para recarregar os dados. Agora só depende de 'user' e 'token'.
   const refreshData = useCallback(async (patientIdToReselect = null) => {
+    console.log('[CONTEXT-LOG] refreshData: Iniciando carregamento de dados');
+    console.log('[CONTEXT-LOG] refreshData: user -', user?.name, '| role -', user?.role, '| isAuth -', isAuthenticated);
+    
     if (!isAuthenticated || !user || !token) {
+      console.log('[CONTEXT-LOG] refreshData: Usuário não autenticado, limpando dados');
       setPatients([]);
       setSelectedPatient(null);
       setIsLoading(false);
@@ -38,17 +42,24 @@ export const PatientProvider = ({ children }) => {
     setError('');
     try {
       let patientData = [];
+      
       if (user.is_admin) {
+        console.log('[CONTEXT-LOG] refreshData: Carregando dados para ADMIN');
         patientData = await fetchAllAdminPatients(token);
       } else if (user.role === 'terapeuta') {
+        console.log('[CONTEXT-LOG] refreshData: Carregando dados para TERAPEUTA');
         patientData = await fetchAllPatients(token);
       } else if (user.role === 'pai') {
+        console.log('[CONTEXT-LOG] refreshData: Carregando dados para PAI');
         const parentData = await fetchParentDashboardData(token);
         patientData = parentData.patient ? [parentData.patient] : [];
         if (parentData.patient) {
+          console.log('[CONTEXT-LOG] refreshData: Pai - paciente encontrado:', parentData.patient.name);
           setSelectedPatient(parentData.patient);
         }
       }
+      
+      console.log(`[CONTEXT-LOG] refreshData: ${patientData.length} pacientes carregados`);
       setPatients(patientData);
 
       if (patientIdToReselect) {
@@ -60,11 +71,13 @@ export const PatientProvider = ({ children }) => {
       }
 
     } catch (err) {
-      console.error(`[PatientContext] Erro ao carregar dados:`, err);
+      console.error(`[CONTEXT-LOG] refreshData: ERRO ao carregar dados:`, err);
+      console.error(`[CONTEXT-LOG] refreshData: ERRO detalhado:`, err.response?.data || err.message);
       setError(err.message || 'Falha ao carregar dados.');
       setPatients([]);
       setSelectedPatient(null);
     } finally {
+      console.log('[CONTEXT-LOG] refreshData: Finalizando carregamento');
       setIsLoading(false);
     }
   // --- CORREÇÃO PRINCIPAL ---

@@ -5,20 +5,39 @@ const NOTIFICATION_API_URL = `${API_URL}/api/notifications`;
 
 export const getNotifications = async (userId) => {
   try {
-    const response = await axios.get(`${NOTIFICATION_API_URL}/${userId}`);
+    console.log('[NOTIFICATION-LOG] getNotifications: Buscando para userId:', userId);
+    const token = localStorage.getItem('token');
+    const response = await axios.get(NOTIFICATION_API_URL, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    });
+    console.log('[NOTIFICATION-LOG] getNotifications: Sucesso');
     return response.data;
   } catch (error) {
-    console.error('Erro ao buscar notificações:', error);
+    console.error('[NOTIFICATION-LOG] getNotifications: Erro -', error.response?.data || error.message);
     throw error;
   }
 };
 
 export const markAsRead = async (notificationId) => {
   try {
-    const response = await axios.put(`${NOTIFICATION_API_URL}/${notificationId}/read`);
+    console.log('[NOTIFICATION-LOG] markAsRead: Marcando como lida:', notificationId);
+    const token = localStorage.getItem('token');
+    const response = await axios.post(`${NOTIFICATION_API_URL}/mark-read`, 
+      { notificationId },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+    console.log('[NOTIFICATION-LOG] markAsRead: Sucesso');
     return response.data;
   } catch (error) {
-    console.error('Erro ao marcar notificação como lida:', error);
+    console.error('[NOTIFICATION-LOG] markAsRead: Erro -', error.response?.data || error.message);
     throw error;
   }
 };
