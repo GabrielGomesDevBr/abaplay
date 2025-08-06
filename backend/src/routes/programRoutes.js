@@ -1,3 +1,5 @@
+// backend/src/routes/programRoutes.js
+
 const express = require('express');
 const router = express.Router();
 
@@ -5,16 +7,17 @@ const router = express.Router();
 const programController = require('../controllers/programController');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// CORREÇÃO: Usando 'authMiddleware.verifyToken' que é a função correta
-// exportada pelo seu middleware original.
-
-// Rota para buscar todos os programas
+// Rota para buscar todos os programas (estrutura aninhada)
 router.get('/', authMiddleware.verifyToken, programController.getAllPrograms);
 
+// Rota para buscar os detalhes de um programa específico.
+router.get('/:programId', authMiddleware.verifyToken, programController.getProgramDetails);
+
+// --- NOVA ROTA ADICIONADA ---
+// Rota para buscar os detalhes de uma designação específica
+router.get('/assignment/:assignmentId', authMiddleware.verifyToken, programController.getAssignmentDetails);
+
 // Rota para designar um programa a um paciente
-// CORREÇÃO: Removido 'isAdmin' pois não existe no seu middleware original.
-// A lógica de permissão, se necessária, deve estar dentro do controller ou ser
-// um novo middleware. Por agora, apenas a verificação do token é aplicada.
 router.post('/assign', authMiddleware.verifyToken, programController.assignProgramToPatient);
 
 // Rota para buscar programas designados de um paciente

@@ -1,0 +1,100 @@
+/* frontend/src/components/program/ProgramLibrary.css */
+
+.program-library {
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.program-library h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.discipline-details,
+.area-details {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
+.discipline-summary,
+.area-summary {
+  padding: 15px 20px;
+  font-weight: bold;
+  cursor: pointer;
+  list-style: none; /* Remove a seta padrão */
+  display: block;
+  position: relative;
+}
+
+.discipline-summary {
+  font-size: 1.2em;
+  background-color: #f0f4f8;
+  color: #1c3d5a;
+}
+
+.area-summary {
+  font-size: 1.1em;
+  background-color: #e8eff5;
+  color: #2c5d8a;
+}
+
+/* Adiciona um ícone de seta customizado */
+.discipline-summary::before,
+.area-summary::before {
+  content: '▶';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%) rotate(0deg);
+  transition: transform 0.2s;
+  font-size: 0.8em;
+}
+
+details[open] > summary::before {
+  transform: translateY(-50%) rotate(90deg);
+}
+
+.discipline-content,
+.area-content {
+  padding: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.sub-area-container {
+  margin-bottom: 20px;
+}
+
+.sub-area-header {
+  margin-bottom: 10px;
+  color: #444;
+  border-bottom: 2px solid #d1e3f3;
+  padding-bottom: 5px;
+}
+
+.programs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.loading-message, .error-message, .empty-message {
+    padding: 20px;
+    text-align: center;
+    font-size: 1.1em;
+    color: #555;
+}
+
+.error-message {
+    color: #d9534f;
+}
+
+.empty-message-small {
+  font-size: 0.9em;
+  color: #6b7280;
+  padding: 10px;
+  text-align: center;
+}

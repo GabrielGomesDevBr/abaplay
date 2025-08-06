@@ -15,8 +15,8 @@ import NotesPage from './pages/NotesPage';
 import DashboardPage from './pages/DashboardPage';
 import ParentDashboardPage from './pages/ParentDashboardPage';
 import AdminPage from './pages/AdminPage';
-// --- CORREÇÃO ---
-// A importação da CaseDiscussionPage antiga foi removida, pois não é mais utilizada.
+// --- NOVA IMPORTAÇÃO ---
+import ProgramSessionPage from './pages/ProgramSessionPage';
 
 
 // Componente de Guarda para Rotas de Admin
@@ -55,15 +55,17 @@ function App() {
                     } 
                   />
 
-                  {/* Rota de programas atualizada para aceitar um parâmetro de área */}
-                  <Route path="programs/:areaName" element={<ProgramsPage />} />
+                  {/* --- ROTA CORRIGIDA --- */}
+                  {/* A rota de programas não precisa mais do parâmetro, pois a página exibe a biblioteca completa. */}
+                  <Route path="programs" element={<ProgramsPage />} />
+
+                  {/* --- NOVA ROTA ADICIONADA --- */}
+                  {/* Rota para a página de execução da sessão de um programa. */}
+                  <Route path="session/:assignmentId" element={<ProgramSessionPage />} />
+
                   <Route path="notes" element={<NotesPage />} />
                   <Route path="dashboard" element={<DashboardPage />} />
                   
-                  {/* --- CORREÇÃO --- */}
-                  {/* A rota para a página de discussão antiga foi removida. */}
-                  {/* A funcionalidade agora é um componente dentro da PatientDetails. */}
-
                 </Route>
 
                 {/* Redireciona qualquer outra rota para a página inicial */}

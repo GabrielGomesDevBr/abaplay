@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom'; // --- NOVA IMPORTAÇÃO ---
 import { usePatients } from '../../context/PatientContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine, faEye, faEyeSlash, faTrashAlt, faSpinner, faArchive } from '@fortawesome/free-solid-svg-icons';
@@ -8,20 +9,20 @@ const AssignedProgramsList = () => {
     selectedPatient, 
     toggleProgramStatus, 
     removeProgram,
-    selectProgramForProgress, 
-    programForProgress,
     isLoading: patientIsLoading
+    // --- REMOÇÃO ---
+    // selectProgramForProgress e programForProgress não são mais necessários aqui.
   } = usePatients();
 
   const [togglingId, setTogglingId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
 
-  // As funções de manipulação (handle) permanecem as mesmas.
-  const handleToggleStatus = async (programId, currentStatus) => {
-    setTogglingId(programId);
+  const handleToggleStatus = async (assignmentId, currentStatus) => {
+    setTogglingId(assignmentId);
     try {
-      await toggleProgramStatus(programId, currentStatus);
+      // Assumindo que toggleProgramStatus espera o ID da designação
+      await toggleProgramStatus(assignmentId, currentStatus);
     } catch (error) {
       console.error("Falha ao mudar status do programa:", error);
     } finally {
@@ -29,26 +30,20 @@ const AssignedProgramsList = () => {
     }
   };
 
-  const handleRemove = async (programId) => {
-    setRemovingId(programId);
+  const handleRemove = async (assignmentId) => {
+    setRemovingId(assignmentId);
     try {
-        await removeProgram(programId);
+        // Assumindo que removeProgram espera o ID da designação
+        await removeProgram(assignmentId);
     } catch(error) {
         console.error("Falha ao remover programa:", error);
     } finally {
         setRemovingId(null);
     }
-  }
-
-  const handleSelectForProgress = (program) => {
-    if (program.status !== 'archived') {
-        selectProgramForProgress(program);
-    } else {
-        console.warn("Tentativa de selecionar programa arquivado para progresso.");
-    }
   };
 
   const assignedPrograms = useMemo(() => {
+    // A API retorna `assignment_id` e `program_name`. Vamos garantir que o componente use os nomes corretos.
     return selectedPatient?.assigned_programs || [];
   }, [selectedPatient]);
 
@@ -58,11 +53,9 @@ const AssignedProgramsList = () => {
       : assignedPrograms.filter(p => p.status !== 'archived');
   }, [assignedPrograms, showArchived]);
 
-  // --- CORREÇÃO PRINCIPAL (AGRUPAMENTO) ---
-  // A lógica agora agrupa os programas pelo novo campo 'discipline'.
   const groupedPrograms = useMemo(() => {
     return programsToShow.reduce((acc, program) => {
-      const discipline = program.discipline || 'Outros'; // Usa a disciplina ou 'Outros' como fallback
+      const discipline = program.discipline || 'Programas'; // Fallback
       if (!acc[discipline]) {
         acc[discipline] = [];
       }
@@ -107,29 +100,27 @@ const AssignedProgramsList = () => {
               </h4>
               <ul className="space-y-2 pt-3">
                 {groupedPrograms[discipline].map(program => {
-                  const isSelectedForProgress = programForProgress?.id === program.id;
                   const isArchived = program.status === 'archived';
                   
                   return (
-                    <li key={program.id} className={`p-2 rounded-lg flex justify-between items-center transition-all duration-200 ${
-                        isSelectedForProgress ? 'bg-indigo-100 ring-2 ring-indigo-300' : 'hover:bg-gray-100'
-                      } ${isArchived ? 'bg-gray-100 opacity-70' : ''}`}
-                    >
-                      {/* CORREÇÃO: Usa 'program.name' em vez de 'program.title' e remove a 'tag'. */}
+                    <li key={program.assignment_id} className={`p-2 rounded-lg flex justify-between items-center transition-all duration-200 hover:bg-gray-100 ${isArchived ? 'bg-gray-100 opacity-70' : ''}`}>
                       <div className={`truncate pr-2 ${isArchived && 'italic text-gray-500'}`}>
-                        <p className="text-sm font-medium truncate" title={program.name}>
-                          {program.name}
+                        <p className="text-sm font-medium truncate" title={program.program_name}>
+                          {program.program_name}
                         </p>
                       </div>
                       <div className="flex space-x-2 flex-shrink-0">
-                        <button onClick={() => handleSelectForProgress(program)} title={isArchived ? "Reative para registrar progresso" : "Ver Progresso/Registrar Sessão"} disabled={isArchived} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-indigo-600 hover:bg-indigo-100 disabled:text-gray-400 disabled:bg-transparent disabled:cursor-not-allowed">
+                        {/* --- ALTERAÇÃO PRINCIPAL --- */}
+                        {/* O botão agora é um Link para a página da sessão. */}
+                        <Link to={`/session/${program.assignment_id}`} title="Iniciar Sessão" className={`p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-indigo-600 hover:bg-indigo-100 ${isArchived ? 'text-gray-400 bg-transparent cursor-not-allowed pointer-events-none' : ''}`}>
                           <FontAwesomeIcon icon={faChartLine} className="fa-fw" />
+                        </Link>
+                        
+                        <button title={isArchived ? "Reativar Programa" : "Arquivar Programa"} onClick={() => handleToggleStatus(program.assignment_id, program.status)} disabled={togglingId === program.assignment_id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-yellow-600 hover:bg-yellow-100 disabled:opacity-50">
+                          {togglingId === program.assignment_id ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> : <FontAwesomeIcon icon={isArchived ? faEye : faEyeSlash} className="fa-fw" />}
                         </button>
-                        <button title={isArchived ? "Reativar Programa" : "Arquivar Programa"} onClick={() => handleToggleStatus(program.id, program.status)} disabled={togglingId === program.id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-yellow-600 hover:bg-yellow-100 disabled:opacity-50">
-                          {togglingId === program.id ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> : <FontAwesomeIcon icon={isArchived ? faEye : faEyeSlash} className="fa-fw" />}
-                        </button>
-                        <button title="Remover Programa Permanentemente" onClick={() => handleRemove(program.id)} disabled={removingId === program.id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-red-500 hover:bg-red-100 disabled:opacity-50">
-                          {removingId === program.id ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> : <FontAwesomeIcon icon={faTrashAlt} className="fa-fw" />}
+                        <button title="Remover Programa Permanentemente" onClick={() => handleRemove(program.assignment_id)} disabled={removingId === program.assignment_id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-red-500 hover:bg-red-100 disabled:opacity-50">
+                          {removingId === program.assignment_id ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> : <FontAwesomeIcon icon={faTrashAlt} className="fa-fw" />}
                         </button>
                       </div>
                     </li>

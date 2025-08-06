@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState } from 'react';
 import { usePatients } from '../context/PatientContext';
+// O usePrograms agora nos dá tudo que precisamos, sem a necessidade de filtrar aqui.
 import { usePrograms } from '../context/ProgramContext';
 import { assignProgram } from '../api/programApi';
 import ProgramLibrary from '../components/program/ProgramLibrary';
@@ -8,43 +8,15 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 
 const ProgramsPage = () => {
-  const { areaName: disciplineName } = useParams();
+  // Hooks para obter dados dos contextos.
   const { selectedPatient, refreshPatientData } = usePatients();
-  const { disciplines, isLoading, error: contextError } = usePrograms();
+  const { isLoading, error: contextError } = usePrograms();
   
+  // Estados locais para gerenciar o processo de designação.
   const [assigningId, setAssigningId] = useState(null);
   const [assignError, setAssignError] = useState('');
 
-  const programsToShow = useMemo(() => {
-    // --- INÍCIO DOS LOGS DE DEPURAÇÃO ---
-    console.log('[DEBUG ProgramsPage] Recalculando a lista de programas para exibir...');
-    console.log('[DEBUG ProgramsPage] Nome da disciplina da URL:', disciplineName);
-    console.log('[DEBUG ProgramsPage] Dados completos recebidos do contexto (disciplines):', JSON.parse(JSON.stringify(disciplines))); // Log profundo
-
-    if (!disciplineName || !disciplines || disciplines.length === 0) {
-      console.log('[DEBUG ProgramsPage] Condição inicial não atendida (sem nome ou sem disciplinas). Retornando [].');
-      return [];
-    }
-
-    // 1. Tenta encontrar a disciplina correspondente
-    const currentDiscipline = disciplines.find(d => d.name === disciplineName);
-    console.log('[DEBUG ProgramsPage] Resultado da busca pela disciplina:', currentDiscipline);
-
-    if (!currentDiscipline || !currentDiscipline.areas || currentDiscipline.areas.length === 0) {
-      console.log('[DEBUG ProgramsPage] Disciplina não encontrada ou não possui áreas. Retornando [].');
-      return [];
-    }
-
-    // 2. Tenta "desempacotar" os programas
-    const allPrograms = currentDiscipline.areas.flatMap(area => 
-      (area.sub_areas || []).flatMap(subArea => subArea.programs || [])
-    );
-    console.log('[DEBUG ProgramsPage] Resultado final da lista de programas (allPrograms):', allPrograms);
-    // --- FIM DOS LOGS DE DEPURAÇÃO ---
-
-    return allPrograms;
-  }, [disciplines, disciplineName]);
-
+  // A função para designar um programa permanece a mesma.
   const handleAssign = async (programId) => {
     if (!selectedPatient) {
       setAssignError('Nenhum cliente selecionado para atribuir o programa.');
@@ -54,17 +26,20 @@ const ProgramsPage = () => {
     setAssignError('');
     try {
       await assignProgram(selectedPatient.id, programId);
+      // Atualiza os dados do paciente para refletir o novo programa designado.
       if (refreshPatientData) {
         await refreshPatientData(selectedPatient.id);
       }
     } catch (error) {
       console.error("Falha ao atribuir programa:", error);
-      setAssignError('Ocorreu um erro ao atribuir o programa.');
+      const errorMessage = error.response?.data || 'Ocorreu um erro ao atribuir o programa.';
+      setAssignError(errorMessage);
     } finally {
       setAssigningId(null);
     }
   };
 
+  // Renderização de estado de carregamento global (vindo do ProgramContext).
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full text-center p-10">
@@ -76,12 +51,13 @@ const ProgramsPage = () => {
     );
   }
   
+  // Renderização de estado de erro global.
   if (contextError) {
     return (
       <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-r-lg">
         <p className="text-sm text-red-800">
           <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
-          {contextError.message || 'Não foi possível carregar os programas.'}
+          {contextError || 'Não foi possível carregar os programas.'}
         </p>
       </div>
     );
@@ -90,15 +66,17 @@ const ProgramsPage = () => {
   return (
     <div>
       <h1 className="text-2xl font-semibold text-gray-800 mb-6">
-        Biblioteca de Programas: {disciplineName}
+        Biblioteca de Programas
       </h1>
       
+      {/* Exibe erros que possam ocorrer durante a designação. */}
       {assignError && (
          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-r-lg">
             <p className="text-sm text-red-800">{assignError}</p>
         </div>
       )}
 
+      {/* Alerta para o usuário selecionar um paciente. */}
       {!selectedPatient && (
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-lg">
           <p className="text-sm text-yellow-800">
@@ -107,12 +85,14 @@ const ProgramsPage = () => {
         </div>
       )}
 
+      {/* Quando um paciente está selecionado, a biblioteca é renderizada. */}
       {selectedPatient && (
         <ProgramLibrary 
-          programs={programsToShow} 
+          // Não passamos mais `programs`, pois o componente busca do context.
           onAssign={handleAssign} 
           isPatientSelected={!!selectedPatient} 
           assigningId={assigningId}
+          // Passamos os programas já designados para o ProgramLibrary poder desabilitar os botões corretos.
           assignedPrograms={selectedPatient.assigned_programs || []}
         />
       )}

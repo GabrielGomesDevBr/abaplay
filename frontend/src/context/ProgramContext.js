@@ -1,30 +1,31 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-// CORREÇÃO: Importa a nova função 'getAllPrograms'
-import { getAllPrograms } from '../api/programApi';
+// --- ALTERAÇÃO ---
+// Importa ambas as funções da nossa API de programas.
+import { getAllPrograms, getProgramById } from '../api/programApi';
 import { useAuth } from './AuthContext';
 
 const ProgramContext = createContext();
 
 export const ProgramProvider = ({ children }) => {
-  // CORREÇÃO: O estado agora armazena 'disciplines', não mais 'areas'.
   const [disciplines, setDisciplines] = useState([]);
+  // --- NOVA ADIÇÃO ---
+  // Estado para armazenar os detalhes de um único programa selecionado.
+  const [selectedProgram, setSelectedProgram] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const { isAuthenticated } = useAuth();
 
-  // A função de busca foi renomeada para maior clareza.
+  // Função para buscar a lista completa de programas. (Seu código, mantido pois está perfeito)
   const fetchDisciplinesAndPrograms = useCallback(async () => {
     if (!isAuthenticated) {
-      setDisciplines([]); // Limpa os dados se o usuário deslogar.
+      setDisciplines([]);
       return;
     }
     
     setIsLoading(true);
     setError(null);
     try {
-      // CORREÇÃO: Chama a função correta da API.
       const fetchedData = await getAllPrograms();
-      // Armazena a estrutura completa (que começa com disciplinas) no estado.
       setDisciplines(fetchedData || []);
     } catch (err) {
       setError('Não foi possível carregar os programas.');
@@ -38,12 +39,33 @@ export const ProgramProvider = ({ children }) => {
     fetchDisciplinesAndPrograms();
   }, [fetchDisciplinesAndPrograms]);
 
-  // CORREÇÃO: Fornece 'disciplines' para os componentes filhos.
+  // --- NOVA FUNÇÃO ---
+  // Função para buscar os detalhes de um programa específico pelo ID.
+  const fetchProgramDetails = useCallback(async (programId) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+        const programData = await getProgramById(programId);
+        setSelectedProgram(programData);
+    } catch (err) {
+        setError('Não foi possível carregar os detalhes do programa.');
+        console.error(`Erro em ProgramContext ao buscar programa ${programId}:`, err);
+        setSelectedProgram(null); // Limpa em caso de erro
+    } finally {
+        setIsLoading(false);
+    }
+  }, []); // Não depende de isAuthenticated, pois pode ser chamado sob demanda.
+
+  // --- ALTERAÇÃO ---
+  // Adiciona os novos estados e funções ao valor do contexto.
   const value = {
     disciplines,
+    selectedProgram,
     isLoading,
     error,
-    refreshPrograms: fetchDisciplinesAndPrograms // Fornece uma função para recarregar os dados
+    refreshPrograms: fetchDisciplinesAndPrograms,
+    fetchProgramDetails,
+    clearSelectedProgram: () => setSelectedProgram(null) // Função para limpar o programa selecionado
   };
 
   return (
@@ -53,7 +75,7 @@ export const ProgramProvider = ({ children }) => {
   );
 };
 
-// O hook customizado agora retorna o contexto com os dados corretos.
+// O hook não muda, mas agora dará acesso aos novos valores.
 export const usePrograms = () => {
   const context = useContext(ProgramContext);
   if (context === null) {
