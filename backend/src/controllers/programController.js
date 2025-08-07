@@ -1,8 +1,4 @@
-// backend/src/controllers/programController.js
-
 const db = require('../models/db'); // Mantido para as outras funções que ainda usam
-// --- ALTERAÇÃO ---
-// Importa a nova função que criamos no passo anterior.
 const { getAllProgramsStructured, getProgramById, getAssignmentById } = require('../models/programModel');
 
 /**
@@ -40,7 +36,6 @@ exports.getProgramDetails = async (req, res) => {
 };
 
 /**
- * --- NOVA FUNÇÃO ---
  * @description Busca os detalhes de uma designação de programa específica.
  * @route GET /api/programs/assignment/:assignmentId
  * @access Private
@@ -61,9 +56,6 @@ exports.getAssignmentDetails = async (req, res) => {
     }
 };
 
-
-// --- O RESTANTE DAS FUNÇÕES PERMANECE INALTERADO ---
-
 exports.assignProgramToPatient = async (req, res) => {
     const { patientId, programId } = req.body;
     const therapistId = req.user.id;
@@ -82,11 +74,9 @@ exports.assignProgramToPatient = async (req, res) => {
 
 exports.removeProgramFromPatient = async (req, res) => {
     const { patientId, programId } = req.params;
-    const therapistId = req.user.id;
     try {
         console.log(`[PROGRAM-CONTROLLER-LOG] removeProgramFromPatient: Removendo programa ${programId} do paciente ${patientId}`);
         
-        // Verifica se existe uma atribuição
         const checkQuery = `SELECT id FROM patient_program_assignments WHERE patient_id = $1 AND program_id = $2`;
         const checkResult = await db.query(checkQuery, [patientId, programId]);
         
@@ -94,7 +84,6 @@ exports.removeProgramFromPatient = async (req, res) => {
             return res.status(404).send('Programa não encontrado para este paciente.');
         }
         
-        // Remove a atribuição
         const deleteQuery = `DELETE FROM patient_program_assignments WHERE patient_id = $1 AND program_id = $2 RETURNING *`;
         const { rows } = await db.query(deleteQuery, [patientId, programId]);
         
@@ -182,5 +171,43 @@ exports.getConsolidatedEvolutionData = async (req, res) => {
     } catch (error) {
         console.error('Erro ao buscar dados consolidados de evolução:', error);
         res.status(500).send('Erro ao buscar dados consolidados de evolução.');
+    }
+};
+
+/**
+ * --- NOVA FUNÇÃO ADICIONADA ---
+ * @description Atualiza o status de uma atribuição de programa (ex: para 'Arquivado').
+ * @route PATCH /api/programs/assignment/:assignmentId/status
+ * @access Private
+ */
+exports.updateAssignmentStatus = async (req, res) => {
+    const { assignmentId } = req.params;
+    const { status } = req.body; // Espera receber { "status": "Arquivado" }
+
+    if (!status) {
+        return res.status(400).send('O novo status é obrigatório.');
+    }
+
+    console.log(`[PROGRAM-CONTROLLER-LOG] updateAssignmentStatus: Atualizando status da atribuição ${assignmentId} para "${status}"`);
+
+    try {
+        const query = `
+            UPDATE patient_program_assignments 
+            SET status = $1 
+            WHERE id = $2 
+            RETURNING *;
+        `;
+        const { rows } = await db.query(query, [status, assignmentId]);
+
+        if (rows.length === 0) {
+            return res.status(404).send('Atribuição de programa não encontrada.');
+        }
+
+        console.log(`[PROGRAM-CONTROLLER-LOG] updateAssignmentStatus: Status atualizado com sucesso.`);
+        res.status(200).json(rows[0]);
+
+    } catch (error) {
+        console.error('[PROGRAM-CONTROLLER-LOG] updateAssignmentStatus: Erro -', error);
+        res.status(500).send('Erro interno ao atualizar o status da atribuição.');
     }
 };

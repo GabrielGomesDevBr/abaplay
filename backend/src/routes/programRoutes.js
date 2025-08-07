@@ -1,5 +1,3 @@
-// backend/src/routes/programRoutes.js
-
 const express = require('express');
 const router = express.Router();
 
@@ -13,9 +11,12 @@ router.get('/', authMiddleware.verifyToken, programController.getAllPrograms);
 // Rota para buscar os detalhes de um programa específico.
 router.get('/:programId', authMiddleware.verifyToken, programController.getProgramDetails);
 
-// --- NOVA ROTA ADICIONADA ---
 // Rota para buscar os detalhes de uma designação específica
 router.get('/assignment/:assignmentId', authMiddleware.verifyToken, programController.getAssignmentDetails);
+
+// --- NOVA ROTA ADICIONADA ---
+// Rota para ATUALIZAR O STATUS de uma designação (ex: 'Ativo' -> 'Arquivado')
+router.patch('/assignment/:assignmentId/status', authMiddleware.verifyToken, programController.updateAssignmentStatus);
 
 // Rota para designar um programa a um paciente
 router.post('/assign', authMiddleware.verifyToken, programController.assignProgramToPatient);

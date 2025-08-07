@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom'; // --- NOVA IMPORTAÇÃO ---
+import { Link } from 'react-router-dom';
 import { usePatients } from '../../context/PatientContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine, faEye, faEyeSlash, faTrashAlt, faSpinner, faArchive } from '@fortawesome/free-solid-svg-icons';
@@ -10,8 +10,6 @@ const AssignedProgramsList = () => {
     toggleProgramStatus, 
     removeProgram,
     isLoading: patientIsLoading
-    // --- REMOÇÃO ---
-    // selectProgramForProgress e programForProgress não são mais necessários aqui.
   } = usePatients();
 
   const [togglingId, setTogglingId] = useState(null);
@@ -21,7 +19,6 @@ const AssignedProgramsList = () => {
   const handleToggleStatus = async (assignmentId, currentStatus) => {
     setTogglingId(assignmentId);
     try {
-      // Assumindo que toggleProgramStatus espera o ID da designação
       await toggleProgramStatus(assignmentId, currentStatus);
     } catch (error) {
       console.error("Falha ao mudar status do programa:", error);
@@ -30,11 +27,12 @@ const AssignedProgramsList = () => {
     }
   };
 
-  const handleRemove = async (assignmentId) => {
-    setRemovingId(assignmentId);
+  // --- CORREÇÃO PRINCIPAL ---
+  // A função `handleRemove` agora recebe o `programId` e o passa para o contexto.
+  const handleRemove = async (programId) => {
+    setRemovingId(programId); // Usamos o programId para o feedback de loading
     try {
-        // Assumindo que removeProgram espera o ID da designação
-        await removeProgram(assignmentId);
+        await removeProgram(programId);
     } catch(error) {
         console.error("Falha ao remover programa:", error);
     } finally {
@@ -43,7 +41,6 @@ const AssignedProgramsList = () => {
   };
 
   const assignedPrograms = useMemo(() => {
-    // A API retorna `assignment_id` e `program_name`. Vamos garantir que o componente use os nomes corretos.
     return selectedPatient?.assigned_programs || [];
   }, [selectedPatient]);
 
@@ -55,7 +52,8 @@ const AssignedProgramsList = () => {
 
   const groupedPrograms = useMemo(() => {
     return programsToShow.reduce((acc, program) => {
-      const discipline = program.discipline || 'Programas'; // Fallback
+      // O objeto 'program' vindo da API contém 'discipline_name'
+      const discipline = program.discipline_name || 'Programas'; 
       if (!acc[discipline]) {
         acc[discipline] = [];
       }
@@ -110,8 +108,6 @@ const AssignedProgramsList = () => {
                         </p>
                       </div>
                       <div className="flex space-x-2 flex-shrink-0">
-                        {/* --- ALTERAÇÃO PRINCIPAL --- */}
-                        {/* O botão agora é um Link para a página da sessão. */}
                         <Link to={`/session/${program.assignment_id}`} title="Iniciar Sessão" className={`p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-indigo-600 hover:bg-indigo-100 ${isArchived ? 'text-gray-400 bg-transparent cursor-not-allowed pointer-events-none' : ''}`}>
                           <FontAwesomeIcon icon={faChartLine} className="fa-fw" />
                         </Link>
@@ -119,8 +115,11 @@ const AssignedProgramsList = () => {
                         <button title={isArchived ? "Reativar Programa" : "Arquivar Programa"} onClick={() => handleToggleStatus(program.assignment_id, program.status)} disabled={togglingId === program.assignment_id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-yellow-600 hover:bg-yellow-100 disabled:opacity-50">
                           {togglingId === program.assignment_id ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> : <FontAwesomeIcon icon={isArchived ? faEye : faEyeSlash} className="fa-fw" />}
                         </button>
-                        <button title="Remover Programa Permanentemente" onClick={() => handleRemove(program.assignment_id)} disabled={removingId === program.assignment_id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-red-500 hover:bg-red-100 disabled:opacity-50">
-                          {removingId === program.assignment_id ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> : <FontAwesomeIcon icon={faTrashAlt} className="fa-fw" />}
+
+                        {/* --- CORREÇÃO PRINCIPAL 2 --- */}
+                        {/* O botão de remover agora passa o `program.program_id` */}
+                        <button title="Remover Programa Permanentemente" onClick={() => handleRemove(program.program_id)} disabled={removingId === program.program_id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-red-500 hover:bg-red-100 disabled:opacity-50">
+                          {removingId === program.program_id ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> : <FontAwesomeIcon icon={faTrashAlt} className="fa-fw" />}
                         </button>
                       </div>
                     </li>

@@ -1,13 +1,7 @@
-// backend/src/models/programModel.js
-
 const pool = require('./db');
 
 /**
  * Busca todos os programas do banco de dados e os retorna em uma estrutura aninhada.
- * A estrutura é: Discipline -> Area -> SubArea -> Programa.
- * Esta função usa funções de agregação JSON do PostgreSQL para construir o objeto
- * diretamente no banco de dados, o que é muito eficiente.
- * @returns {Promise<Array>} Uma promessa que resolve para um array de disciplinas, cada uma contendo suas áreas, sub-áreas e programas.
  */
 const getAllProgramsStructured = async () => {
     const query = `
@@ -45,7 +39,7 @@ const getAllProgramsStructured = async () => {
                                         WHERE psa.area_id = pa.id
                                     ) AS sub_areas_agg
                                 ), '[]'::json
-                            ) AS areas
+                            ) AS sub_areas
                         FROM program_areas pa
                         WHERE pa.discipline_id = d.id
                     ) AS areas_agg
@@ -56,7 +50,6 @@ const getAllProgramsStructured = async () => {
     `;
     try {
         const { rows } = await pool.query(query);
-        // O resultado já vem estruturado do banco, similar ao antigo JSON
         return rows;
     } catch (error) {
         console.error('Erro ao buscar programas estruturados:', error);
@@ -66,10 +59,12 @@ const getAllProgramsStructured = async () => {
 
 /**
  * Busca um programa específico pelo seu ID, incluindo todos os seus passos e instruções.
- * @param {number} programId O ID do programa a ser buscado.
- * @returns {Promise<Object|null>} Uma promessa que resolve para o objeto do programa ou null se não for encontrado.
  */
 const getProgramById = async (programId) => {
+    console.log(`[MODEL-LOG] getProgramById: Buscando detalhes completos para o programa com ID: ${programId}`);
+    
+    // --- CORREÇÃO PRINCIPAL ---
+    // A coluna "order" é uma palavra reservada do SQL e precisa estar entre aspas duplas.
     const query = `
         SELECT
             p.id,
@@ -89,12 +84,12 @@ const getProgramById = async (programId) => {
                             ps.description as step_description,
                             COALESCE(
                                 (
-                                    SELECT json_agg(instructions_agg ORDER BY instructions_agg.instruction_number)
+                                    SELECT json_agg(instructions_agg ORDER BY instructions_agg.instruction_order)
                                     FROM (
                                         SELECT
                                             psi.id as instruction_id,
-                                            psi.instruction_number,
-                                            psi.description as instruction_description
+                                            psi."order" as instruction_order, -- CORRIGIDO
+                                            psi.instruction_text as instruction_description
                                         FROM program_step_instructions psi
                                         WHERE psi.step_id = ps.id
                                     ) AS instructions_agg
@@ -113,18 +108,16 @@ const getProgramById = async (programId) => {
     `;
     try {
         const { rows } = await pool.query(query, [programId]);
+        console.log(`[MODEL-LOG] getProgramById: Sucesso ao buscar programa com ID ${programId}. Encontrado: ${rows.length > 0}`);
         return rows[0] || null;
     } catch (error) {
-        console.error(`Erro ao buscar programa com ID ${programId}:`, error);
+        console.error(`[MODEL-LOG] getProgramById: ERRO FATAL ao buscar programa com ID ${programId}:`, error);
         throw error;
     }
 };
 
 /**
- * --- NOVA FUNÇÃO ---
  * Busca os detalhes de uma designação específica pelo seu ID.
- * @param {number} assignmentId O ID da designação (da tabela patient_program_assignments).
- * @returns {Promise<Object|null>} Uma promessa que resolve para o objeto da designação ou null se não for encontrado.
  */
 const getAssignmentById = async (assignmentId) => {
     const query = `
@@ -153,5 +146,5 @@ const getAssignmentById = async (assignmentId) => {
 module.exports = {
     getAllProgramsStructured,
     getProgramById,
-    getAssignmentById, // Nova função adicionada à exportação
+    getAssignmentById,
 };

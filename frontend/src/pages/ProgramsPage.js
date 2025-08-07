@@ -1,45 +1,69 @@
 import React, { useState } from 'react';
 import { usePatients } from '../context/PatientContext';
-// O usePrograms agora nos dá tudo que precisamos, sem a necessidade de filtrar aqui.
 import { usePrograms } from '../context/ProgramContext';
+// CORREÇÃO: Importar ambas as funções de API, de atribuição e remoção.
 import { assignProgram } from '../api/programApi';
+import { removeProgramFromPatient } from '../api/patientApi'; // Importa a função de remoção
 import ProgramLibrary from '../components/program/ProgramLibrary';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 
 const ProgramsPage = () => {
-  // Hooks para obter dados dos contextos.
   const { selectedPatient, refreshPatientData } = usePatients();
   const { isLoading, error: contextError } = usePrograms();
-  
-  // Estados locais para gerenciar o processo de designação.
-  const [assigningId, setAssigningId] = useState(null);
-  const [assignError, setAssignError] = useState('');
 
-  // A função para designar um programa permanece a mesma.
+  const [assigningId, setAssigningId] = useState(null);
+  // CORREÇÃO: Adicionar estado para controlar o processo de remoção.
+  const [removingId, setRemovingId] = useState(null);
+  const [actionError, setActionError] = useState('');
+
   const handleAssign = async (programId) => {
     if (!selectedPatient) {
-      setAssignError('Nenhum cliente selecionado para atribuir o programa.');
+      setActionError('Nenhum cliente selecionado para atribuir o programa.');
       return;
     }
     setAssigningId(programId);
-    setAssignError('');
+    setActionError('');
     try {
       await assignProgram(selectedPatient.id, programId);
       // Atualiza os dados do paciente para refletir o novo programa designado.
       if (refreshPatientData) {
+        // Força a recarga completa dos dados do paciente para obter a nova lista de programas.
         await refreshPatientData(selectedPatient.id);
       }
     } catch (error) {
       console.error("Falha ao atribuir programa:", error);
-      const errorMessage = error.response?.data || 'Ocorreu um erro ao atribuir o programa.';
-      setAssignError(errorMessage);
+      const errorMessage = error.response?.data?.message || error.response?.data || 'Ocorreu um erro ao atribuir o programa.';
+      setActionError(errorMessage);
     } finally {
       setAssigningId(null);
     }
   };
 
-  // Renderização de estado de carregamento global (vindo do ProgramContext).
+  // CORREÇÃO: Nova função para lidar com a remoção de um programa.
+  const handleRemove = async (programId) => {
+    if (!selectedPatient) {
+        setActionError('Nenhum cliente selecionado.');
+        return;
+    }
+    setRemovingId(programId);
+    setActionError('');
+    try {
+        await removeProgramFromPatient(selectedPatient.id, programId);
+        // Atualiza os dados do paciente para refletir a remoção do programa.
+        if (refreshPatientData) {
+            await refreshPatientData(selectedPatient.id);
+        }
+    } catch (error) {
+        console.error("Falha ao remover programa:", error);
+        const errorMessage = error.response?.data?.message || error.response?.data || 'Ocorreu um erro ao remover o programa.';
+        setActionError(errorMessage);
+    } finally {
+        setRemovingId(null);
+    }
+  };
+
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full text-center p-10">
@@ -50,8 +74,7 @@ const ProgramsPage = () => {
       </div>
     );
   }
-  
-  // Renderização de estado de erro global.
+
   if (contextError) {
     return (
       <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-r-lg">
@@ -68,15 +91,13 @@ const ProgramsPage = () => {
       <h1 className="text-2xl font-semibold text-gray-800 mb-6">
         Biblioteca de Programas
       </h1>
-      
-      {/* Exibe erros que possam ocorrer durante a designação. */}
-      {assignError && (
+
+      {actionError && (
          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-r-lg">
-            <p className="text-sm text-red-800">{assignError}</p>
+            <p className="text-sm text-red-800">{actionError}</p>
         </div>
       )}
 
-      {/* Alerta para o usuário selecionar um paciente. */}
       {!selectedPatient && (
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-lg">
           <p className="text-sm text-yellow-800">
@@ -85,14 +106,15 @@ const ProgramsPage = () => {
         </div>
       )}
 
-      {/* Quando um paciente está selecionado, a biblioteca é renderizada. */}
       {selectedPatient && (
-        <ProgramLibrary 
-          // Não passamos mais `programs`, pois o componente busca do context.
-          onAssign={handleAssign} 
-          isPatientSelected={!!selectedPatient} 
+        <ProgramLibrary
+          // CORREÇÃO: Passar a nova função de remoção e o estado de loading correspondente.
+          onAssign={handleAssign}
+          onRemove={handleRemove}
+          isPatientSelected={!!selectedPatient}
           assigningId={assigningId}
-          // Passamos os programas já designados para o ProgramLibrary poder desabilitar os botões corretos.
+          removingId={removingId}
+          // A lista de programas atribuídos é crucial para a lógica de exibição dos botões.
           assignedPrograms={selectedPatient.assigned_programs || []}
         />
       )}

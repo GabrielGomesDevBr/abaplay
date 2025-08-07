@@ -125,7 +125,6 @@ export const getAssignmentDetails = async (assignmentId) => {
 };
 
 /**
- * --- NOVA FUNÇÃO ---
  * Regista a evolução de uma sessão de um programa para um paciente.
  * @param {Object} evolutionData - Os dados da sessão a serem registados.
  * @returns {Promise<Object>}
@@ -146,7 +145,6 @@ export const recordProgramEvolution = async (evolutionData) => {
 };
 
 /**
- * --- NOVA FUNÇÃO ---
  * Busca o histórico de evolução de um paciente para um programa específico.
  * @param {string|number} patientId - O ID do paciente.
  * @param {string|number} programId - O ID do programa.
@@ -158,6 +156,28 @@ export const getProgramEvolution = async (patientId, programId) => {
     return response.data;
   } catch (error) {
     console.error(`Erro detalhado em getProgramEvolution para paciente ${patientId} e programa ${programId}:`, {
+        message: error.message,
+        request_url: error.config?.url,
+        response_status: error.response?.status,
+        response_data: error.response?.data,
+    });
+    throw error;
+  }
+};
+
+/**
+ * --- NOVA FUNÇÃO ADICIONADA ---
+ * Atualiza o status de uma atribuição de programa.
+ * @param {string|number} assignmentId - O ID da atribuição a ser atualizada.
+ * @param {string} status - O novo status (ex: 'Arquivado', 'Ativo').
+ * @returns {Promise<Object>}
+ */
+export const updateAssignmentStatus = async (assignmentId, status) => {
+  try {
+    const response = await apiClient.patch(`/programs/assignment/${assignmentId}/status`, { status });
+    return response.data;
+  } catch (error) {
+    console.error(`Erro detalhado em updateAssignmentStatus para a atribuição ${assignmentId}:`, {
         message: error.message,
         request_url: error.config?.url,
         response_status: error.response?.status,

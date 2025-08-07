@@ -1,9 +1,10 @@
 import React from 'react';
 import { usePrograms } from '../../context/ProgramContext';
 import ProgramCard from './ProgramCard';
-import './ProgramLibrary.css'; // Esta linha precisa do ficheiro CSS para funcionar
+import './ProgramLibrary.css';
 
-const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSelected }) => {
+// CORREÇÃO: Adicionar onRemove e removingId às props do componente.
+const ProgramLibrary = ({ onAssign, onRemove, assigningId, removingId, assignedPrograms, isPatientSelected }) => {
   const { disciplines, isLoading, error } = usePrograms();
 
   if (isLoading) {
@@ -39,8 +40,12 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
                               key={program.id}
                               program={program}
                               onAssign={onAssign}
+                              // CORREÇÃO: Passar a função onRemove para o card.
+                              onRemove={onRemove}
                               isAssigned={isAssigned}
                               isAssigning={assigningId === program.id}
+                              // CORREÇÃO: Passar o estado de remoção para o card.
+                              isRemoving={removingId === program.id}
                               isPatientSelected={isPatientSelected}
                             />
                           );
