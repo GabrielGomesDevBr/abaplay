@@ -4,6 +4,12 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
 const getAuthHeaders = (token) => {
+  // Garantir que o token não seja 'undefined' antes de criar o cabeçalho.
+  if (!token) {
+    console.error("[API-LOG] Tentativa de criar cabeçalho de autenticação sem token.");
+    // Lançar um erro ou retornar cabeçalhos vazios pode ser uma opção,
+    // mas a validação deve ocorrer antes da chamada.
+  }
   return {
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -87,14 +93,11 @@ export const createSession = async (patientId, sessionData, token) => {
   }
 };
 
-
-// --- Funções de Gestão de Programas (CORRIGIDAS) ---
-// Estas funções agora usam as rotas centralizadas em '/programs'
+// --- Funções de Gestão de Programas ---
 
 export const assignProgramToPatient = async (patientId, programId, token) => {
     try {
-        // CORREÇÃO: Usa a nova rota centralizada
-        const response = await axios.post(`${API_URL}/programs/assign`, { patientId, programId }, getAuthHeaders(token));
+        const response = await axios.post(`${API_URL}/assignments`, { patientId, programId }, getAuthHeaders(token));
         return response.data;
     } catch (error) {
         console.error(`Erro ao atribuir programa ${programId} ao paciente ${patientId}:`, error.response?.data || error.message);
@@ -102,20 +105,23 @@ export const assignProgramToPatient = async (patientId, programId, token) => {
     }
 };
 
-export const removeProgramFromPatient = async (patientId, programId, token) => {
+// CORREÇÃO 1: A função agora se chama `removeProgramAssignment` para maior clareza.
+// CORREÇÃO 2: A assinatura mudou. Agora ela recebe `assignmentId` e `token`.
+export const removeProgramAssignment = async (assignmentId, token) => {
     try {
-        // CORREÇÃO: Usa a nova rota DELETE centralizada
-        await axios.delete(`${API_URL}/programs/assign/${patientId}/${programId}`, getAuthHeaders(token));
+        // CORREÇÃO 3: A URL agora aponta para a rota correta no backend: /api/assignments/:assignmentId
+        await axios.delete(`${API_URL}/assignments/${assignmentId}`, getAuthHeaders(token));
     } catch (error) {
-        console.error(`Erro ao remover programa ${programId} do paciente ${patientId}:`, error.response?.data || error.message);
-        throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível remover o programa.');
+        console.error(`Erro ao remover a atribuição ${assignmentId}:`, error.response?.data || error.message);
+        // CORREÇÃO 4: Mensagem de erro genérica atualizada.
+        const apiError = error.response?.data?.errors?.[0]?.msg || 'Não foi possível remover o programa.';
+        // Lança o erro para ser tratado na página.
+        throw new Error(apiError);
     }
 };
 
 export const updateProgramStatusForPatient = async (patientId, programId, status, token) => {
     try {
-        // AVISO: Esta rota ainda não foi criada no novo 'programController'.
-        // Ela precisará ser movida e criada lá para funcionar. Por enquanto, a mantemos aqui.
         const response = await axios.patch(
             `${API_URL}/patients/${patientId}/programs/${programId}/status`,
             { status },

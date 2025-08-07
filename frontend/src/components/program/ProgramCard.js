@@ -1,9 +1,9 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// CORREÇÃO: Adicionar o ícone de lixeira.
-import { faPlus, faCheck, faSpinner, faTrash } from '@fortawesome/free-solid-svg-icons';
+// O ícone de lixeira não é mais necessário aqui.
+import { faPlus, faCheck, faSpinner } from '@fortawesome/free-solid-svg-icons';
 
-// A função de cores é mantida para uso futuro.
+// A função de cores é mantida.
 const getTagColor = (tag) => {
     const colors = {
         "Mando": "bg-blue-100 text-blue-800", "Tato": "bg-green-100 text-green-800",
@@ -12,35 +12,26 @@ const getTagColor = (tag) => {
     return colors[tag] || "bg-gray-200 text-gray-700";
 }
 
-// CORREÇÃO: Adicionar onRemove e isRemoving às props.
-const ProgramCard = ({ program, onAssign, onRemove, isAssigning, isRemoving, isPatientSelected, isAssigned }) => {
+// SOLUÇÃO: As props 'onRemove' e 'isRemoving' foram removidas.
+const ProgramCard = ({ program, onAssign, isAssigning, isPatientSelected, isAssigned }) => {
   
   const objectiveText = program.objective ? program.objective : 'Nenhum objetivo definido.';
 
-  // CORREÇÃO PRINCIPAL: Lógica condicional para renderizar o botão correto.
   const renderButton = () => {
+    // Se o programa já está atribuído, mostra o botão "Atribuído" (verde e desabilitado).
     if (isAssigned) {
-      // Se o programa já está atribuído, mostra o botão de REMOVER.
       return (
         <button
-          onClick={() => onRemove(program.id)}
-          disabled={!isPatientSelected || isRemoving}
-          title={!isPatientSelected ? 'Selecione um cliente' : 'Remover programa do cliente'}
-          className={`text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-200 w-32 text-center shadow-sm 
-            ${!isPatientSelected ? 'bg-gray-200 text-gray-500 cursor-not-allowed' :
-            'bg-red-500 text-white hover:bg-red-600 active:scale-95'}`}
+          disabled={true} // Sempre desabilitado
+          title="Este programa já foi atribuído ao cliente"
+          className={`text-sm font-semibold py-2 px-4 rounded-lg w-32 text-center shadow-sm 
+            bg-green-500 text-white cursor-default`} // Cor verde, cursor padrão
         >
-          {isRemoving ? (
-            <FontAwesomeIcon icon={faSpinner} spin />
-          ) : (
-            <>
-              <FontAwesomeIcon icon={faTrash} className="mr-2" /> Remover
-            </>
-          )}
+          <FontAwesomeIcon icon={faCheck} className="mr-2" /> Atribuído
         </button>
       );
     } else {
-      // Se o programa NÃO está atribuído, mostra o botão de ATRIBUIR.
+      // Se não, mostra o botão "Atribuir" (azul e funcional).
       return (
         <button
           onClick={() => onAssign(program.id)}
@@ -48,7 +39,7 @@ const ProgramCard = ({ program, onAssign, onRemove, isAssigning, isRemoving, isP
           title={!isPatientSelected ? 'Selecione um cliente para atribuir' : 'Atribuir ao cliente'}
           className={`text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-200 w-32 text-center shadow-sm 
             ${!isPatientSelected ? 'bg-gray-200 text-gray-500 cursor-not-allowed' :
-            'bg-indigo-500 text-white hover:bg-indigo-600 active:scale-95'}`}
+            'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'}`} // Cor azul
         >
           {isAssigning ? (
             <FontAwesomeIcon icon={faSpinner} spin />
@@ -76,7 +67,6 @@ const ProgramCard = ({ program, onAssign, onRemove, isAssigning, isRemoving, isP
         </p>
       </div>
       <div className="program-card-actions bg-gray-50 px-5 py-3 rounded-b-xl border-t border-gray-100 text-right">
-        {/* Renderiza o botão com a nova lógica. */}
         {renderButton()}
       </div>
     </div>

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { usePatients } from '../context/PatientContext';
 import { usePrograms } from '../context/ProgramContext';
-// CORREÇÃO: Importar ambas as funções de API, de atribuição e remoção.
-import { assignProgram } from '../api/programApi';
-import { removeProgramFromPatient } from '../api/patientApi'; // Importa a função de remoção
+import { useAuth } from '../context/AuthContext';
+// A função 'removeProgramAssignment' foi removida das importações.
+import { assignProgramToPatient } from '../api/patientApi';
 import ProgramLibrary from '../components/program/ProgramLibrary';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
@@ -11,10 +11,12 @@ import { faSpinner, faExclamationTriangle } from '@fortawesome/free-solid-svg-ic
 const ProgramsPage = () => {
   const { selectedPatient, refreshPatientData } = usePatients();
   const { isLoading, error: contextError } = usePrograms();
+  
+  // SOLUÇÃO: O token agora é extraído diretamente do hook useAuth.
+  const { token } = useAuth();
 
   const [assigningId, setAssigningId] = useState(null);
-  // CORREÇÃO: Adicionar estado para controlar o processo de remoção.
-  const [removingId, setRemovingId] = useState(null);
+  // O estado 'removingId' não é mais necessário.
   const [actionError, setActionError] = useState('');
 
   const handleAssign = async (programId) => {
@@ -22,47 +24,29 @@ const ProgramsPage = () => {
       setActionError('Nenhum cliente selecionado para atribuir o programa.');
       return;
     }
+    
+    if (!token) {
+      setActionError('Erro de autenticação. Por favor, faça login novamente.');
+      return;
+    }
+
     setAssigningId(programId);
     setActionError('');
     try {
-      await assignProgram(selectedPatient.id, programId);
-      // Atualiza os dados do paciente para refletir o novo programa designado.
+      await assignProgramToPatient(selectedPatient.id, programId, token);
       if (refreshPatientData) {
-        // Força a recarga completa dos dados do paciente para obter a nova lista de programas.
         await refreshPatientData(selectedPatient.id);
       }
     } catch (error) {
       console.error("Falha ao atribuir programa:", error);
-      const errorMessage = error.response?.data?.message || error.response?.data || 'Ocorreu um erro ao atribuir o programa.';
-      setActionError(errorMessage);
+      setActionError(error.message || 'Ocorreu um erro ao atribuir o programa.');
     } finally {
       setAssigningId(null);
     }
   };
 
-  // CORREÇÃO: Nova função para lidar com a remoção de um programa.
-  const handleRemove = async (programId) => {
-    if (!selectedPatient) {
-        setActionError('Nenhum cliente selecionado.');
-        return;
-    }
-    setRemovingId(programId);
-    setActionError('');
-    try {
-        await removeProgramFromPatient(selectedPatient.id, programId);
-        // Atualiza os dados do paciente para refletir a remoção do programa.
-        if (refreshPatientData) {
-            await refreshPatientData(selectedPatient.id);
-        }
-    } catch (error) {
-        console.error("Falha ao remover programa:", error);
-        const errorMessage = error.response?.data?.message || error.response?.data || 'Ocorreu um erro ao remover o programa.';
-        setActionError(errorMessage);
-    } finally {
-        setRemovingId(null);
-    }
-  };
-
+  // A função handleRemove foi completamente removida desta página,
+  // conforme nossa decisão de centralizar a lógica.
 
   if (isLoading) {
     return (
@@ -108,13 +92,10 @@ const ProgramsPage = () => {
 
       {selectedPatient && (
         <ProgramLibrary
-          // CORREÇÃO: Passar a nova função de remoção e o estado de loading correspondente.
           onAssign={handleAssign}
-          onRemove={handleRemove}
+          // As props 'onRemove' e 'removingId' não são mais passadas.
           isPatientSelected={!!selectedPatient}
           assigningId={assigningId}
-          removingId={removingId}
-          // A lista de programas atribuídos é crucial para a lógica de exibição dos botões.
           assignedPrograms={selectedPatient.assigned_programs || []}
         />
       )}

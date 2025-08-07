@@ -3,7 +3,9 @@ import { usePrograms } from '../../context/ProgramContext';
 import ProgramCard from './ProgramCard';
 import './ProgramLibrary.css';
 
-const ProgramLibrary = ({ onAssign, onRemove, assigningId, removingId, assignedPrograms, isPatientSelected }) => {
+// SOLUÇÃO: As props 'onRemove' e 'removingId' foram removidas,
+// pois esta tela não terá mais a função de remover.
+const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSelected }) => {
   const { disciplines, isLoading, error } = usePrograms();
 
   if (isLoading) {
@@ -14,35 +16,30 @@ const ProgramLibrary = ({ onAssign, onRemove, assigningId, removingId, assignedP
     return <div className="error-message">{error}</div>;
   }
   
-  // CORRIGIDO: A verificação agora usa Object.keys() para checar se o objeto está vazio.
   if (!disciplines || Object.keys(disciplines).length === 0) {
     return <div className="empty-message">Nenhum programa encontrado na biblioteca.</div>;
   }
 
   return (
     <div className="program-library">
-      {/* CORRIGIDO: Itera sobre as chaves do objeto (nomes das disciplinas) */}
       {Object.keys(disciplines).map((disciplineName) => {
-        const areas = disciplines[disciplineName]; // Pega o objeto de áreas para a disciplina atual
+        const areas = disciplines[disciplineName];
         return (
           <details key={disciplineName} className="discipline-details" open>
             <summary className="discipline-summary">{disciplineName}</summary>
             <div className="discipline-content">
-              {/* CORRIGIDO: Itera sobre as chaves do objeto de áreas */}
               {Object.keys(areas).map((areaName) => {
-                const subAreas = areas[areaName]; // Pega o objeto de sub-áreas
+                const subAreas = areas[areaName];
                 return (
                   <details key={areaName} className="area-details" open>
                     <summary className="area-summary">{areaName}</summary>
                     <div className="area-content">
-                      {/* CORRIGIDO: Itera sobre as chaves do objeto de sub-áreas */}
                       {Object.keys(subAreas).map((subAreaName) => {
-                        const programs = subAreas[subAreaName]; // Pega o array de programas
+                        const programs = subAreas[subAreaName];
                         return (
                           <div key={subAreaName} className="sub-area-container">
                             <h4 className="sub-area-header">{subAreaName}</h4>
                             <div className="programs-grid">
-                              {/* Agora 'programs' é um array, então .map() funciona */}
                               {programs?.map((program) => {
                                 const isAssigned = Array.isArray(assignedPrograms) && assignedPrograms.some(p => p.program_id === program.id);
                                 return (
@@ -50,10 +47,9 @@ const ProgramLibrary = ({ onAssign, onRemove, assigningId, removingId, assignedP
                                     key={program.id}
                                     program={program}
                                     onAssign={onAssign}
-                                    onRemove={onRemove}
+                                    // A lógica de remoção não é mais passada para o card.
                                     isAssigned={isAssigned}
                                     isAssigning={assigningId === program.id}
-                                    isRemoving={removingId === program.id}
                                     isPatientSelected={isPatientSelected}
                                   />
                                 );

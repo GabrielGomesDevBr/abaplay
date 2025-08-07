@@ -2,13 +2,11 @@ import React, { createContext, useState, useContext, useEffect, useCallback } fr
 import { useAuth } from './AuthContext';
 import { fetchAllAdminPatients } from '../api/adminApi';
 import { fetchParentDashboardData } from '../api/parentApi';
-// --- CORREÇÃO DE IMPORTAÇÃO ---
-// A função 'getAllProgramsForPatient' foi renomeada para 'getAssignmentsForPatient'
 import { updateAssignmentStatus, getAssignmentsForPatient } from '../api/programApi'; 
 import { 
   fetchAllPatients,
   assignProgramToPatient,
-  removeProgramFromPatient,
+  removeProgramAssignment,
   createSession,
   updatePatientNotes
 } from '../api/patientApi';
@@ -29,14 +27,12 @@ export const PatientProvider = ({ children }) => {
   const [programForProgress, setProgramForProgress] = useState(null);
 
   const refreshData = useCallback(async (patientIdToReselect = null) => {
-    console.log('[CONTEXT-LOG] refreshData: Iniciando carregamento de dados');
     if (!isAuthenticated || !user || !token) {
       setPatients([]);
       setSelectedPatient(null);
       setIsLoading(false);
       return;
     }
-
     setIsLoading(true);
     setError('');
     try {
@@ -53,7 +49,6 @@ export const PatientProvider = ({ children }) => {
         }
       }
       setPatients(patientData);
-
       if (patientIdToReselect) {
         const reSelected = patientData.find(p => p.id === patientIdToReselect);
         if (reSelected) {
@@ -63,7 +58,6 @@ export const PatientProvider = ({ children }) => {
         setSelectedPatient(null);
       }
     } catch (err) {
-      console.error(`[CONTEXT-LOG] refreshData: ERRO ao carregar dados:`, err);
       setError(err.message || 'Falha ao carregar dados.');
     } finally {
       setIsLoading(false);
@@ -75,20 +69,12 @@ export const PatientProvider = ({ children }) => {
       setSelectedPatient(null);
       return;
     }
-    
-    console.log(`[CONTEXT-LOG] Selecionando paciente ${patient.id} e buscando dados completos...`);
     setIsLoadingPatient(true);
     setProgramForProgress(null);
     try {
-      // --- CORREÇÃO NA CHAMADA DA FUNÇÃO ---
-      // Agora usa a função com o nome correto: getAssignmentsForPatient
-      const assignedPrograms = await getAssignmentsForPatient(patient.id);
-      console.log(`[CONTEXT-LOG] Programas atribuídos para o paciente ${patient.id}:`, assignedPrograms);
-      
+      const assignedPrograms = await getAssignmentsForPatient(patient.id, token);
       setSelectedPatient({ ...patient, assigned_programs: assignedPrograms });
-
     } catch (error) {
-      console.error(`Erro ao buscar detalhes do paciente ${patient.id}:`, error);
       setError('Não foi possível carregar os detalhes do cliente.');
       setSelectedPatient(patient);
     } finally {
@@ -103,24 +89,48 @@ export const PatientProvider = ({ children }) => {
   const performActionAndReload = async (action) => {
     if (!selectedPatient) throw new Error("Nenhum cliente selecionado.");
     const patientId = selectedPatient.id;
-    await action();
-    const currentPatient = patients.find(p => p.id === patientId);
-    if (currentPatient) {
-      await selectPatient(currentPatient);
+    try {
+        await action();
+        const currentPatient = patients.find(p => p.id === patientId);
+        if (currentPatient) {
+          await selectPatient(currentPatient);
+        }
+    } catch (error) {
+        console.error("Erro ao executar ação e recarregar:", error);
+        throw error;
     }
   };
 
   const assignProgram = (programId) => performActionAndReload(() => assignProgramToPatient(selectedPatient.id, programId, token));
   
   const removeProgram = (programId) => {
+      if (!selectedPatient) return;
+      
+      const assignment = selectedPatient.assigned_programs?.find(
+        (p) => p.program_id === programId
+      );
+
+      if (!assignment) {
+        alert("Erro: Não foi possível encontrar a referência do programa para remoção. Tente atualizar a página.");
+        return;
+      }
+
+      // SOLUÇÃO: Usar a propriedade correta 'assignment_id' que vimos nos logs.
+      const assignmentIdToRemove = assignment.assignment_id;
+      
+      if (!assignmentIdToRemove) {
+        alert("Erro: ID da atribuição é inválido.");
+        return;
+      }
+
       if (window.confirm("Tem a certeza que deseja remover este programa permanentemente? Esta ação não pode ser desfeita.")) {
-        performActionAndReload(() => removeProgramFromPatient(selectedPatient.id, programId, token));
+        performActionAndReload(() => removeProgramAssignment(assignmentIdToRemove, token));
       }
   };
 
   const toggleProgramStatus = (assignmentId, currentStatus) => {
       const newStatus = currentStatus === 'archived' ? 'active' : 'archived';
-      performActionAndReload(() => updateAssignmentStatus(assignmentId, newStatus));
+      performActionAndReload(() => updateAssignmentStatus(assignmentId, newStatus, token));
   };
 
   const addSession = (sessionData) => performActionAndReload(() => createSession(selectedPatient.id, sessionData, token));
