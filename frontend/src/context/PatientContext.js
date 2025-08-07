@@ -3,7 +3,8 @@ import { useAuth } from './AuthContext';
 import { fetchAllAdminPatients } from '../api/adminApi';
 import { fetchParentDashboardData } from '../api/parentApi';
 // --- CORREÇÃO DE IMPORTAÇÃO ---
-import { updateAssignmentStatus, getAllProgramsForPatient } from '../api/programApi'; 
+// A função 'getAllProgramsForPatient' foi renomeada para 'getAssignmentsForPatient'
+import { updateAssignmentStatus, getAssignmentsForPatient } from '../api/programApi'; 
 import { 
   fetchAllPatients,
   assignProgramToPatient,
@@ -18,7 +19,7 @@ export const PatientProvider = ({ children }) => {
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingPatient, setIsLoadingPatient] = useState(false); // Novo estado para loading do paciente selecionado
+  const [isLoadingPatient, setIsLoadingPatient] = useState(false);
   const [error, setError] = useState('');
   const { user, isAuthenticated, token } = useAuth();
 
@@ -48,7 +49,6 @@ export const PatientProvider = ({ children }) => {
         const parentData = await fetchParentDashboardData(token);
         patientData = parentData.patient ? [parentData.patient] : [];
         if (parentData.patient) {
-          // Para o pai, já selecionamos e carregamos os dados completos.
           await selectPatient(parentData.patient);
         }
       }
@@ -57,7 +57,7 @@ export const PatientProvider = ({ children }) => {
       if (patientIdToReselect) {
         const reSelected = patientData.find(p => p.id === patientIdToReselect);
         if (reSelected) {
-          await selectPatient(reSelected); // Re-seleciona e carrega dados completos
+          await selectPatient(reSelected);
         }
       } else if (user.role !== 'pai') {
         setSelectedPatient(null);
@@ -68,10 +68,8 @@ export const PatientProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, user, token]); // Removido selectPatient da dependência para evitar loop
+  }, [isAuthenticated, user, token]);
 
-  // --- CORREÇÃO PRINCIPAL ---
-  // A função `selectPatient` agora busca os dados completos do paciente selecionado.
   const selectPatient = useCallback(async (patient) => {
     if (!patient) {
       setSelectedPatient(null);
@@ -82,21 +80,21 @@ export const PatientProvider = ({ children }) => {
     setIsLoadingPatient(true);
     setProgramForProgress(null);
     try {
-      // Busca a lista de programas mais recente para este paciente
-      const assignedPrograms = await getAllProgramsForPatient(patient.id);
+      // --- CORREÇÃO NA CHAMADA DA FUNÇÃO ---
+      // Agora usa a função com o nome correto: getAssignmentsForPatient
+      const assignedPrograms = await getAssignmentsForPatient(patient.id);
       console.log(`[CONTEXT-LOG] Programas atribuídos para o paciente ${patient.id}:`, assignedPrograms);
       
-      // Atualiza o objeto do paciente com a lista de programas completa
       setSelectedPatient({ ...patient, assigned_programs: assignedPrograms });
 
     } catch (error) {
       console.error(`Erro ao buscar detalhes do paciente ${patient.id}:`, error);
       setError('Não foi possível carregar os detalhes do cliente.');
-      setSelectedPatient(patient); // Mantém os dados básicos mesmo em caso de erro
+      setSelectedPatient(patient);
     } finally {
       setIsLoadingPatient(false);
     }
-  }, [token]); // Depende apenas do token
+  }, [token]);
 
   useEffect(() => {
     refreshData();
@@ -106,7 +104,6 @@ export const PatientProvider = ({ children }) => {
     if (!selectedPatient) throw new Error("Nenhum cliente selecionado.");
     const patientId = selectedPatient.id;
     await action();
-    // Após a ação, recarrega os dados completos do paciente selecionado
     const currentPatient = patients.find(p => p.id === patientId);
     if (currentPatient) {
       await selectPatient(currentPatient);
@@ -132,7 +129,7 @@ export const PatientProvider = ({ children }) => {
   const value = {
     patients, selectedPatient, 
     isLoading, 
-    isLoadingPatient, // Exporta o novo estado de loading
+    isLoadingPatient,
     error,
     selectPatient,
     isPatientFormOpen, patientToEdit,

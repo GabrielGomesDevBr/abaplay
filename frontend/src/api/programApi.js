@@ -19,20 +19,20 @@ apiClient.interceptors.request.use(
   }
 );
 
+// --- Funções Relacionadas a Programas (Biblioteca) ---
+
 /**
- * Busca toda a biblioteca de programas de forma estruturada (Discipline -> Area -> etc.).
+ * Busca toda a biblioteca de programas de forma estruturada.
  * @returns {Promise<Array>}
  */
 export const getAllPrograms = async () => {
   try {
+    // Endpoint continua /programs, está correto.
     const response = await apiClient.get('/programs');
     return response.data;
   } catch (error) {
     console.error('Erro detalhado em getAllPrograms:', {
-        message: error.message,
-        request_url: error.config?.url,
-        response_status: error.response?.status,
-        response_data: error.response?.data,
+        message: error.message, request_url: error.config?.url,
     });
     throw error;
   }
@@ -45,128 +45,113 @@ export const getAllPrograms = async () => {
  */
 export const getProgramById = async (programId) => {
   try {
+    // Endpoint continua /programs/:id, está correto.
     const response = await apiClient.get(`/programs/${programId}`);
     return response.data;
-  } catch (error)
-  {
+  } catch (error) {
     console.error(`Erro detalhado em getProgramById para o ID ${programId}:`, {
-        message: error.message,
-        request_url: error.config?.url,
-        response_status: error.response?.status,
-        response_data: error.response?.data,
+        message: error.message, request_url: error.config?.url,
     });
     throw error;
   }
 };
 
 
+// --- Funções Relacionadas a Atribuições (Assignments) ---
+
 /**
- * Busca os programas que já foram designados a um paciente específico.
+ * Busca as atribuições de programas para um paciente específico.
  * @param {string|number} patientId - O ID do paciente.
  * @returns {Promise<Array>}
  */
-export const getAllProgramsForPatient = async (patientId) => {
-    if (!patientId) {
-        throw new Error("ID do Paciente é necessário para buscar os programas.");
-    }
+export const getAssignmentsForPatient = async (patientId) => {
+    if (!patientId) throw new Error("ID do Paciente é necessário.");
   try {
-    const response = await apiClient.get(`/programs/assigned/${patientId}`);
+    // CORRIGIDO: Rota agora é /assignments/patient/:patientId
+    const response = await apiClient.get(`/assignments/patient/${patientId}`);
     return response.data;
   } catch (error) {
-    console.error('Erro detalhado em getAllProgramsForPatient:', {
-        message: error.message,
-        request_url: error.config?.url,
-        response_status: error.response?.status,
-        response_data: error.response?.data,
+    console.error('Erro detalhado em getAssignmentsForPatient:', {
+        message: error.message, request_url: error.config?.url,
     });
     throw error;
   }
 };
 
 /**
- * Designa um programa da biblioteca para um paciente.
+ * Atribui um programa da biblioteca para um paciente.
  * @param {string|number} patientId - O ID do paciente.
  * @param {string|number} programId - O ID do programa.
  * @returns {Promise<Object>}
  */
 export const assignProgram = async (patientId, programId) => {
     try {
-        const response = await apiClient.post('/programs/assign', { patientId, programId });
+        // CORRIGIDO: Rota agora é /assignments
+        const response = await apiClient.post('/assignments', { patientId, programId });
         return response.data;
     } catch (error) {
         console.error('Erro detalhado em assignProgram:', {
-            message: error.message,
-            request_url: error.config?.url,
-            response_status: error.response?.status,
-            response_data: error.response?.data,
+            message: error.message, request_url: error.config?.url,
         });
         throw error;
     }
 };
 
 /**
- * Busca os detalhes de uma designação específica pelo seu ID.
+ * Busca os detalhes de uma atribuição específica pelo seu ID.
  * @param {string|number} assignmentId - O ID da designação do programa.
  * @returns {Promise<Object>}
  */
 export const getAssignmentDetails = async (assignmentId) => {
   try {
-    const response = await apiClient.get(`/programs/assignment/${assignmentId}`);
+    // CORRIGIDO: Rota agora é /assignments/:id
+    const response = await apiClient.get(`/assignments/${assignmentId}`);
     return response.data;
   } catch (error) {
     console.error(`Erro detalhado em getAssignmentDetails para o ID ${assignmentId}:`, {
-        message: error.message,
-        request_url: error.config?.url,
-        response_status: error.response?.status,
-        response_data: error.response?.data,
+        message: error.message, request_url: error.config?.url,
     });
     throw error;
   }
 };
 
 /**
- * Regista a evolução de uma sessão de um programa para um paciente.
- * @param {Object} evolutionData - Os dados da sessão a serem registados.
+ * Regista o progresso de uma sessão.
+ * @param {Object} progressData - Os dados da sessão a serem registados.
  * @returns {Promise<Object>}
  */
-export const recordProgramEvolution = async (evolutionData) => {
+export const recordProgress = async (progressData) => {
   try {
-    const response = await apiClient.post('/programs/evolution', evolutionData);
+    // CORRIGIDO: Rota agora é /assignments/progress
+    const response = await apiClient.post('/assignments/progress', progressData);
     return response.data;
   } catch (error) {
-    console.error('Erro detalhado em recordProgramEvolution:', {
-        message: error.message,
-        request_url: error.config?.url,
-        response_status: error.response?.status,
-        response_data: error.response?.data,
+    console.error('Erro detalhado em recordProgress:', {
+        message: error.message, request_url: error.config?.url,
     });
     throw error;
   }
 };
 
 /**
- * Busca o histórico de evolução de um paciente para um programa específico.
- * @param {string|number} patientId - O ID do paciente.
- * @param {string|number} programId - O ID do programa.
+ * Busca o histórico de progresso de uma atribuição específica.
+ * @param {string|number} assignmentId - O ID da atribuição.
  * @returns {Promise<Array>}
  */
-export const getProgramEvolution = async (patientId, programId) => {
+export const getAssignmentEvolution = async (assignmentId) => {
   try {
-    const response = await apiClient.get(`/programs/evolution/${patientId}/${programId}`);
+    // CORRIGIDO: Rota agora é /assignments/:assignmentId/progress
+    const response = await apiClient.get(`/assignments/${assignmentId}/progress`);
     return response.data;
   } catch (error) {
-    console.error(`Erro detalhado em getProgramEvolution para paciente ${patientId} e programa ${programId}:`, {
-        message: error.message,
-        request_url: error.config?.url,
-        response_status: error.response?.status,
-        response_data: error.response?.data,
+    console.error(`Erro detalhado em getAssignmentEvolution para a atribuição ${assignmentId}:`, {
+        message: error.message, request_url: error.config?.url,
     });
     throw error;
   }
 };
 
 /**
- * --- NOVA FUNÇÃO ADICIONADA ---
  * Atualiza o status de uma atribuição de programa.
  * @param {string|number} assignmentId - O ID da atribuição a ser atualizada.
  * @param {string} status - O novo status (ex: 'Arquivado', 'Ativo').
@@ -174,14 +159,12 @@ export const getProgramEvolution = async (patientId, programId) => {
  */
 export const updateAssignmentStatus = async (assignmentId, status) => {
   try {
-    const response = await apiClient.patch(`/programs/assignment/${assignmentId}/status`, { status });
+    // CORRIGIDO: Rota agora é /assignments/:id/status
+    const response = await apiClient.patch(`/assignments/${assignmentId}/status`, { status });
     return response.data;
   } catch (error) {
     console.error(`Erro detalhado em updateAssignmentStatus para a atribuição ${assignmentId}:`, {
-        message: error.message,
-        request_url: error.config?.url,
-        response_status: error.response?.status,
-        response_data: error.response?.data,
+        message: error.message, request_url: error.config?.url,
     });
     throw error;
   }

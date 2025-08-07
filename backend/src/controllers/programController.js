@@ -1,213 +1,82 @@
-const db = require('../models/db'); // Mantido para as outras funções que ainda usam
-const { getAllProgramsStructured, getProgramById, getAssignmentById } = require('../models/programModel');
+const Program = require('../models/programModel');
 
 /**
- * @description Busca todos os programas de forma estruturada.
- * @route GET /api/programs
- * @access Private
+ * @description Cria um novo programa com etapas e instruções.
+ * @route POST /api/programs
  */
-exports.getAllPrograms = async (req, res) => {
+exports.createProgram = async (req, res) => {
     try {
-        const structuredData = await getAllProgramsStructured();
-        res.json(structuredData);
+        const program = await Program.createProgram(req.body);
+        res.status(201).json(program);
     } catch (error) {
-        res.status(500).send('Erro ao buscar os programas.');
+        console.error('[CONTROLLER-ERROR] createProgram:', error);
+        res.status(500).send('Erro ao criar o programa.');
     }
 };
 
 /**
- * @description Busca os detalhes de um programa específico pelo ID.
- * @route GET /api/programs/:programId
- * @access Private
+ * @description Busca todos os programas de forma estruturada por hierarquia.
+ * @route GET /api/programs
+ */
+exports.getAllPrograms = async (req, res) => {
+    try {
+        // A função no model foi renomeada para maior clareza
+        const programs = await Program.getAllProgramsWithHierarchy();
+        res.json(programs);
+    } catch (error) {
+        console.error('[CONTROLLER-ERROR] getAllPrograms:', error);
+        res.status(500).send('Erro ao buscar programas.');
+    }
+};
+
+/**
+ * @description Busca os detalhes completos de um programa específico.
+ * @route GET /api/programs/:id
  */
 exports.getProgramDetails = async (req, res) => {
     try {
-        const { programId } = req.params;
-        const program = await getProgramById(programId);
-
+        // O parâmetro na rota agora é 'id'
+        const { id } = req.params;
+        const program = await Program.getProgramById(id);
         if (!program) {
             return res.status(404).send('Programa não encontrado.');
         }
-
         res.json(program);
     } catch (error) {
+        console.error(`[CONTROLLER-ERROR] getProgramDetails (ID: ${req.params.id}):`, error);
         res.status(500).send('Erro ao buscar detalhes do programa.');
     }
 };
 
 /**
- * @description Busca os detalhes de uma designação de programa específica.
- * @route GET /api/programs/assignment/:assignmentId
- * @access Private
+ * @description Atualiza um programa existente, suas etapas e instruções.
+ * @route PUT /api/programs/:id
  */
-exports.getAssignmentDetails = async (req, res) => {
+exports.updateProgram = async (req, res) => {
     try {
-        const { assignmentId } = req.params;
-        const assignment = await getAssignmentById(assignmentId);
-
-        if (!assignment) {
-            return res.status(404).send('Designação de programa não encontrada.');
-        }
-
-        res.json(assignment);
+        const { id } = req.params;
+        const program = await Program.updateProgram(id, req.body);
+        res.json(program);
     } catch (error) {
-        // O erro já é logado no Model.
-        res.status(500).send('Erro ao buscar detalhes da designação.');
-    }
-};
-
-exports.assignProgramToPatient = async (req, res) => {
-    const { patientId, programId } = req.body;
-    const therapistId = req.user.id;
-    try {
-        console.log(`[PROGRAM-CONTROLLER-LOG] assignProgramToPatient: Atribuindo programa ${programId} ao paciente ${patientId}`);
-        const query = `INSERT INTO patient_program_assignments (patient_id, program_id, therapist_id) VALUES ($1, $2, $3) RETURNING *;`;
-        const { rows } = await db.query(query, [patientId, programId, therapistId]);
-        console.log('[PROGRAM-CONTROLLER-LOG] assignProgramToPatient: Programa atribuído com sucesso');
-        res.status(201).json(rows[0]);
-    } catch (error) {
-        console.error('[PROGRAM-CONTROLLER-LOG] assignProgramToPatient: Erro -', error);
-        if (error.code === '23505') { return res.status(409).send('Este programa já foi designado a este paciente.'); }
-        res.status(500).send('Erro interno ao designar programa.');
-    }
-};
-
-exports.removeProgramFromPatient = async (req, res) => {
-    const { patientId, programId } = req.params;
-    try {
-        console.log(`[PROGRAM-CONTROLLER-LOG] removeProgramFromPatient: Removendo programa ${programId} do paciente ${patientId}`);
-        
-        const checkQuery = `SELECT id FROM patient_program_assignments WHERE patient_id = $1 AND program_id = $2`;
-        const checkResult = await db.query(checkQuery, [patientId, programId]);
-        
-        if (checkResult.rows.length === 0) {
-            return res.status(404).send('Programa não encontrado para este paciente.');
-        }
-        
-        const deleteQuery = `DELETE FROM patient_program_assignments WHERE patient_id = $1 AND program_id = $2 RETURNING *`;
-        const { rows } = await db.query(deleteQuery, [patientId, programId]);
-        
-        console.log('[PROGRAM-CONTROLLER-LOG] removeProgramFromPatient: Programa removido com sucesso');
-        res.status(200).json({ message: 'Programa removido com sucesso', assignment: rows[0] });
-    } catch (error) {
-        console.error('[PROGRAM-CONTROLLER-LOG] removeProgramFromPatient: Erro -', error);
-        res.status(500).send('Erro interno ao remover programa.');
-    }
-};
-
-exports.getAssignedProgramsForPatient = async (req, res) => {
-    const { patientId } = req.params;
-    try {
-        const query = `
-            SELECT
-                ppa.id AS assignment_id, ppa.status, p.id AS program_id,
-                p.name AS program_name, p.objective
-            FROM patient_program_assignments ppa JOIN programs p ON ppa.program_id = p.id
-            WHERE ppa.patient_id = $1;
-        `;
-        const { rows } = await db.query(query, [patientId]);
-        res.json(rows);
-    } catch (error) {
-        console.error('Erro ao buscar programas designados:', error);
-        res.status(500).send('Erro ao buscar programas designados.');
-    }
-};
-
-exports.recordEvolution = async (req, res) => {
-    const { assignmentId, stepId, sessionDate, attempts, successes, score, details } = req.body;
-    const therapistId = req.user.id;
-    try {
-        const query = `
-            INSERT INTO patient_program_progress
-                (assignment_id, step_id, therapist_id, session_date, attempts, successes, score, details)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *;
-        `;
-        const values = [assignmentId, stepId, therapistId, sessionDate, attempts, successes, score, details];
-        const { rows } = await db.query(query, values);
-        res.status(201).json(rows[0]);
-    } catch (error) {
-        console.error('Erro ao registrar evolução:', error);
-        res.status(500).send('Erro ao registrar evolução.');
-    }
-};
-
-exports.getEvolutionForPatient = async (req, res) => {
-    const { patientId, programId } = req.params;
-    try {
-        const query = `
-            SELECT
-                ppp.id, ppp.session_date, ppp.attempts, ppp.successes, ppp.score, ppp.details,
-                pst.id as step_id, pst.step_number, pst.name as step_name
-            FROM patient_program_progress ppp
-            JOIN patient_program_assignments ppa ON ppp.assignment_id = ppa.id
-            JOIN program_steps pst ON ppp.step_id = pst.id
-            WHERE ppa.patient_id = $1 AND ppa.program_id = $2
-            ORDER BY ppp.session_date, pst.step_number;
-        `;
-        const { rows } = await db.query(query, [patientId, programId]);
-        res.json(rows);
-    } catch (error) {
-        console.error('Erro ao buscar evolução do paciente:', error);
-        res.status(500).send('Erro ao buscar evolução do paciente.');
-    }
-};
-
-exports.getConsolidatedEvolutionData = async (req, res) => {
-    const { patientId } = req.params;
-    try {
-        const query = `
-            SELECT
-                p.id as program_id, p.name as program_name, pst.id as step_id, pst.name as step_name,
-                pst.step_number, ppp.session_date, ppp.score
-            FROM patient_program_progress ppp
-            JOIN patient_program_assignments ppa ON ppp.assignment_id = ppa.id
-            JOIN programs p ON ppa.program_id = p.id
-            JOIN program_steps pst ON ppp.step_id = pst.id
-            WHERE ppa.patient_id = $1
-            ORDER BY p.name, pst.step_number, ppp.session_date;
-        `;
-        const { rows } = await db.query(query, [patientId]);
-        res.json(rows);
-    } catch (error) {
-        console.error('Erro ao buscar dados consolidados de evolução:', error);
-        res.status(500).send('Erro ao buscar dados consolidados de evolução.');
+        console.error(`[CONTROLLER-ERROR] updateProgram (ID: ${id}):`, error);
+        res.status(500).send('Erro ao atualizar o programa.');
     }
 };
 
 /**
- * --- NOVA FUNÇÃO ADICIONADA ---
- * @description Atualiza o status de uma atribuição de programa (ex: para 'Arquivado').
- * @route PATCH /api/programs/assignment/:assignmentId/status
- * @access Private
+ * @description Exclui um programa e todos os seus dados relacionados.
+ * @route DELETE /api/programs/:id
  */
-exports.updateAssignmentStatus = async (req, res) => {
-    const { assignmentId } = req.params;
-    const { status } = req.body; // Espera receber { "status": "Arquivado" }
-
-    if (!status) {
-        return res.status(400).send('O novo status é obrigatório.');
-    }
-
-    console.log(`[PROGRAM-CONTROLLER-LOG] updateAssignmentStatus: Atualizando status da atribuição ${assignmentId} para "${status}"`);
-
+exports.deleteProgram = async (req, res) => {
     try {
-        const query = `
-            UPDATE patient_program_assignments 
-            SET status = $1 
-            WHERE id = $2 
-            RETURNING *;
-        `;
-        const { rows } = await db.query(query, [status, assignmentId]);
-
-        if (rows.length === 0) {
-            return res.status(404).send('Atribuição de programa não encontrada.');
+        const { id } = req.params;
+        const result = await Program.deleteProgram(id);
+        if (result === 0) {
+            return res.status(404).send('Programa não encontrado para exclusão.');
         }
-
-        console.log(`[PROGRAM-CONTROLLER-LOG] updateAssignmentStatus: Status atualizado com sucesso.`);
-        res.status(200).json(rows[0]);
-
+        res.status(200).send('Programa excluído com sucesso.');
     } catch (error) {
-        console.error('[PROGRAM-CONTROLLER-LOG] updateAssignmentStatus: Erro -', error);
-        res.status(500).send('Erro interno ao atualizar o status da atribuição.');
+        console.error(`[CONTROLLER-ERROR] deleteProgram (ID: ${id}):`, error);
+        res.status(500).send('Erro ao excluir o programa.');
     }
 };

@@ -14,9 +14,9 @@ import {
   Filler,
 } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
-// --- NOVA IMPORTAÇÃO ---
-// Importa as funções da API que este componente irá usar.
-import { recordProgramEvolution, getProgramEvolution } from '../../api/programApi';
+// --- CORREÇÃO NA IMPORTAÇÃO ---
+// Importa as funções com os nomes corretos da API.
+import { recordProgress, getAssignmentEvolution } from '../../api/programApi';
 
 ChartJS.register(
   CategoryScale,
@@ -42,7 +42,6 @@ const formatDate = (dateString, format = 'long') => {
     return adjustedDate.toLocaleDateString('pt-BR', options);
 };
 
-// --- COMPONENTE REATORIZADO ---
 const SessionProgress = ({ program, assignment }) => {
   // Estados para o formulário
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);
@@ -60,10 +59,12 @@ const SessionProgress = ({ program, assignment }) => {
 
   // Função para buscar o histórico de progresso
   const fetchEvolutionHistory = useCallback(async () => {
-    if (!assignment) return;
+    if (!assignment?.assignment_id) return; // Garante que temos o ID da atribuição
     setIsLoadingHistory(true);
     try {
-      const history = await getProgramEvolution(assignment.patient_id, assignment.program_id);
+      // --- CORREÇÃO NA CHAMADA DA FUNÇÃO ---
+      // Agora usa getAssignmentEvolution e passa apenas o ID da atribuição.
+      const history = await getAssignmentEvolution(assignment.assignment_id);
       setEvolutionData(history);
     } catch (err) {
       setError('Não foi possível carregar o histórico de progresso.');
@@ -82,7 +83,8 @@ const SessionProgress = ({ program, assignment }) => {
     fetchEvolutionHistory();
     // Define o primeiro passo como selecionado por defeito
     if (program?.steps?.length > 0) {
-      setSelectedStepId(program.steps[0].step_id);
+      // Ajustado para o nome correto da propriedade
+      setSelectedStepId(program.steps[0].id);
     }
   }, [program, assignment, fetchEvolutionHistory]);
 
@@ -110,9 +112,9 @@ const SessionProgress = ({ program, assignment }) => {
     
     const score = (numSuccesses / numAttempts) * 100;
     const evolutionPayload = {
-      assignmentId: assignment.assignment_id,
-      stepId: selectedStepId,
-      sessionDate,
+      assignment_id: assignment.assignment_id, // Nome do campo corrigido para o backend
+      step_id: selectedStepId, // Nome do campo corrigido para o backend
+      session_date: sessionDate, // Nome do campo corrigido para o backend
       attempts: numAttempts,
       successes: numSuccesses,
       score: parseFloat(score.toFixed(2)),
@@ -120,7 +122,9 @@ const SessionProgress = ({ program, assignment }) => {
     };
 
     try {
-        await recordProgramEvolution(evolutionPayload);
+        // --- CORREÇÃO NA CHAMADA DA FUNÇÃO ---
+        // Agora usa a função recordProgress.
+        await recordProgress(evolutionPayload);
         // Limpa o formulário e atualiza o histórico
         setAttempts('');
         setSuccesses('');
@@ -151,10 +155,57 @@ const SessionProgress = ({ program, assignment }) => {
     }]
   };
   
-  const chartOptions = { /* ... (as suas excelentes opções de gráfico são mantidas aqui) ... */ };
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+            backgroundColor: '#fff',
+            titleColor: '#333',
+            bodyColor: '#666',
+            borderColor: '#ddd',
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+                label: (context) => `Pontuação: ${context.parsed.y.toFixed(2)}%`
+            }
+        },
+        annotation: {
+            annotations: {
+                line1: {
+                    type: 'line',
+                    yMin: 80,
+                    yMax: 80,
+                    borderColor: 'rgb(45, 212, 191)',
+                    borderWidth: 2,
+                    borderDash: [6, 6],
+                    label: {
+                        content: 'Meta (80%)',
+                        position: 'end',
+                        backgroundColor: 'rgba(45, 212, 191, 0.8)',
+                        font: { size: 10 },
+                        color: 'white',
+                        padding: 4,
+                        borderRadius: 4,
+                    }
+                }
+            }
+        }
+    },
+    scales: {
+        y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+                callback: (value) => `${value}%`
+            }
+        }
+    }
+  };
 
   // Renderização defensiva
-  if (!program && !assignment) {
+  if (!program || !assignment) {
     return (
       <div className="flex flex-col items-center justify-center text-center text-gray-500 p-10 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
         <p className="text-lg font-medium text-gray-600">Selecione um programa</p>
@@ -184,8 +235,8 @@ const SessionProgress = ({ program, assignment }) => {
                   <select id="program-step" value={selectedStepId} onChange={e => setSelectedStepId(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500">
                       <option value="" disabled>Selecione um passo</option>
                       {program?.steps?.map(step => (
-                          <option key={step.step_id} value={step.step_id}>
-                              Passo {step.step_number}: {step.step_name}
+                          <option key={step.id} value={step.id}>
+                              Passo {step.step_number}: {step.name}
                           </option>
                       )) || <option disabled>Nenhum passo disponível</option>}
                   </select>

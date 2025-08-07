@@ -1,13 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const { assignProgramToPatient } = require('../controllers/assignmentController');
+const assignmentController = require('../controllers/assignmentController');
+// O middleware de autenticação foi removido daqui, pois já é aplicado no server.js
 
-// O middleware de autenticação (verifyToken) já é aplicado no arquivo server.js
-// para todo o grupo de rotas '/api/assignments'. Portanto, não é necessário
-// adicioná-lo novamente aqui.
+// Rota para atribuir um programa a um paciente
+router.post('/', assignmentController.assignProgramToPatient);
 
-// Rota para criar uma nova atribuição de programa para um paciente.
-// A requisição será POST /api/assignments
-router.post('/', assignProgramToPatient);
+// Rota para remover uma atribuição de programa
+router.delete('/:assignmentId', assignmentController.removeProgramFromPatient);
+
+// Rota para buscar programas designados de um paciente
+router.get('/patient/:patientId', assignmentController.getAssignedProgramsByPatientId);
+
+// Rota para buscar os detalhes de uma designação específica
+router.get('/:id', assignmentController.getAssignmentDetails);
+
+// Rota para ATUALIZAR O STATUS de uma designação
+router.patch('/:id/status', assignmentController.updateAssignmentStatus);
+
+// Rota para registrar progresso (evolução)
+router.post('/progress', assignmentController.recordProgress);
+
+// Rota para buscar a evolução de uma designação específica
+router.get('/:assignmentId/progress', assignmentController.getEvolutionForAssignment);
 
 module.exports = router;
