@@ -2,10 +2,14 @@ import React, { createContext, useState, useContext, useEffect, useCallback } fr
 import { useAuth } from './AuthContext';
 import { fetchAllAdminPatients } from '../api/adminApi';
 import { fetchParentDashboardData } from '../api/parentApi';
-import { updateAssignmentStatus, getAssignmentsForPatient } from '../api/programApi'; 
+// --- CORREÇÃO DE IMPORTAÇÃO (1/2) ---
+// 'removeProgramAssignment' foi removido desta linha, pois não pertence a este arquivo.
+import { updateAssignmentStatus } from '../api/programApi'; 
 import { 
   fetchAllPatients,
   assignProgramToPatient,
+  // --- CORREÇÃO DE IMPORTAÇÃO (2/2) ---
+  // 'removeProgramAssignment' agora é importado corretamente do patientApi.
   removeProgramAssignment,
   createSession,
   updatePatientNotes
@@ -24,8 +28,7 @@ export const PatientProvider = ({ children }) => {
   const [isPatientFormOpen, setIsPatientFormOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [patientToEdit, setPatientToEdit] = useState(null);
-  const [programForProgress, setProgramForProgress] = useState(null);
-
+  
   const refreshData = useCallback(async (patientIdToReselect = null) => {
     if (!isAuthenticated || !user || !token) {
       setPatients([]);
@@ -45,14 +48,15 @@ export const PatientProvider = ({ children }) => {
         const parentData = await fetchParentDashboardData(token);
         patientData = parentData.patient ? [parentData.patient] : [];
         if (parentData.patient) {
-          await selectPatient(parentData.patient);
+          setSelectedPatient(parentData.patient);
         }
       }
       setPatients(patientData);
+
       if (patientIdToReselect) {
         const reSelected = patientData.find(p => p.id === patientIdToReselect);
         if (reSelected) {
-          await selectPatient(reSelected);
+          setSelectedPatient(reSelected);
         }
       } else if (user.role !== 'pai') {
         setSelectedPatient(null);
@@ -69,18 +73,8 @@ export const PatientProvider = ({ children }) => {
       setSelectedPatient(null);
       return;
     }
-    setIsLoadingPatient(true);
-    setProgramForProgress(null);
-    try {
-      const assignedPrograms = await getAssignmentsForPatient(patient.id, token);
-      setSelectedPatient({ ...patient, assigned_programs: assignedPrograms });
-    } catch (error) {
-      setError('Não foi possível carregar os detalhes do cliente.');
-      setSelectedPatient(patient);
-    } finally {
-      setIsLoadingPatient(false);
-    }
-  }, [token]);
+    setSelectedPatient(patient);
+  }, []);
 
   useEffect(() => {
     refreshData();
@@ -91,10 +85,7 @@ export const PatientProvider = ({ children }) => {
     const patientId = selectedPatient.id;
     try {
         await action();
-        const currentPatient = patients.find(p => p.id === patientId);
-        if (currentPatient) {
-          await selectPatient(currentPatient);
-        }
+        await refreshData(patientId);
     } catch (error) {
         console.error("Erro ao executar ação e recarregar:", error);
         throw error;
@@ -105,25 +96,14 @@ export const PatientProvider = ({ children }) => {
   
   const removeProgram = (programId) => {
       if (!selectedPatient) return;
-      
-      const assignment = selectedPatient.assigned_programs?.find(
-        (p) => p.program_id === programId
-      );
-
+      const assignment = selectedPatient.assigned_programs?.find(p => p.program_id === programId);
       if (!assignment) {
-        alert("Erro: Não foi possível encontrar a referência do programa para remoção. Tente atualizar a página.");
+        console.error("Erro: Não foi possível encontrar a referência do programa para remoção.");
         return;
       }
-
-      // SOLUÇÃO: Usar a propriedade correta 'assignment_id' que vimos nos logs.
       const assignmentIdToRemove = assignment.assignment_id;
-      
-      if (!assignmentIdToRemove) {
-        alert("Erro: ID da atribuição é inválido.");
-        return;
-      }
-
       if (window.confirm("Tem a certeza que deseja remover este programa permanentemente? Esta ação não pode ser desfeita.")) {
+        // A função 'removeProgramAssignment' agora será encontrada pois a importação está correta.
         performActionAndReload(() => removeProgramAssignment(assignmentIdToRemove, token));
       }
   };
@@ -145,8 +125,6 @@ export const PatientProvider = ({ children }) => {
     isPatientFormOpen, patientToEdit,
     openPatientForm: useCallback((patient = null) => { setPatientToEdit(patient); setIsPatientFormOpen(true); }, []),
     closePatientForm: useCallback(() => { setPatientToEdit(null); setIsPatientFormOpen(false); }, []),
-    programForProgress,
-    selectProgramForProgress: useCallback((program) => setProgramForProgress(program), []),
     isReportModalOpen,
     openReportModal: useCallback(() => setIsReportModalOpen(true), []),
     closeReportModal: useCallback(() => setIsReportModalOpen(false), []),

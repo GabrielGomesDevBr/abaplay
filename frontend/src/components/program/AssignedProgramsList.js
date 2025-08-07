@@ -2,9 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { usePatients } from '../../context/PatientContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartLine, faEye, faEyeSlash, faTrashAlt, faSpinner, faArchive } from '@fortawesome/free-solid-svg-icons';
+import { faChartLine, faEye, faEyeSlash, faTrashAlt, faSpinner, faArchive, faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 
-const AssignedProgramsList = () => {
+// O componente recebe onProgramSelect e selectedProgramId da ClientsPage
+const AssignedProgramsList = ({ onProgramSelect, selectedProgramId }) => {
   const { 
     selectedPatient, 
     toggleProgramStatus, 
@@ -26,11 +27,9 @@ const AssignedProgramsList = () => {
       setTogglingId(null);
     }
   };
-
-  // --- CORREÇÃO PRINCIPAL ---
-  // A função `handleRemove` agora recebe o `programId` e o passa para o contexto.
+  
   const handleRemove = async (programId) => {
-    setRemovingId(programId); // Usamos o programId para o feedback de loading
+    setRemovingId(programId);
     try {
         await removeProgram(programId);
     } catch(error) {
@@ -52,8 +51,8 @@ const AssignedProgramsList = () => {
 
   const groupedPrograms = useMemo(() => {
     return programsToShow.reduce((acc, program) => {
-      // O objeto 'program' vindo da API contém 'discipline_name'
-      const discipline = program.discipline_name || 'Programas'; 
+      // Com a correção no Context, 'discipline_name' agora estará presente
+      const discipline = program.discipline_name || 'Geral'; 
       if (!acc[discipline]) {
         acc[discipline] = [];
       }
@@ -89,36 +88,44 @@ const AssignedProgramsList = () => {
         </div>
       </div>
       
-      <ul className="space-y-4 overflow-y-auto flex-1 -mx-2 px-2 max-h-[calc(100vh-450px)]">
+      <ul className="space-y-3 overflow-y-auto flex-1 -mx-2 px-2 max-h-[calc(100vh-450px)]">
         {programsToShow.length > 0 ? (
           programDisciplines.map(discipline => (
             <li key={discipline}>
-              <h4 className="text-sm font-semibold uppercase tracking-wider text-indigo-700 bg-indigo-100 px-3 py-2 rounded-md sticky top-0 shadow-sm">
+              <h4 className="text-sm font-semibold uppercase tracking-wider text-indigo-700 bg-indigo-100 px-3 py-2 rounded-md sticky top-0 shadow-sm flex items-center">
+                <FontAwesomeIcon icon={faLayerGroup} className="mr-2" />
                 {discipline}
               </h4>
               <ul className="space-y-2 pt-3">
                 {groupedPrograms[discipline].map(program => {
                   const isArchived = program.status === 'archived';
-                  
+                  const isSelected = program.assignment_id === selectedProgramId;
+
                   return (
-                    <li key={program.assignment_id} className={`p-2 rounded-lg flex justify-between items-center transition-all duration-200 hover:bg-gray-100 ${isArchived ? 'bg-gray-100 opacity-70' : ''}`}>
+                    <li key={program.assignment_id} 
+                        onClick={() => !isArchived && onProgramSelect(program)}
+                        className={`p-2.5 rounded-lg flex justify-between items-center transition-all duration-200 cursor-pointer ${isSelected ? 'bg-indigo-100 shadow-sm' : 'hover:bg-gray-50'} ${isArchived ? 'bg-gray-100 opacity-70 cursor-not-allowed' : ''}`}>
                       <div className={`truncate pr-2 ${isArchived && 'italic text-gray-500'}`}>
                         <p className="text-sm font-medium truncate" title={program.program_name}>
                           {program.program_name}
                         </p>
                       </div>
                       <div className="flex space-x-2 flex-shrink-0">
-                        <Link to={`/session/${program.assignment_id}`} title="Iniciar Sessão" className={`p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-indigo-600 hover:bg-indigo-100 ${isArchived ? 'text-gray-400 bg-transparent cursor-not-allowed pointer-events-none' : ''}`}>
+                        
+                        {/* --- BOTÃO DE SESSÃO RESTAURADO E VISÍVEL --- */}
+                        <Link 
+                          to={`/session/${program.assignment_id}`} 
+                          title="Iniciar Sessão" 
+                          onClick={(e) => e.stopPropagation()} // Impede que o clique no botão selecione o item da lista
+                          className={`p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-indigo-600 hover:bg-indigo-200 ${isArchived ? 'text-gray-400 bg-transparent cursor-not-allowed pointer-events-none' : ''}`}>
                           <FontAwesomeIcon icon={faChartLine} className="fa-fw" />
                         </Link>
                         
-                        <button title={isArchived ? "Reativar Programa" : "Arquivar Programa"} onClick={() => handleToggleStatus(program.assignment_id, program.status)} disabled={togglingId === program.assignment_id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-yellow-600 hover:bg-yellow-100 disabled:opacity-50">
+                        <button title={isArchived ? "Reativar Programa" : "Arquivar Programa"} onClick={(e) => { e.stopPropagation(); handleToggleStatus(program.assignment_id, program.status); }} disabled={togglingId === program.assignment_id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-yellow-600 hover:bg-yellow-100 disabled:opacity-50">
                           {togglingId === program.assignment_id ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> : <FontAwesomeIcon icon={isArchived ? faEye : faEyeSlash} className="fa-fw" />}
                         </button>
 
-                        {/* --- CORREÇÃO PRINCIPAL 2 --- */}
-                        {/* O botão de remover agora passa o `program.program_id` */}
-                        <button title="Remover Programa Permanentemente" onClick={() => handleRemove(program.program_id)} disabled={removingId === program.program_id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-red-500 hover:bg-red-100 disabled:opacity-50">
+                        <button title="Remover Programa Permanentemente" onClick={(e) => { e.stopPropagation(); handleRemove(program.program_id); }} disabled={removingId === program.program_id} className="p-2 rounded-full w-9 h-9 flex items-center justify-center transition-colors text-red-500 hover:bg-red-100 disabled:opacity-50">
                           {removingId === program.program_id ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> : <FontAwesomeIcon icon={faTrashAlt} className="fa-fw" />}
                         </button>
                       </div>

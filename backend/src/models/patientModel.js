@@ -12,12 +12,16 @@ const getFullPatientData = async (patientId) => {
     const patient = patientResult.rows[0];
 
     // --- CORREÇÃO PRINCIPAL ---
-    // A query agora junta (JOIN) as tabelas até 'disciplines' para buscar o nome da disciplina.
-    // Isso é crucial para o frontend poder agrupar os programas.
+    // A query foi ajustada para selecionar todos os campos necessários com nomes claros (aliases)
+    // que o frontend espera, incluindo o crucial 'assignment_id'.
     const programsQuery = `
         SELECT
-            p.id,
-            p.name,
+            ppa.id AS assignment_id,
+            p.id AS program_id,
+            p.name AS program_name,
+            p.objective,
+            p.procedure,
+            p.trials,
             ppa.status,
             d.name AS discipline_name
         FROM
@@ -30,12 +34,16 @@ const getFullPatientData = async (patientId) => {
     `;
     const programsResult = await pool.query(programsQuery, [patientId]);
     
-    // O objeto agora inclui o nome da disciplina.
+    // O mapeamento agora cria um objeto que corresponde exatamente ao que os componentes do frontend precisam.
     patient.assigned_programs = programsResult.rows.map(row => ({ 
-        id: row.id, 
-        name: row.name,
+        assignment_id: row.assignment_id,
+        program_id: row.program_id,
+        program_name: row.program_name,
+        objective: row.objective,
+        procedure: row.procedure,
+        trials: row.trials,
         status: row.status || 'active',
-        discipline: row.discipline_name // Novo campo!
+        discipline_name: row.discipline_name
     }));
 
     // A busca de sessões permanece a mesma.
@@ -59,7 +67,7 @@ const getFullPatientData = async (patientId) => {
 
 
 // --- O RESTANTE DO MODELO ---
-// As outras funções permanecem como na nossa última correção.
+// As outras funções permanecem como estavam.
 
 const PatientModel = {
   async create(patientData, clinicId) {

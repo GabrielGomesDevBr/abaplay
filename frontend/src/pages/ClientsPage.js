@@ -1,5 +1,4 @@
-import React from 'react';
-// A importação do 'Link' e do ícone 'faComments' foi removida pois não são mais necessários aqui.
+import React, { useState, useEffect } from 'react';
 import { usePatients } from '../context/PatientContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserCircle, faSpinner } from '@fortawesome/free-solid-svg-icons';
@@ -9,7 +8,6 @@ import PatientForm from '../components/patient/PatientForm';
 import AssignedProgramsList from '../components/program/AssignedProgramsList';
 import SessionProgress from '../components/program/SessionProgress';
 import ConsolidatedReportModal from '../components/patient/ConsolidatedReportModal';
-
 
 const ClientsPage = () => {
   const { 
@@ -24,6 +22,14 @@ const ClientsPage = () => {
     closeReportModal
   } = usePatients();
 
+  // 1. Adiciona um estado para rastrear o programa selecionado na lista
+  const [selectedProgram, setSelectedProgram] = useState(null);
+
+  // 2. Garante que o programa selecionado seja limpo ao trocar de paciente
+  useEffect(() => {
+    setSelectedProgram(null);
+  }, [selectedPatient]);
+
   const handleSavePatient = async (patientData) => {
     if (patientToEdit) {
       await editPatient(patientData);
@@ -32,6 +38,10 @@ const ClientsPage = () => {
     }
   };
 
+  // 3. Função para atualizar o estado quando um programa é clicado
+  const handleProgramSelect = (program) => {
+    setSelectedProgram(program);
+  };
 
   if (isLoading) {
     return (
@@ -48,20 +58,21 @@ const ClientsPage = () => {
     <>
       {selectedPatient ? (
         <div className="space-y-6">
-          
           <PatientDetails />
-
-          {/* --- CORREÇÃO APLICADA AQUI --- */}
-          {/* O botão antigo de "Discussão de Caso" foi completamente removido deste local. */}
-          {/* A funcionalidade agora está centralizada dentro do componente PatientDetails. */}
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
-                <AssignedProgramsList />
+                {/* 4. Passa a função de seleção e o ID do programa selecionado para a lista */}
+                <AssignedProgramsList 
+                  onProgramSelect={handleProgramSelect}
+                  selectedProgramId={selectedProgram?.assignment_id}
+                />
             </div>
             
-            <div className="lg:col-span-2">
-                 <SessionProgress />
+            {/* 5. Adiciona um contêiner estilizado para o componente de progresso */}
+            <div className="lg:col-span-2 bg-white p-5 rounded-lg shadow-md border border-gray-200">
+                 {/* 6. Passa o programa selecionado para o componente de progresso */}
+                 <SessionProgress program={selectedProgram} assignment={selectedProgram} />
             </div>
           </div>
         </div>
