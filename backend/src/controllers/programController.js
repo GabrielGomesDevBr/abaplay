@@ -1,12 +1,14 @@
 const Program = require('../models/programModel');
 
 /**
- * @description Cria um novo programa com etapas e instruções.
+ * @description Cria um novo programa. Os detalhes como materiais e procedimento são salvos em campos JSONB.
  * @route POST /api/programs
+ * @access Private
  */
 exports.createProgram = async (req, res) => {
     try {
-        const program = await Program.createProgram(req.body);
+        // A lógica de criação agora é mais simples e será tratada no model para inserir os dados no novo formato.
+        const program = await Program.create(req.body);
         res.status(201).json(program);
     } catch (error) {
         console.error('[CONTROLLER-ERROR] createProgram:', error);
@@ -15,13 +17,14 @@ exports.createProgram = async (req, res) => {
 };
 
 /**
- * @description Busca todos os programas de forma estruturada por hierarquia.
+ * @description Busca todos os programas de forma estruturada, alinhado com o novo schema.
  * @route GET /api/programs
+ * @access Private
  */
 exports.getAllPrograms = async (req, res) => {
     try {
-        // A função no model foi renomeada para maior clareza
-        const programs = await Program.getAllProgramsWithHierarchy();
+        // A função no model buscará os dados do novo schema, que já contém tudo que precisamos.
+        const programs = await Program.getAllWithHierarchy();
         res.json(programs);
     } catch (error) {
         console.error('[CONTROLLER-ERROR] getAllPrograms:', error);
@@ -30,14 +33,15 @@ exports.getAllPrograms = async (req, res) => {
 };
 
 /**
- * @description Busca os detalhes completos de um programa específico.
+ * @description Busca os detalhes completos de um programa específico pelo seu ID.
  * @route GET /api/programs/:id
+ * @access Private
  */
 exports.getProgramDetails = async (req, res) => {
     try {
-        // O parâmetro na rota agora é 'id'
         const { id } = req.params;
-        const program = await Program.getProgramById(id);
+        // A função no model buscará todos os detalhes diretamente da tabela 'programs'.
+        const program = await Program.findById(id);
         if (!program) {
             return res.status(404).send('Programa não encontrado.');
         }
@@ -49,13 +53,15 @@ exports.getProgramDetails = async (req, res) => {
 };
 
 /**
- * @description Atualiza um programa existente, suas etapas e instruções.
+ * @description Atualiza um programa existente.
  * @route PUT /api/programs/:id
+ * @access Private
  */
 exports.updateProgram = async (req, res) => {
     try {
         const { id } = req.params;
-        const program = await Program.updateProgram(id, req.body);
+        // A lógica de atualização no model será simplificada para o novo formato de dados.
+        const program = await Program.update(id, req.body);
         res.json(program);
     } catch (error) {
         console.error(`[CONTROLLER-ERROR] updateProgram (ID: ${id}):`, error);
@@ -64,13 +70,14 @@ exports.updateProgram = async (req, res) => {
 };
 
 /**
- * @description Exclui um programa e todos os seus dados relacionados.
+ * @description Exclui um programa. A deleção em cascata no DB cuidará dos dados relacionados.
  * @route DELETE /api/programs/:id
+ * @access Private
  */
 exports.deleteProgram = async (req, res) => {
     try {
         const { id } = req.params;
-        const result = await Program.deleteProgram(id);
+        const result = await Program.deleteById(id);
         if (result === 0) {
             return res.status(404).send('Programa não encontrado para exclusão.');
         }

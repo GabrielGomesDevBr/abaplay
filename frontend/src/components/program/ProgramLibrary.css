@@ -1,100 +1,98 @@
-/* frontend/src/components/program/ProgramLibrary.css */
-
+/* Estilo geral da biblioteca de programas */
 .program-library {
-  padding: 20px;
-  background-color: #f9f9f9;
+  width: 100%;
+  padding: 1rem;
+  background-color: #f9fafb; /* Cinza bem claro */
   border-radius: 8px;
 }
 
-.program-library h2 {
-  margin-bottom: 20px;
-  color: #333;
+/* Container para as abas de navegação */
+.tabs-container {
+  display: flex;
+  flex-wrap: wrap;
+  border-bottom: 2px solid #e5e7eb; /* Linha divisória cinza */
+  margin-bottom: 1.5rem;
 }
 
-.discipline-details,
-.area-details {
-  background-color: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  overflow: hidden;
-}
-
-.discipline-summary,
-.area-summary {
-  padding: 15px 20px;
-  font-weight: bold;
+/* Estilo individual de cada botão/aba */
+.tab-button {
+  padding: 0.75rem 1.5rem;
+  margin-bottom: -2px; /* Alinha o botão com a borda inferior */
+  border: 2px solid transparent;
+  border-bottom: none;
+  background-color: transparent;
+  color: #4b5563; /* Cinza escuro */
+  font-size: 0.95rem;
+  font-weight: 600;
   cursor: pointer;
-  list-style: none; /* Remove a seta padrão */
-  display: block;
-  position: relative;
+  transition: all 0.2s ease-in-out;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
 }
 
-.discipline-summary {
-  font-size: 1.2em;
-  background-color: #f0f4f8;
-  color: #1c3d5a;
+.tab-button:hover {
+  background-color: #f3f4f6; /* Cinza um pouco mais escuro no hover */
+  color: #1f2937;
 }
 
-.area-summary {
-  font-size: 1.1em;
-  background-color: #e8eff5;
-  color: #2c5d8a;
+/* Estilo da aba que está ativa */
+.tab-button.active {
+  color: #4f46e5; /* Roxo/Índigo */
+  border-color: #e5e7eb;
+  border-bottom-color: #f9fafb; /* Faz a aba "conectar" com o conteúdo */
+  background-color: #f9fafb;
 }
 
-/* Adiciona um ícone de seta customizado */
-.discipline-summary::before,
-.area-summary::before {
-  content: '▶';
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%) rotate(0deg);
-  transition: transform 0.2s;
-  font-size: 0.8em;
+/* Container para o conteúdo da aba selecionada */
+.tab-content {
+  padding-top: 1rem;
 }
 
-details[open] > summary::before {
-  transform: translateY(-50%) rotate(90deg);
+/* Container para cada área (ex: Mando, Tato) */
+.area-container {
+  margin-bottom: 2rem;
 }
 
-.discipline-content,
-.area-content {
-  padding: 15px;
-  border-top: 1px solid #e0e0e0;
+.area-header {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #d1d5db;
+  margin-bottom: 1.5rem;
 }
 
+/* Container para a sub-área (se necessário) */
 .sub-area-container {
-  margin-bottom: 20px;
+  margin-bottom: 1.5rem;
 }
 
 .sub-area-header {
-  margin-bottom: 10px;
-  color: #444;
-  border-bottom: 2px solid #d1e3f3;
-  padding-bottom: 5px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 1rem;
 }
 
+/* Grid para os cards dos programas */
 .programs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
+  gap: 1.5rem;
 }
 
-.loading-message, .error-message, .empty-message {
-    padding: 20px;
-    text-align: center;
-    font-size: 1.1em;
-    color: #555;
-}
-
-.error-message {
-    color: #d9534f;
+/* Mensagens de feedback */
+.loading-message,
+.error-message,
+.empty-message {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1rem;
+  color: #6b7280;
 }
 
 .empty-message-small {
-  font-size: 0.9em;
+  font-size: 0.9rem;
   color: #6b7280;
-  padding: 10px;
-  text-align: center;
+  padding: 1rem 0;
 }
