@@ -13,9 +13,11 @@ JOIN information_schema.columns c ON t.table_name = c.table_name
 WHERE t.table_schema = 'public' 
   AND t.table_type = 'BASE TABLE'
   AND t.table_name IN (
-    'disciplines', 'program_areas', 'program_sub_areas', 'programs', 'program_steps',
-    'patients', 'therapist_patient_assignments', 'patient_program_assignments',
-    'patient_program_progress', 'case_discussions', 'parent_chats'
+    'disciplines', 'program_areas', 'program_sub_areas', 'programs',
+    'patients', 'users', 'clinics',
+    'therapist_patient_assignments', 'patient_program_assignments',
+    'patient_program_progress', 'case_discussions', 'parent_chats',
+    'notifications', 'notification_status'
   )
 GROUP BY t.table_name
 ORDER BY t.table_name;
@@ -28,14 +30,14 @@ SELECT
     psa.name as sub_area,
     p.id as program_id,
     p.name as program_name,
-    p.objective as program_objective,
-    COUNT(ps.id) as total_steps
+    p.objective,
+    p.skill,
+    p.trials
 FROM disciplines d
 LEFT JOIN program_areas pa ON d.id = pa.discipline_id
 LEFT JOIN program_sub_areas psa ON pa.id = psa.area_id
 LEFT JOIN programs p ON psa.id = p.sub_area_id
-LEFT JOIN program_steps ps ON p.id = ps.program_id
-GROUP BY d.name, pa.name, psa.name, p.id, p.name, p.objective
+GROUP BY d.name, pa.name, psa.name, p.id, p.name, p.objective, p.skill, p.trials
 ORDER BY d.name, pa.name, psa.name, p.name;
 
 -- 3. ANÁLISE DE ATRIBUIÇÕES DE PROGRAMAS
@@ -70,7 +72,40 @@ JOIN users u ON cd.user_id = u.id
 ORDER BY pat.name, cd.created_at DESC
 LIMIT 20;
 
--- 5. ANÁLISE DE MENSAGENS (PARENT CHATS)
+-- 5. ANÁLISE DE PROGRESSO DOS PROGRAMAS
+-- ======================================
+SELECT 
+    pat.name as patient_name,
+    p.name as program_name,
+    ppp.session_date,
+    ppp.trials_correct,
+    ppp.trials_incorrect,
+    ppp.total_trials,
+    ROUND((ppp.trials_correct::float / NULLIF(ppp.total_trials, 0)) * 100, 2) as success_percentage
+FROM patient_program_progress ppp
+JOIN patient_program_assignments ppa ON ppp.assignment_id = ppa.id
+JOIN patients pat ON ppa.patient_id = pat.id
+JOIN programs p ON ppa.program_id = p.id
+ORDER BY pat.name, p.name, ppp.session_date DESC
+LIMIT 50;
+
+-- 6. ANÁLISE DE NOTIFICAÇÕES
+-- ===========================
+SELECT 
+    n.id,
+    n.type as notification_type,
+    n.title,
+    n.message,
+    pat.name as patient_name,
+    ns.read_at,
+    n.created_at
+FROM notifications n
+LEFT JOIN patients pat ON n.patient_id = pat.id
+LEFT JOIN notification_status ns ON n.id = ns.notification_id
+ORDER BY n.created_at DESC
+LIMIT 20;
+
+-- 7. ANÁLISE DE MENSAGENS (PARENT CHATS)
 -- ======================================
 SELECT 
     pc.id,
@@ -84,7 +119,7 @@ JOIN users u ON pc.sender_id = u.id
 ORDER BY pat.name, pc.created_at DESC
 LIMIT 20;
 
--- 6. DETALHES DO TERAPEUTA E SEUS PACIENTES
+-- 8. DETALHES DO TERAPEUTA E SEUS PACIENTES
 -- =========================================
 SELECT 
     u.id as therapist_id,
@@ -99,7 +134,7 @@ LEFT JOIN patients pat ON tpa.patient_id = pat.id
 WHERE u.role = 'terapeuta'
 ORDER BY u.name, pat.name;
 
--- 7. CONTAGEM DE REGISTROS POR TABELA
+-- 9. CONTAGEM DE REGISTROS POR TABELA
 -- ===================================
 SELECT 'disciplines' as tabela, COUNT(*) as total FROM disciplines
 UNION ALL
@@ -109,9 +144,15 @@ SELECT 'program_sub_areas' as tabela, COUNT(*) as total FROM program_sub_areas
 UNION ALL
 SELECT 'programs' as tabela, COUNT(*) as total FROM programs
 UNION ALL
-SELECT 'program_steps' as tabela, COUNT(*) as total FROM program_steps
-UNION ALL
 SELECT 'patients' as tabela, COUNT(*) as total FROM patients
+UNION ALL
+SELECT 'users' as tabela, COUNT(*) as total FROM users
+UNION ALL
+SELECT 'clinics' as tabela, COUNT(*) as total FROM clinics
+UNION ALL
+SELECT 'notifications' as tabela, COUNT(*) as total FROM notifications
+UNION ALL
+SELECT 'notification_status' as tabela, COUNT(*) as total FROM notification_status
 UNION ALL
 SELECT 'patient_program_assignments' as tabela, COUNT(*) as total FROM patient_program_assignments
 UNION ALL
