@@ -26,9 +26,8 @@ const Assignment = {
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
-            // Primeiro, remove o progresso para evitar violação de chave estrangeira
-            await client.query('DELETE FROM patient_program_progress WHERE assignment_id = $1', [id]);
-            // Depois, remove a atribuição
+            // A deleção em cascata no banco de dados deve cuidar do progresso associado.
+            // Simplificamos para uma única deleção.
             const result = await client.query('DELETE FROM patient_program_assignments WHERE id = $1', [id]);
             await client.query('COMMIT');
             return result.rowCount;
@@ -64,30 +63,44 @@ const Assignment = {
 
     /**
      * Busca os detalhes completos de uma atribuição, incluindo os dados do programa.
+     * Esta função foi refatorada para buscar os detalhes do programa diretamente da tabela 'programs'.
      * @param {number} id - O ID da atribuição.
      * @returns {Promise<object|null>} Os detalhes da atribuição ou null se não for encontrada.
      */
     async getAssignmentDetailsById(id) {
         const query = `
             SELECT
-                ppa.id as assignment_id,
+                ppa.id AS assignment_id,
                 ppa.status,
                 ppa.assigned_at,
-                json_build_object(
+                jsonb_build_object(
                     'id', pat.id,
                     'name', pat.name
-                ) as patient,
-                json_build_object(
+                ) AS patient,
+                jsonb_build_object(
                     'id', ther.id,
-                    'full_name', ther.full_name
-                ) as therapist,
-                (SELECT program_json FROM get_program_details(ppa.program_id)) as program
+                    'name', ther.full_name -- CORRIGIDO: de 'name' para 'full_name'
+                ) AS therapist,
+                -- Constrói o objeto do programa diretamente a partir da tabela 'programs'
+                jsonb_build_object(
+                    'id', p.id,
+                    'name', p.name,
+                    'objective', p.objective,
+                    'program_slug', p.program_slug,
+                    'skill', p.skill,
+                    'materials', p.materials,
+                    'procedure', p.procedure,
+                    'criteria_for_advancement', p.criteria_for_advancement,
+                    'trials', p.trials
+                ) AS program
             FROM 
                 patient_program_assignments ppa
             JOIN 
                 patients pat ON ppa.patient_id = pat.id
             JOIN 
                 users ther ON ppa.therapist_id = ther.id
+            JOIN
+                programs p ON ppa.program_id = p.id
             WHERE 
                 ppa.id = $1;
         `;
@@ -104,7 +117,7 @@ const Assignment = {
     async updateStatus(id, status) {
         const query = `
             UPDATE patient_program_assignments 
-            SET status = $1 
+            SET status = $1, updated_at = NOW()
             WHERE id = $2 
             RETURNING *;
         `;
@@ -128,6 +141,21 @@ const Assignment = {
         const values = [assignment_id, step_id, therapist_id, session_date, attempts, successes, score, details];
         const { rows } = await pool.query(query, values);
         return rows[0];
+    },
+    
+    /**
+     * Busca todo o progresso associado a uma atribuição.
+     * @param {number} assignmentId - O ID da atribuição.
+     * @returns {Promise<Array<object>>} Uma lista de registros de progresso.
+     */
+    async findProgressByAssignmentId(assignmentId) {
+        const query = `
+            SELECT * FROM patient_program_progress 
+            WHERE assignment_id = $1 
+            ORDER BY session_date DESC, created_at DESC;
+        `;
+        const { rows } = await pool.query(query, [assignmentId]);
+        return rows;
     }
 };
 

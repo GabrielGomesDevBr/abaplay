@@ -1,38 +1,44 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { usePrograms } from '../context/ProgramContext';
+// O 'usePrograms' não é mais necessário aqui, simplificando o componente.
 import { getAssignmentDetails } from '../api/programApi';
-import SessionProgress from '../components/program/SessionProgress'; // --- NOVA IMPORTAÇÃO ---
+import SessionProgress from '../components/program/SessionProgress';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faExclamationTriangle, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 
 const ProgramSessionPage = () => {
   const { assignmentId } = useParams();
-  const { selectedProgram, fetchProgramDetails, clearSelectedProgram } = usePrograms();
   
-  const [assignment, setAssignment] = useState(null);
+  // Simplificamos o estado para um único objeto que conterá todos os dados da sessão.
+  const [sessionData, setSessionData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    clearSelectedProgram();
+    // Garante que o ID da atribuição existe antes de tentar carregar os dados.
+    if (!assignmentId) {
+      setError('ID da designação não fornecido.');
+      setIsLoading(false);
+      return;
+    }
 
     const loadSessionData = async () => {
       try {
         setIsLoading(true);
         setError('');
         
-        const assignmentData = await getAssignmentDetails(assignmentId);
-        if (!assignmentData) {
+        // Fazemos apenas UMA chamada à API, que agora retorna todos os dados necessários.
+        const data = await getAssignmentDetails(assignmentId);
+        if (!data) {
           throw new Error('Designação de programa não encontrada.');
         }
-        setAssignment(assignmentData);
-
-        await fetchProgramDetails(assignmentData.program_id);
+        
+        // Armazenamos a resposta completa no nosso estado.
+        setSessionData(data);
 
       } catch (err) {
         console.error("Erro ao carregar dados da sessão:", err);
-        setError(err.response?.data || err.message || 'Ocorreu um erro ao carregar a sessão.');
+        setError(err.response?.data?.message || err.message || 'Ocorreu um erro ao carregar a sessão.');
       } finally {
         setIsLoading(false);
       }
@@ -40,15 +46,13 @@ const ProgramSessionPage = () => {
 
     loadSessionData();
 
-    return () => {
-      clearSelectedProgram();
-    };
-  }, [assignmentId, fetchProgramDetails, clearSelectedProgram]);
+  }, [assignmentId]); // O useEffect agora só depende do assignmentId.
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full text-center p-10">
         <FontAwesomeIcon icon={faSpinner} className="fa-spin text-4xl text-indigo-500" />
+        <p className="ml-4 text-lg text-gray-600">Carregando dados da sessão...</p>
       </div>
     );
   }
@@ -67,26 +71,33 @@ const ProgramSessionPage = () => {
     );
   }
 
+  // Se os dados não foram carregados por algum motivo, mostramos uma mensagem.
+  if (!sessionData) {
+    return <div className="text-center p-10">Não foi possível carregar os dados da sessão.</div>;
+  }
+
+  // Extraímos os dados do nosso estado para usar no JSX.
+  const { program, patient, assignment_id } = sessionData;
+
   return (
     <div className="p-4 md:p-6">
       <div className="mb-6">
-        <Link to={`/clients/${assignment?.patient_id}`} className="text-indigo-600 hover:text-indigo-800 text-sm">
+        <Link to={`/clients/${patient?.id}`} className="text-indigo-600 hover:text-indigo-800 text-sm">
             <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
             Voltar para os detalhes do paciente
         </Link>
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mt-2">
-          {selectedProgram?.name || 'Carregando programa...'}
+          {program?.name || 'Carregando programa...'}
         </h1>
         <p className="text-md text-gray-600">
-          Sessão de Terapia para: <span className="font-semibold">{assignment?.patient_name}</span>
+          Sessão de Terapia para: <span className="font-semibold">{patient?.name}</span>
         </p>
       </div>
 
-      {/* --- ALTERAÇÃO PRINCIPAL --- */}
-      {/* O componente SessionProgress é renderizado aqui, recebendo os dados necessários. */}
       <div className="bg-white p-6 rounded-lg shadow-md">
-        {selectedProgram && assignment ? (
-          <SessionProgress program={selectedProgram} assignment={assignment} />
+        {program && sessionData ? (
+          // Passamos o objeto 'program' e o objeto 'sessionData' (como 'assignment') para o componente filho.
+          <SessionProgress program={program} assignment={sessionData} />
         ) : (
           <div className="text-center text-gray-500">
             <FontAwesomeIcon icon={faSpinner} className="fa-spin text-2xl" />

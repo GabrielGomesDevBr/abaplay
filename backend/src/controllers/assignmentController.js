@@ -1,5 +1,4 @@
 const Assignment = require('../models/assignmentModel');
-const pool = require('../models/db'); // Usado para queries que ainda não estão no model
 
 /**
  * @description Atribui um programa a um paciente.
@@ -111,18 +110,10 @@ exports.recordProgress = async (req, res) => {
 exports.getEvolutionForAssignment = async (req, res) => {
     const { assignmentId } = req.params;
     try {
-        // Esta query é específica e pode permanecer aqui ou ser movida para o model.
-        const query = `
-            SELECT
-                ppp.id, ppp.session_date, ppp.attempts, ppp.successes, ppp.score, ppp.details,
-                pst.id as step_id, pst.step_number, pst.name as step_name
-            FROM patient_program_progress ppp
-            JOIN program_steps pst ON ppp.step_id = pst.id
-            WHERE ppp.assignment_id = $1
-            ORDER BY ppp.session_date, pst.step_number;
-        `;
-        const { rows } = await pool.query(query, [assignmentId]);
-        res.json(rows);
+        // Esta consulta foi simplificada. A lógica de associar o progresso
+        // ao passo específico será feita no frontend usando os dados do progresso.
+        const evolution = await Assignment.findProgressByAssignmentId(assignmentId);
+        res.json(evolution);
     } catch (error) {
         console.error(`[CONTROLLER-ERROR] getEvolutionForAssignment (AssignmentID: ${assignmentId}):`, error);
         res.status(500).send('Erro ao buscar evolução do paciente.');
