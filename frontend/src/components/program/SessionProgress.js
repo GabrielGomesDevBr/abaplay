@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faSpinner, faCheck, faBullseye } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faSpinner, faCheck, faBullseye, faChartLine } from '@fortawesome/free-solid-svg-icons';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -71,7 +71,6 @@ const SessionProgress = ({ program, assignment }) => {
     setIsLoadingHistory(true);
     try {
       const history = await getAssignmentEvolution(assignment.assignment_id);
-      // MUDANÇA CRÍTICA: Garante que 'history' seja um array antes de tentar ordená-lo.
       const validHistory = Array.isArray(history) ? history : [];
       const sortedHistory = validHistory.sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
       setEvolutionData(sortedHistory);
@@ -85,6 +84,9 @@ const SessionProgress = ({ program, assignment }) => {
 
   useEffect(() => {
     if (!program || !assignment) {
+      // Limpa os dados quando nenhum programa é selecionado
+      setEvolutionData([]);
+      setIsLoadingHistory(false);
       return;
     }
     
@@ -93,6 +95,8 @@ const SessionProgress = ({ program, assignment }) => {
 
     if (procedureSteps.length > 0) {
       setSelectedStepIndex('0');
+    } else {
+      setSelectedStepIndex('');
     }
   }, [program, assignment, fetchEvolutionHistory, procedureSteps]);
 
@@ -237,17 +241,20 @@ const SessionProgress = ({ program, assignment }) => {
     }
   };
 
+  // *** ALTERAÇÃO PRINCIPAL ***
+  // Verifica se um programa foi selecionado. Se não, exibe a mensagem para o usuário.
   if (!program || !assignment) {
     return (
-        <div className="flex flex-col items-center justify-center text-center text-gray-500 p-10">
-          <p>Carregando dados da sessão...</p>
+        <div className="flex flex-col items-center justify-center text-center text-gray-400 p-10 h-full">
+          <FontAwesomeIcon icon={faChartLine} className="text-4xl mb-4" />
+          <h4 className="font-semibold text-lg text-gray-600">Nenhum Programa Selecionado</h4>
+          <p className="text-sm">Selecione um programa na lista ao lado para começar.</p>
         </div>
       );
   }
 
   return (
     <div>
-      {/* MUDANÇA: A caixa de objetivo só é renderizada se o objetivo existir. */}
       {program?.objective && (
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm">
           <h5 className="font-semibold text-blue-800 mb-2 flex items-center">
