@@ -11,6 +11,9 @@ router.post('/', programController.createProgram);
 // Rota para buscar todos os programas
 router.get('/', programController.getAllPrograms);
 
+// Rota para buscar os programas atribuídos de um paciente para grade de programas
+router.get('/patient/:patientId/grade', programController.getPatientProgramsGrade);
+
 // Rota para buscar os detalhes de um programa específico.
 router.get('/:id', programController.getProgramDetails);
 

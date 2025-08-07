@@ -1,4 +1,5 @@
 const pool = require('./db');
+const { normalizeStatus } = require('../utils/statusNormalizer');
 
 /**
  * @description Cria um novo programa no banco de dados com base nos dados fornecidos.
@@ -201,11 +202,116 @@ const deleteById = async (id) => {
     }
 };
 
+/**
+ * @description Busca todos os programas atribuídos a um paciente organizados por disciplina/área para a grade de programas.
+ * Esta função retorna os programas no formato adequado para geração do PDF da grade.
+ * @param {number} patientId - O ID do paciente.
+ * @returns {Promise<object>} Objeto organizado por áreas com os programas atribuídos e ativos.
+ */
+const getAssignedProgramsForGrade = async (patientId) => {
+    // Debug: Primeira query para ver todos os programas e seus status
+    const debugQuery = `
+        SELECT 
+            d.name AS discipline_name,
+            pa.name AS area_name,
+            p.id,
+            p.name AS title,
+            ppa.status,
+            COUNT(*) OVER() as total_count
+        FROM patient_program_assignments ppa
+        JOIN programs p ON ppa.program_id = p.id
+        JOIN program_sub_areas psa ON p.sub_area_id = psa.id
+        JOIN program_areas pa ON psa.area_id = pa.id
+        JOIN disciplines d ON pa.discipline_id = d.id
+        WHERE ppa.patient_id = $1
+        ORDER BY d.name, pa.name, p.name;
+    `;
+    
+    const query = `
+        SELECT 
+            d.name AS discipline_name,
+            pa.name AS area_name,
+            p.id,
+            p.name AS title,
+            p.objective,
+            p.program_slug AS tag,
+            p.skill,
+            p.materials,
+            p.procedure,
+            p.criteria_for_advancement,
+            p.trials,
+            ppa.status
+        FROM patient_program_assignments ppa
+        JOIN programs p ON ppa.program_id = p.id
+        JOIN program_sub_areas psa ON p.sub_area_id = psa.id
+        JOIN program_areas pa ON psa.area_id = pa.id
+        JOIN disciplines d ON pa.discipline_id = d.id
+        WHERE ppa.patient_id = $1
+        ORDER BY d.name, pa.name, p.name;
+    `;
+    
+    try {
+        // Debug: Executar query de debug primeiro
+        const debugResult = await pool.query(debugQuery, [patientId]);
+        console.log(`[DEBUG-GRADE] Paciente ${patientId} - Total de programas no banco:`, debugResult.rows.length);
+        console.log('[DEBUG-GRADE] Status dos programas encontrados:', 
+            debugResult.rows.map(r => ({ title: r.title, status: r.status, discipline: r.discipline_name }))
+        );
+        
+        const { rows } = await pool.query(query, [patientId]);
+        
+        console.log(`[DEBUG-GRADE] Programas retornados após filtro:`, rows.length);
+        console.log('[DEBUG-GRADE] Programas filtrados:', 
+            rows.map(r => ({ title: r.title, status: r.status, discipline: r.discipline_name }))
+        );
+        
+        // Organiza os programas por área, apenas os ativos após normalização
+        const programsByArea = {};
+        rows.forEach(row => {
+            const { discipline_name, area_name, ...programData } = row;
+            const normalizedStatus = normalizeStatus(programData.status);
+            
+            // Só inclui programas ativos
+            if (normalizedStatus === 'active') {
+                const areaKey = `${discipline_name} - ${area_name}`;
+                
+                if (!programsByArea[areaKey]) {
+                    programsByArea[areaKey] = [];
+                }
+                
+                programsByArea[areaKey].push({
+                    id: programData.id,
+                    title: programData.title,
+                    tag: programData.tag,
+                    objective: programData.objective,
+                    criteria_for_advancement: programData.criteria_for_advancement,
+                    trials: programData.trials,
+                    skill: programData.skill,
+                    materials: programData.materials,
+                    procedure: programData.procedure,
+                    status: normalizedStatus
+                });
+            }
+        });
+
+        console.log(`[DEBUG-GRADE] Estrutura final por área:`, Object.keys(programsByArea).map(area => ({
+            area,
+            count: programsByArea[area].length
+        })));
+
+        return programsByArea;
+    } catch (error) {
+        console.error(`[MODEL-ERROR] Erro ao buscar programas atribuídos para grade do paciente ${patientId}:`, error);
+        throw error;
+    }
+};
+
 // Exporta os métodos com os nomes que o controller espera
 module.exports = {
     create,
     getAllWithHierarchy,
     findById,
     update,
-    deleteById
+    deleteById,
+    getAssignedProgramsForGrade
 };

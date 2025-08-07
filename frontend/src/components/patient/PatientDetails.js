@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { usePatients } from '../../context/PatientContext';
-import { usePrograms } from '../../context/ProgramContext'; 
 import { generateProgramGradePDF, generateWeeklyRecordSheetPDF } from '../../utils/pdfGenerator'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -52,7 +51,6 @@ const ActionButton = ({ icon, title, description, onClick, disabled, iconClassNa
 
 const PatientDetails = () => {
   const { selectedPatient, openPatientForm, removePatient, openReportModal } = usePatients();
-  const { allProgramsData, isLoading: programsAreLoading, getProgramById } = usePrograms();
   const [isParentChatVisible, setIsParentChatVisible] = useState(false);
   const [isDiscussionChatVisible, setIsDiscussionChatVisible] = useState(false);
 
@@ -67,8 +65,8 @@ const PatientDetails = () => {
 
   const handleEdit = () => openPatientForm(selectedPatient);
   const handleDelete = () => removePatient(selectedPatient.id);
-  const handleGenerateGradePdf = () => generateProgramGradePDF(selectedPatient, allProgramsData);
-  const handleGenerateRecordSheet = () => generateWeeklyRecordSheetPDF(selectedPatient, getProgramById, allProgramsData);
+  const handleGenerateGradePdf = () => generateProgramGradePDF(selectedPatient);
+  const handleGenerateRecordSheet = () => generateWeeklyRecordSheetPDF(selectedPatient);
   
   const handleToggleParentChat = () => {
     setIsDiscussionChatVisible(false);
@@ -173,7 +171,6 @@ const PatientDetails = () => {
                     title="Grade de Programas"
                     description="Gera um PDF com a lista dos programas atribuídos."
                     onClick={handleGenerateGradePdf}
-                    disabled={programsAreLoading}
                     iconClassName="text-red-500"
                 />
                 <ActionButton 
@@ -181,7 +178,6 @@ const PatientDetails = () => {
                     title="Folha de Registro"
                     description="Cria uma folha de registro para anotações manuais."
                     onClick={handleGenerateRecordSheet}
-                    disabled={programsAreLoading}
                     iconClassName="text-blue-500"
                 />
                 <ActionButton 
@@ -189,7 +185,6 @@ const PatientDetails = () => {
                     title="Geração de Relatório"
                     description="Abre o modal para gerar um relatório de progresso."
                     onClick={openReportModal}
-                    disabled={programsAreLoading}
                     iconClassName="text-green-500"
                 />
             </div>

@@ -56,6 +56,23 @@ export const getProgramById = async (programId) => {
   }
 };
 
+/**
+ * Busca os programas atribuídos a um paciente organizados para a grade de programas.
+ * @param {string|number} patientId - O ID do paciente.
+ * @returns {Promise<Object>} Objeto organizado por áreas com os programas atribuídos.
+ */
+export const getPatientProgramsGrade = async (patientId) => {
+  try {
+    const response = await apiClient.get(`/programs/patient/${patientId}/grade`);
+    return response.data;
+  } catch (error) {
+    console.error(`Erro detalhado em getPatientProgramsGrade para o paciente ${patientId}:`, {
+        message: error.message, request_url: error.config?.url,
+    });
+    throw error;
+  }
+};
+
 
 // --- Funções Relacionadas a Atribuições (Assignments) ---
 

@@ -25,126 +25,120 @@ const formatDate = (dateString, format = 'long') => {
 
 /**
  * Gera um PDF da Grade de Programas de um paciente, organizado por ESPECIALIDADE.
+ * Esta versão busca os dados diretamente da API usando o novo endpoint.
  * @param {object} patient - O objeto do paciente selecionado.
- * @param {object} allProgramsData - O objeto completo com todos os programas.
  */
-export const generateProgramGradePDF = (patient, allProgramsData) => {
+export const generateProgramGradePDF = async (patient) => {
     if (!patient) {
         alert("Nenhum cliente selecionado.");
         return;
     }
 
-    const assignedProgramIds = new Set(
-      (patient.assigned_programs || [])
-        .filter(p => p.status === 'active')
-        .map(p => p.id)
-    );
+    try {
+        // Importa a função da API dinamicamente para evitar circular imports
+        const { getPatientProgramsGrade } = await import('../api/programApi');
+        
+        // Busca os programas organizados para a grade
+        const programsByArea = await getPatientProgramsGrade(patient.id);
 
-    if (assignedProgramIds.size === 0) {
-        alert("Nenhum programa ativo para gerar a Grade.");
-        return;
-    }
-
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const margin = 15;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const contentWidth = pageWidth - margin * 2;
-    let y = margin + 10;
-    let pageCount = 1;
-
-    const addFooter = (currentPage) => {
-        doc.setFontSize(8);
-        doc.setTextColor(100);
-        const footerText = `Página ${currentPage}`;
-        doc.text(footerText, pageWidth / 2, doc.internal.pageSize.getHeight() - margin / 2, { align: 'center' });
-        doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, margin, doc.internal.pageSize.getHeight() - margin / 2);
-        doc.setTextColor(0);
-    };
-
-    const checkAndAddPage = (currentY, requiredHeight = 20) => {
-        if (currentY > doc.internal.pageSize.getHeight() - margin - requiredHeight) {
-            addFooter(pageCount);
-            doc.addPage();
-            pageCount++;
-            return margin + 10;
+        if (Object.keys(programsByArea).length === 0) {
+            alert("Nenhum programa ativo para gerar a Grade.");
+            return;
         }
-        return currentY;
-    };
-    
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Grade de Programas Ativos - ${patient.name}`, pageWidth / 2, y, { align: 'center' });
-    y += 8;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`ID: ${patient.id}`, margin, y);
-    doc.text(`Nasc: ${formatDate(patient.dob)}`, pageWidth - margin, y, { align: 'right' });
-    y += 6;
-    doc.text(`Diagnóstico: ${patient.diagnosis || 'Não informado'}`, margin, y);
-    y += 10;
-    doc.setLineWidth(0.2);
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 8;
 
-    const programsByArea = {};
-    for (const areaName in allProgramsData) {
-        const programsInArea = allProgramsData[areaName];
-        if (Array.isArray(programsInArea)) {
-            const assignedInThisArea = programsInArea.filter(program => assignedProgramIds.has(program.id));
-            if (assignedInThisArea.length > 0) {
-                programsByArea[areaName] = assignedInThisArea;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const margin = 15;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const contentWidth = pageWidth - margin * 2;
+        let y = margin + 10;
+        let pageCount = 1;
+
+        const addFooter = (currentPage) => {
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            const footerText = `Página ${currentPage}`;
+            doc.text(footerText, pageWidth / 2, doc.internal.pageSize.getHeight() - margin / 2, { align: 'center' });
+            doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, margin, doc.internal.pageSize.getHeight() - margin / 2);
+            doc.setTextColor(0);
+        };
+
+        const checkAndAddPage = (currentY, requiredHeight = 20) => {
+            if (currentY > doc.internal.pageSize.getHeight() - margin - requiredHeight) {
+                addFooter(pageCount);
+                doc.addPage();
+                pageCount++;
+                return margin + 10;
             }
-        }
-    }
-    
-    const sortedAreas = Object.keys(programsByArea).sort();
-
-    for (const area of sortedAreas) {
-        y = checkAndAddPage(y, 15);
-        doc.setFontSize(12);
+            return currentY;
+        };
+        
+        doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.setFillColor(240, 240, 240);
-        doc.rect(margin, y - 4, contentWidth, 7, 'F');
-        doc.text(area.replace(/([A-Z])/g, ' $1').trim(), margin + 2, y);
+        doc.text(`Grade de Programas Ativos - ${patient.name}`, pageWidth / 2, y, { align: 'center' });
+        y += 8;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`ID: ${patient.id}`, margin, y);
+        doc.text(`Nasc: ${formatDate(patient.dob)}`, pageWidth - margin, y, { align: 'right' });
+        y += 6;
+        doc.text(`Diagnóstico: ${patient.diagnosis || 'Não informado'}`, margin, y);
+        y += 10;
+        doc.setLineWidth(0.2);
+        doc.line(margin, y, pageWidth - margin, y);
         y += 8;
 
-        for (const program of programsByArea[area]) {
-            y = checkAndAddPage(y);
-            doc.setFontSize(10);
+        const sortedAreas = Object.keys(programsByArea).sort();
+
+        for (const area of sortedAreas) {
+            y = checkAndAddPage(y, 15);
+            doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            doc.text(`• ${program.title} (Tag: ${program.tag})`, margin + 4, y);
-            y += 5;
+            doc.setFillColor(240, 240, 240);
+            doc.rect(margin, y - 4, contentWidth, 7, 'F');
+            doc.text(area, margin + 2, y);
+            y += 8;
 
-            y = checkAndAddPage(y);
-            doc.setFontSize(9);
-            doc.setFont('helvetica', 'normal');
-            let objectiveLines = doc.splitTextToSize(`Objetivo: ${program.objective || 'Não definido'}`, contentWidth - 8);
-            doc.text(objectiveLines, margin + 8, y);
-            y += objectiveLines.length * 4 + 2;
-
-            if (program.criteria_for_advancement) {
+            for (const program of programsByArea[area]) {
                 y = checkAndAddPage(y);
-                doc.setFont('helvetica', 'italic');
-                let criteriaLines = doc.splitTextToSize(`Critério de Avanço: ${program.criteria_for_advancement}`, contentWidth - 8);
-                doc.text(criteriaLines, margin + 8, y);
-                y += criteriaLines.length * 4 + 2;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`• ${program.title} (Tag: ${program.tag || 'N/A'})`, margin + 4, y);
+                y += 5;
+
+                y = checkAndAddPage(y);
+                doc.setFontSize(9);
                 doc.setFont('helvetica', 'normal');
+                let objectiveLines = doc.splitTextToSize(`Objetivo: ${program.objective || 'Não definido'}`, contentWidth - 8);
+                doc.text(objectiveLines, margin + 8, y);
+                y += objectiveLines.length * 4 + 2;
+
+                if (program.criteria_for_advancement) {
+                    y = checkAndAddPage(y);
+                    doc.setFont('helvetica', 'italic');
+                    let criteriaLines = doc.splitTextToSize(`Critério de Avanço: ${program.criteria_for_advancement}`, contentWidth - 8);
+                    doc.text(criteriaLines, margin + 8, y);
+                    y += criteriaLines.length * 4 + 2;
+                    doc.setFont('helvetica', 'normal');
+                }
+                y += 5;
             }
-            y += 5;
         }
+        addFooter(pageCount);
+        const filename = `Grade_Programas_Ativos_${patient.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
+        doc.save(filename);
+    } catch (error) {
+        console.error('Erro ao gerar PDF da grade de programas:', error);
+        alert('Erro ao gerar o PDF da grade de programas. Tente novamente.');
     }
-    addFooter(pageCount);
-    const filename = `Grade_Programas_Ativos_${patient.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
-    doc.save(filename);
 };
 
-export const generateWeeklyRecordSheetPDF = (patient, allProgramsData) => {
+export const generateWeeklyRecordSheetPDF = (patient) => {
     if (!patient) {
         alert("Nenhum cliente selecionado.");
         return;
     }
     
-    // CORREÇÃO: Usa os dados diretamente do paciente, sem chamar getProgramById.
+    // Usa os dados diretamente do paciente
     const activeAssignedPrograms = (patient.assigned_programs || [])
         .filter(p => p.status === 'active');
 
@@ -167,22 +161,25 @@ export const generateWeeklyRecordSheetPDF = (patient, allProgramsData) => {
     doc.text(`Semana de: ______ / ______ / ________`, pageWidth - margin, finalY + 12, { align: 'right' });
     finalY += 20;
 
+    // Agrupa programas por disciplina/área
     const programsByArea = {};
-    for (const areaName in allProgramsData) {
-        programsByArea[areaName] = activeAssignedPrograms.filter(
-            p => allProgramsData[areaName].some(pa => pa.id === p.id)
-        );
-    }
+    activeAssignedPrograms.forEach(program => {
+        const areaKey = program.discipline_name || 'Outros';
+        if (!programsByArea[areaKey]) {
+            programsByArea[areaKey] = [];
+        }
+        programsByArea[areaKey].push(program);
+    });
     
     const sortedAreas = Object.keys(programsByArea).sort();
     
     const body = [];
     sortedAreas.forEach(area => {
         if (programsByArea[area].length > 0) {
-            body.push([{ content: area.replace(/([A-Z])/g, ' $1').trim(), colSpan: 8, styles: { fontStyle: 'bold', fillColor: [230, 230, 230], textColor: [0,0,0], halign: 'left' } }]);
+            body.push([{ content: area, colSpan: 8, styles: { fontStyle: 'bold', fillColor: [230, 230, 230], textColor: [0,0,0], halign: 'left' } }]);
             programsByArea[area].forEach(program => {
                 const trialsText = `(${program.trials || 'N/A'} tent.)`;
-                const programCell = `${program.title}\n${trialsText}`;
+                const programCell = `${program.program_name || program.title}\n${trialsText}`;
                 body.push([programCell, '', '', '', '', '', '', '']);
             });
         }

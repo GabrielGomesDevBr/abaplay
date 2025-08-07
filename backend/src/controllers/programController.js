@@ -87,3 +87,19 @@ exports.deleteProgram = async (req, res) => {
         res.status(500).send('Erro ao excluir o programa.');
     }
 };
+
+/**
+ * @description Busca os programas atribuídos a um paciente organizados para a grade de programas.
+ * @route GET /api/programs/patient/:patientId/grade
+ * @access Private
+ */
+exports.getPatientProgramsGrade = async (req, res) => {
+    try {
+        const { patientId } = req.params;
+        const programsForGrade = await Program.getAssignedProgramsForGrade(patientId);
+        res.json(programsForGrade);
+    } catch (error) {
+        console.error(`[CONTROLLER-ERROR] getPatientProgramsGrade (Patient ID: ${req.params.patientId}):`, error);
+        res.status(500).send('Erro ao buscar programas da grade do paciente.');
+    }
+};

@@ -1,4 +1,5 @@
 const pool = require('./db.js');
+const { normalizeProgramsStatus } = require('../utils/statusNormalizer');
 
 // Função auxiliar para buscar todos os dados de um paciente
 const getFullPatientData = async (patientId) => {
@@ -11,9 +12,7 @@ const getFullPatientData = async (patientId) => {
     
     const patient = patientResult.rows[0];
 
-    // --- CORREÇÃO PRINCIPAL ---
-    // A query foi ajustada para selecionar todos os campos necessários com nomes claros (aliases)
-    // que o frontend espera, incluindo o crucial 'assignment_id'.
+    // Query ajustada para incluir todos os status possíveis como na grade
     const programsQuery = `
         SELECT
             ppa.id AS assignment_id,
@@ -34,17 +33,29 @@ const getFullPatientData = async (patientId) => {
     `;
     const programsResult = await pool.query(programsQuery, [patientId]);
     
-    // O mapeamento agora cria um objeto que corresponde exatamente ao que os componentes do frontend precisam.
-    patient.assigned_programs = programsResult.rows.map(row => ({ 
+    console.log(`[DEBUG-PATIENT] Paciente ${patientId} - Total programas carregados:`, programsResult.rows.length);
+    console.log('[DEBUG-PATIENT] Status dos programas:', 
+        programsResult.rows.map(r => ({ name: r.program_name, status: r.status, discipline: r.discipline_name }))
+    );
+    
+    // Mapeia os dados e aplica normalização de status
+    const rawPrograms = programsResult.rows.map(row => ({ 
         assignment_id: row.assignment_id,
         program_id: row.program_id,
         program_name: row.program_name,
         objective: row.objective,
         procedure: row.procedure,
         trials: row.trials,
-        status: row.status || 'active',
+        status: row.status,
         discipline_name: row.discipline_name
     }));
+    
+    // Normaliza todos os status usando o utilitário
+    patient.assigned_programs = normalizeProgramsStatus(rawPrograms);
+    
+    console.log(`[DEBUG-PATIENT] Programas ativos após normalização:`, 
+        patient.assigned_programs.filter(p => p.status === 'active').length
+    );
 
     // A busca de sessões permanece a mesma.
     const sessionsResult = await pool.query(
