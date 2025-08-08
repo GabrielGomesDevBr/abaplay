@@ -54,7 +54,18 @@ const Navbar = ({ toggleSidebar }) => {
     
     const getLinkClass = (path) => {
       const isActive = location.pathname.startsWith(path);
-      return `${baseClasses} ${isMobile ? mobileClasses : desktopClasses} ${isActive ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-indigo-600'}`;
+      if (isMobile) {
+        return `${baseClasses} ${mobileClasses} ${
+          isActive 
+            ? 'bg-gradient-to-r from-indigo-600 to-purple-700 text-white shadow-lg transform scale-105' 
+            : 'text-gray-600 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-700 transition-all'
+        }`;
+      }
+      return `${baseClasses} ${desktopClasses} ${
+        isActive 
+          ? 'bg-gradient-to-r from-indigo-600 to-purple-700 text-white shadow-lg' 
+          : 'text-gray-600 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-700'
+      }`;
     };
 
     if (user?.role === 'pai') {
@@ -89,22 +100,24 @@ const Navbar = ({ toggleSidebar }) => {
   };
 
   return (
-    <header className="bg-white/95 backdrop-blur-sm sticky top-0 z-10 w-full flex-shrink-0 border-b border-gray-200">
+    <header className="bg-gradient-to-r from-white via-indigo-50/30 to-purple-50/30 backdrop-blur-md sticky top-0 z-10 w-full flex-shrink-0 border-b border-indigo-200/50 shadow-sm">
         {/* O resto do JSX do seu componente permanece o mesmo */}
         <div className="flex items-center justify-between px-4 sm:px-6 h-16">
             <div className="flex items-center">
                 {shouldShowSidebarToggle && (
                     <button 
                         onClick={toggleSidebar} 
-                        className="lg:hidden mr-3 p-2 rounded-md text-gray-500 hover:text-white hover:bg-indigo-600"
+                        className="lg:hidden mr-3 p-2 rounded-md text-gray-600 hover:text-white hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-600 transition-all transform hover:scale-105"
                         aria-label="Abrir menu de clientes"
                     >
                         <FontAwesomeIcon icon={faBars} className="h-6 w-6" />
                     </button>
                 )}
 
-            <NavLink to="/" className="text-2xl font-bold text-indigo-600 flex items-center mr-2">
-                <FontAwesomeIcon icon={faBrain} className="mr-2" />
+            <NavLink to="/" className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-700 bg-clip-text text-transparent flex items-center mr-2 hover:from-indigo-700 hover:to-purple-800 transition-all">
+                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-2 rounded-lg mr-3 shadow-sm">
+                    <FontAwesomeIcon icon={faBrain} className="text-white" />
+                </div>
                 <span>ABAplay</span>
             </NavLink>
             <div className="hidden lg:flex items-center space-x-1 ml-4">
@@ -115,31 +128,41 @@ const Navbar = ({ toggleSidebar }) => {
             <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="hidden md:block text-sm">
                 {selectedPatient ? (
-                <span className="font-medium text-indigo-700">Cliente: {selectedPatient.name}</span>
-                ) : ( user?.role === 'terapeuta' && <span className="italic text-gray-500">Nenhum cliente selecionado</span> )}
-                {user?.role === 'pai' && ( <span className="font-medium text-indigo-700">Acompanhamento</span> )}
+                <div className="bg-gradient-to-r from-indigo-100 to-purple-100 border border-indigo-200 px-3 py-1 rounded-full">
+                    <span className="font-medium bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent">Cliente: {selectedPatient.name}</span>
+                </div>
+                ) : ( user?.role === 'terapeuta' && 
+                <div className="bg-gradient-to-r from-gray-100 to-slate-100 border border-gray-200 px-3 py-1 rounded-full">
+                    <span className="italic text-gray-500">Nenhum cliente selecionado</span>
+                </div>
+                )}
+                {user?.role === 'pai' && ( 
+                <div className="bg-gradient-to-r from-indigo-100 to-purple-100 border border-indigo-200 px-3 py-1 rounded-full">
+                    <span className="font-medium bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent">Acompanhamento</span>
+                </div>
+                )}
             </div>
             <div className="relative flex items-center space-x-3">
                 {user && user.role !== 'pai' && (
                 <button
                     onClick={toggleNotificationPanel}
-                    className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                    className="p-2 rounded-full hover:bg-gradient-to-r hover:from-indigo-100 hover:to-purple-100 transition-all duration-200 transform hover:scale-110"
                     title="Notificações"
                 >
                     <NotificationBadge ref={notificationBadgeRef} />
                 </button>
                 )}
                 
-                <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm" title={user?.full_name || user?.username}>
+                <div className="w-9 h-9 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm border-2 border-white shadow-md hover:shadow-lg transition-all transform hover:scale-110" title={user?.full_name || user?.username}>
                 {getInitials(user?.full_name || user?.username)}
                 </div>
-                <button onClick={logout} title="Sair" className="text-gray-500 hover:text-red-600 transition-colors duration-150 p-2 rounded-full hover:bg-red-50">
+                <button onClick={logout} title="Sair" className="text-gray-500 hover:text-red-600 transition-all duration-150 p-2 rounded-full hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 transform hover:scale-110">
                 <FontAwesomeIcon icon={faSignOutAlt} className="fa-fw" />
                 </button>
             </div>
 
             <div className="lg:hidden flex items-center">
-                <button ref={buttonRef} onClick={toggleMobileMenu} type="button" className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-white hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" aria-controls="mobile-menu" aria-expanded={isMobileMenuOpen}>
+                <button ref={buttonRef} onClick={toggleMobileMenu} type="button" className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-white hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all transform hover:scale-105" aria-controls="mobile-menu" aria-expanded={isMobileMenuOpen}>
                 <span className="sr-only">Abrir menu</span>
                 <FontAwesomeIcon icon={isMobileMenuOpen ? faTimes : faBars} className="h-6 w-6" />
                 </button>
@@ -149,7 +172,7 @@ const Navbar = ({ toggleSidebar }) => {
       
         <div 
             ref={menuRef} 
-            className={`lg:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-sm shadow-lg transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'transform translate-y-0' : 'transform -translate-y-full'}`} 
+            className={`lg:hidden absolute top-full left-0 right-0 bg-gradient-to-r from-white via-indigo-50/50 to-purple-50/50 backdrop-blur-md shadow-xl border-t border-indigo-200/50 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'transform translate-y-0' : 'transform -translate-y-full'}`} 
             style={{ visibility: isMobileMenuOpen ? 'visible' : 'hidden' }}
             id="mobile-menu"
         >
@@ -162,7 +185,7 @@ const Navbar = ({ toggleSidebar }) => {
                         <div className="text-base font-medium leading-none text-gray-800">{user?.full_name || user?.username}</div>
                         <div className="text-sm font-medium leading-none text-gray-500">{user?.role}</div>
                     </div>
-                    <button onClick={logout} className="ml-auto flex-shrink-0 bg-gray-100 p-2 rounded-full text-gray-500 hover:text-red-600 hover:bg-red-50 focus:outline-none">
+                    <button onClick={logout} className="ml-auto flex-shrink-0 bg-gradient-to-r from-gray-100 to-slate-100 p-2 rounded-full text-gray-500 hover:text-red-600 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 focus:outline-none transition-all transform hover:scale-110">
                         <span className="sr-only">Sair</span>
                         <FontAwesomeIcon icon={faSignOutAlt} />
                     </button>
