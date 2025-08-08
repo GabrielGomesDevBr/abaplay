@@ -14,6 +14,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const programRoutes = require('./routes/programRoutes');
 // --- Adicionada a importação da nova rota ---
 const assignmentRoutes = require('./routes/assignmentRoutes');
+const contactRoutes = require('./routes/contactRoutes');
 
 // Importa o middleware de autenticação
 const { verifyToken } = require('./middleware/authMiddleware');
@@ -75,6 +76,8 @@ app.use('/api/notifications', verifyToken, notificationRoutes);
 app.use('/api/programs', verifyToken, programRoutes);
 // --- Adicionada a nova rota de atribuições, devidamente protegida ---
 app.use('/api/assignments', verifyToken, assignmentRoutes);
+// --- Nova rota de contatos para sistema de chat iniciado ---
+app.use('/api/contacts', verifyToken, contactRoutes);
 
 
 // Rota de autenticação (não precisa de token)

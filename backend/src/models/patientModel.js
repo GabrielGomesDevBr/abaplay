@@ -162,6 +162,38 @@ const PatientModel = {
   async removeProgram(patientId, programId) {
     const query = `DELETE FROM patient_program_assignments WHERE patient_id = $1 AND program_id = $2`;
     return (await pool.query(query, [patientId, programId])).rowCount;
+  },
+  
+  // Nova função para buscar terapeutas atribuídos ao paciente
+  async getAssignedTherapists(patientId) {
+    console.log(`[MODEL-LOG] getAssignedTherapists: Buscando terapeutas para paciente ${patientId}`);
+    const query = `
+      SELECT 
+        u.id,
+        u.full_name,
+        u.role,
+        u.created_at,
+        COUNT(DISTINCT p.id) as total_patients
+      FROM users u
+      INNER JOIN therapist_patient_assignments tpa ON u.id = tpa.therapist_id
+      LEFT JOIN therapist_patient_assignments tpa2 ON u.id = tpa2.therapist_id
+      LEFT JOIN patients p ON tpa2.patient_id = p.id
+      WHERE tpa.patient_id = $1 
+        AND (u.role = 'therapist' OR u.role = 'terapeuta')
+      GROUP BY u.id, u.full_name, u.role, u.created_at
+      ORDER BY u.full_name ASC
+    `;
+    
+    const { rows } = await pool.query(query, [patientId]);
+    console.log(`[MODEL-LOG] getAssignedTherapists: Encontrados ${rows.length} terapeutas`);
+    
+    return rows.map(row => ({
+      id: row.id,
+      full_name: row.full_name,
+      role: row.role,
+      total_patients: parseInt(row.total_patients),
+      created_at: row.created_at
+    }));
   }
 };
 

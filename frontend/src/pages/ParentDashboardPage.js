@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePatients } from '../context/PatientContext';
 import { usePrograms } from '../context/ProgramContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 // 1. Importar o novo ícone de chat
-import { faSpinner, faExclamationCircle, faChartLine, faCalendarAlt, faTimesCircle, faComments } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faExclamationCircle, faChartLine, faCalendarAlt, faTimesCircle, faComments, faUsers } from '@fortawesome/free-solid-svg-icons';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -117,8 +118,9 @@ const ParentChart = ({ program, sessionData }) => {
 
 
 const ParentDashboardPage = () => {
+    const navigate = useNavigate();
     const { selectedPatient, isLoading, error } = usePatients();
-    const { getProgramById, disciplines, isLoading: programsAreLoading } = usePrograms();
+    const { getProgramById, isLoading: programsAreLoading } = usePrograms();
     
     
     const [startDate, setStartDate] = useState('');
@@ -211,12 +213,38 @@ const ParentDashboardPage = () => {
                 </div>
             </div>
             
+            {/* Botão de Acesso aos Contatos */}
+            <div className="mb-6">
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg p-4 text-white shadow-lg">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-lg font-semibold mb-2">💬 Quer mencionar um terapeuta específico?</h3>
+                            <p className="text-blue-100 text-sm">
+                                Use @ para mencionar terapeutas específicos no chat. Todos veem a mensagem, garantindo transparência e colaboração.
+                            </p>
+                        </div>
+                        <button 
+                            onClick={() => navigate('/contacts')}
+                            className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg hover:transform hover:scale-105"
+                        >
+                            <span className="text-xl">@</span>
+                            <span>Mencionar Terapeuta</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             {/* 3. Bloco de "Observações" substituído pelo novo componente de Chat */}
             <div className="mb-8">
                 <h3 className="text-xl font-semibold text-gray-700 mb-3 pb-2 border-b border-gray-200 flex items-center">
                     <FontAwesomeIcon icon={faComments} className="mr-3 text-blue-500" />
-                    Comunicação com a Equipe
+                    Chat Geral da Equipe
                 </h3>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-blue-700">
+                        💡 <strong>Dica:</strong> Este chat é compartilhado com toda a equipe. Para conversar com um terapeuta específico, use o botão "Meus Contatos" acima.
+                    </p>
+                </div>
                 <ParentTherapistChat 
                     patientId={selectedPatient.id} 
                     patientName={selectedPatient.name} 
