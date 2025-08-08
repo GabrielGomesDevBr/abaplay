@@ -52,95 +52,213 @@ const StatCard = ({ title, value, icon, colorClass, interpretation }) => {
   );
 };
 
-// Componente para legendas fixas
-const MetricsLegend = () => (
-  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200 mb-6">
-    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-      <FontAwesomeIcon icon={faInfoCircle} className="mr-2 text-blue-600" />
-      Guia de Métricas ABA
-    </h3>
-    
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-      <div className="bg-white p-3 rounded border border-blue-100">
-        <h4 className="font-medium text-gray-700 mb-2">📊 Progresso Médio</h4>
-        <p className="text-gray-600 text-xs">Média de todas as sessões de intervenção no período. Meta: ≥70%</p>
-      </div>
-      
-      <div className="bg-white p-3 rounded border border-blue-100">
-        <h4 className="font-medium text-gray-700 mb-2">🎯 Taxa de Aquisição</h4>
-        <p className="text-gray-600 text-xs">% de programas que atingiram critério (≥80%) recentemente. Meta: ≥30%</p>
-      </div>
-      
-      <div className="bg-white p-3 rounded border border-blue-100">
-        <h4 className="font-medium text-gray-700 mb-2">⏱️ Frequência Semanal</h4>
-        <p className="text-gray-600 text-xs">Sessões por semana em média. Ideal ABA: 3-5 sessões/semana</p>
-      </div>
-      
-      <div className="bg-white p-3 rounded border border-blue-100">
-        <h4 className="font-medium text-gray-700 mb-2">📈 Estabilidade</h4>
-        <p className="text-gray-600 text-xs">Consistência da performance (0-100). Alta: ≥80%, indica manutenção</p>
-      </div>
-      
-      <div className="bg-white p-3 rounded border border-blue-100">
-        <h4 className="font-medium text-gray-700 mb-2">🏆 Programas na Meta</h4>
-        <p className="text-gray-600 text-xs">Quantos programas atingiram ≥80% de desempenho médio</p>
-      </div>
-      
-      <div className="bg-white p-3 rounded border border-blue-100">
-        <h4 className="font-medium text-gray-700 mb-2">📅 Dias até Critério</h4>
-        <p className="text-gray-600 text-xs">Tempo médio para dominar habilidades. Varia por complexidade</p>
-      </div>
+// Componente para guia de métricas com melhor organização visual
+const MetricsGuide = () => (
+  <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-8 overflow-hidden">
+    {/* Cabeçalho principal */}
+    <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
+      <h3 className="text-xl font-bold text-white flex items-center">
+        <FontAwesomeIcon icon={faInfoCircle} className="mr-3" />
+        Guia de Métricas ABA
+      </h3>
+      <p className="text-blue-100 text-sm mt-1">Compreenda os indicadores e interpretações utilizados</p>
     </div>
-    
-    {/* Sistema de cores */}
-    <div className="mt-4 p-3 bg-white rounded border border-blue-100">
-      <h4 className="font-medium text-gray-700 mb-2">🎨 Sistema de Interpretação</h4>
-      <div className="flex space-x-6 text-xs">
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-          <span className="text-green-700">Bom desempenho</span>
+
+    <div className="p-6">
+      {/* Seção 1: Definições das Métricas */}
+      <div className="mb-8">
+        <div className="flex items-center mb-4 pb-2 border-b border-gray-200">
+          <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+          <h4 className="text-lg font-semibold text-gray-800">📊 Definições das Métricas</h4>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-          <span className="text-yellow-700">Requer atenção</span>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border-l-4 border-blue-500">
+            <h5 className="font-semibold text-gray-800 mb-2 flex items-center">
+              <span className="text-blue-600 mr-2">📊</span> Progresso Médio
+            </h5>
+            <p className="text-gray-700 text-sm leading-relaxed">
+              Média de todas as sessões de intervenção no período selecionado.
+            </p>
+            <div className="mt-2 text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded-full inline-block">
+              Meta: ≥70%
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border-l-4 border-purple-500">
+            <h5 className="font-semibold text-gray-800 mb-2 flex items-center">
+              <span className="text-purple-600 mr-2">🎯</span> Taxa de Aquisição
+            </h5>
+            <p className="text-gray-700 text-sm leading-relaxed">
+              Percentual de programas que atingiram critério (≥80%) recentemente.
+            </p>
+            <div className="mt-2 text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded-full inline-block">
+              Meta: ≥30%
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-4 rounded-lg border-l-4 border-amber-500">
+            <h5 className="font-semibold text-gray-800 mb-2 flex items-center">
+              <span className="text-amber-600 mr-2">⏱️</span> Frequência Semanal
+            </h5>
+            <p className="text-gray-700 text-sm leading-relaxed">
+              Número de dias únicos com sessões por semana em média.
+            </p>
+            <div className="mt-2 text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded-full inline-block">
+              Ideal ABA: 3-5 dias/semana
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border-l-4 border-green-500">
+            <h5 className="font-semibold text-gray-800 mb-2 flex items-center">
+              <span className="text-green-600 mr-2">📈</span> Estabilidade
+            </h5>
+            <p className="text-gray-700 text-sm leading-relaxed">
+              Consistência da performance (0-100). Alta estabilidade indica manutenção.
+            </p>
+            <div className="mt-2 text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full inline-block">
+              Alta: ≥80%
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-lg border-l-4 border-emerald-500">
+            <h5 className="font-semibold text-gray-800 mb-2 flex items-center">
+              <span className="text-emerald-600 mr-2">🏆</span> Programas na Meta
+            </h5>
+            <p className="text-gray-700 text-sm leading-relaxed">
+              Quantidade de programas que atingiram ≥80% de desempenho médio.
+            </p>
+            <div className="mt-2 text-xs text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full inline-block">
+              Objetivo: Maioria
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 rounded-lg border-l-4 border-indigo-500">
+            <h5 className="font-semibold text-gray-800 mb-2 flex items-center">
+              <span className="text-indigo-600 mr-2">📅</span> Dias até Critério
+            </h5>
+            <p className="text-gray-700 text-sm leading-relaxed">
+              Tempo médio para dominar habilidades. Varia por complexidade da tarefa.
+            </p>
+            <div className="mt-2 text-xs text-indigo-700 bg-indigo-100 px-2 py-1 rounded-full inline-block">
+              Variável
+            </div>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-          <span className="text-red-700">Crítico - ação necessária</span>
+      </div>
+
+      {/* Seção 2: Sistema de Interpretação */}
+      <div className="mb-6">
+        <div className="flex items-center mb-4 pb-2 border-b border-gray-200">
+          <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+          <h4 className="text-lg font-semibold text-gray-800">🎨 Sistema de Interpretação</h4>
+        </div>
+        
+        <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg">
+          <p className="text-gray-600 text-sm mb-4">Os indicadores visuais nas métricas seguem este sistema de cores:</p>
+          <div className="flex flex-wrap gap-6">
+            <div className="flex items-center space-x-3 bg-white px-4 py-2 rounded-lg shadow-sm">
+              <div className="w-4 h-4 bg-green-500 rounded-full shadow-sm"></div>
+              <span className="text-green-700 font-medium">Bom desempenho</span>
+              <span className="text-gray-500 text-sm">- Dentro das metas</span>
+            </div>
+            <div className="flex items-center space-x-3 bg-white px-4 py-2 rounded-lg shadow-sm">
+              <div className="w-4 h-4 bg-yellow-500 rounded-full shadow-sm"></div>
+              <span className="text-yellow-700 font-medium">Requer atenção</span>
+              <span className="text-gray-500 text-sm">- Monitoramento necessário</span>
+            </div>
+            <div className="flex items-center space-x-3 bg-white px-4 py-2 rounded-lg shadow-sm">
+              <div className="w-4 h-4 bg-red-500 rounded-full shadow-sm"></div>
+              <span className="text-red-700 font-medium">Crítico</span>
+              <span className="text-gray-500 text-sm">- Ação imediata necessária</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Nota de rodapé */}
+      <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+        <div className="flex items-start">
+          <FontAwesomeIcon icon={faLightbulb} className="text-blue-600 mt-1 mr-3" />
+          <div>
+            <p className="text-blue-800 font-medium mb-1">Dica Profissional</p>
+            <p className="text-blue-700 text-sm leading-relaxed">
+              Use estas métricas em conjunto para uma análise completa do progresso. 
+              Métricas isoladas podem não refletir o quadro completo do desenvolvimento.
+            </p>
+          </div>
         </div>
       </div>
     </div>
   </div>
 );
 
-// Componente para recomendações
+// Componente para recomendações com design melhorado
 const RecommendationPanel = ({ recommendations, regressionAlerts }) => {
   if (recommendations.length === 0 && regressionAlerts === 0) return null;
 
   return (
-    <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-lg border border-amber-200 mb-6">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-        <FontAwesomeIcon icon={faLightbulb} className="mr-2 text-amber-600" />
-        Recomendações Clínicas
-      </h3>
+    <div className="bg-white border border-orange-200 rounded-xl shadow-sm mb-8 overflow-hidden">
+      {/* Cabeçalho */}
+      <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-4">
+        <h3 className="text-xl font-bold text-white flex items-center">
+          <FontAwesomeIcon icon={faLightbulb} className="mr-3" />
+          Recomendações Clínicas
+        </h3>
+        <p className="text-orange-100 text-sm mt-1">Sugestões baseadas na análise dos dados</p>
+      </div>
       
-      <div className="space-y-3">
-        {regressionAlerts > 0 && (
-          <div className="flex items-start space-x-3 p-3 bg-red-50 border border-red-200 rounded">
-            <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-600 mt-0.5" />
-            <div>
-              <p className="font-medium text-red-800">Alerta de Regressão</p>
-              <p className="text-sm text-red-700">{regressionAlerts} programa(s) apresentando declínio na performance</p>
+      <div className="p-6">
+        <div className="space-y-4">
+          {regressionAlerts > 0 && (
+            <div className="bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+              <div className="flex items-start space-x-3">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-red-800 mb-1">⚠️ Alerta de Regressão</p>
+                  <p className="text-red-700 text-sm">
+                    {regressionAlerts} programa{regressionAlerts > 1 ? 's apresentam' : ' apresenta'} declínio na performance. 
+                    Revisão imediata recomendada.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {recommendations.length > 0 && (
+            <div className="space-y-3">
+              {recommendations.map((rec, index) => (
+                <div key={index} className="bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
+                  <div className="flex items-start space-x-3">
+                    <div className="bg-amber-100 p-2 rounded-full flex-shrink-0">
+                      <FontAwesomeIcon icon={faLightbulb} className="text-amber-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-gray-800 text-sm leading-relaxed">{rec}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {(recommendations.length > 0 || regressionAlerts > 0) && (
+          <div className="mt-6 bg-orange-50 border border-orange-200 p-4 rounded-lg">
+            <div className="flex items-start">
+              <FontAwesomeIcon icon={faInfoCircle} className="text-orange-600 mt-1 mr-3" />
+              <div>
+                <p className="text-orange-800 font-medium mb-1">💡 Dica</p>
+                <p className="text-orange-700 text-sm leading-relaxed">
+                  Estas recomendações são geradas automaticamente com base nas métricas atuais. 
+                  Considere o contexto clínico individual ao implementar mudanças.
+                </p>
+              </div>
             </div>
           </div>
         )}
-        
-        {recommendations.map((rec, index) => (
-          <div key={index} className="flex items-start space-x-3 p-3 bg-white border border-amber-200 rounded">
-            <FontAwesomeIcon icon={faLightbulb} className="text-amber-600 mt-0.5" />
-            <p className="text-sm text-gray-700">{rec}</p>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -624,13 +742,15 @@ const DashboardPage = () => {
     });
     const stabilityIndex = stabilityCount > 0 ? (stabilitySum / stabilityCount).toFixed(1) : '--';
 
-    // Frequência de sessões por semana
+    // Frequência de sessões por semana (corrigida)
     const sessionDates = filteredSessionData.map(s => new Date(s.session_date)).sort((a, b) => a - b);
     let sessionFrequency = '--';
     if (sessionDates.length >= 2) {
+      // Agrupa sessões por data única para evitar contar múltiplas sessões do mesmo dia
+      const uniqueDates = [...new Set(sessionDates.map(date => date.toDateString()))];
       const totalDays = Math.max((sessionDates[sessionDates.length - 1] - sessionDates[0]) / (1000 * 60 * 60 * 24), 1);
-      const totalWeeks = totalDays / 7;
-      sessionFrequency = totalWeeks > 0 ? (sessionDates.length / totalWeeks).toFixed(1) : '--';
+      const totalWeeks = Math.max(totalDays / 7, 1); // Garante pelo menos 1 semana
+      sessionFrequency = totalWeeks > 0 ? (uniqueDates.length / totalWeeks).toFixed(1) : '--';
     }
 
     // Interpretações e recomendações
@@ -686,8 +806,8 @@ const DashboardPage = () => {
             </div>
           </div>
           
-          {/* Legendas fixas */}
-          <MetricsLegend />
+          {/* Guia de métricas reformulado */}
+          <MetricsGuide />
           
           {/* Recomendações clínicas */}
           <RecommendationPanel recommendations={analytics.recommendations} regressionAlerts={analytics.regressionAlerts} />
