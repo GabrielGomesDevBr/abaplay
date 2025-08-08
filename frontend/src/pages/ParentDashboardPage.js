@@ -118,7 +118,8 @@ const ParentChart = ({ program, sessionData }) => {
 
 const ParentDashboardPage = () => {
     const { selectedPatient, isLoading, error } = usePatients();
-    const { getProgramById, isLoading: programsAreLoading } = usePrograms();
+    const { getProgramById, disciplines, isLoading: programsAreLoading } = usePrograms();
+    
     
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -174,15 +175,19 @@ const ParentDashboardPage = () => {
     }
 
     const assignedPrograms = (selectedPatient.assigned_programs || [])
-        .map(p => getProgramById(p.id))
+        .map(p => {
+            // Tentar diferentes propriedades possíveis para o ID
+            const programId = p.id || p.program_id || p.programId;
+            return getProgramById(programId);
+        })
         .filter(p => p); 
 
-    const programsByArea = assignedPrograms.reduce((acc, program) => {
-        const area = program.area || 'Outros';
-        if (!acc[area]) {
-            acc[area] = [];
+    const programsByDiscipline = assignedPrograms.reduce((acc, program) => {
+        const discipline = program.discipline || 'Outros';
+        if (!acc[discipline]) {
+            acc[discipline] = [];
         }
-        acc[area].push(program);
+        acc[discipline].push(program);
         return acc;
     }, {});
 
@@ -221,19 +226,19 @@ const ParentDashboardPage = () => {
             <div>
                  <h3 className="text-xl font-semibold text-gray-700 mb-3 pb-2 border-b border-gray-200 flex items-center">
                     <FontAwesomeIcon icon={faChartLine} className="mr-3 text-indigo-500" />
-                    Progresso por Programa
+                    Progresso por Área de Intervenção
                 </h3>
                 
-                {Object.keys(programsByArea).length > 0 ? (
-                    Object.keys(programsByArea).sort().map(area => (
-                        <div key={area} className="mb-8 p-4 bg-white rounded-lg shadow-md border border-gray-200">
+                {Object.keys(programsByDiscipline).length > 0 ? (
+                    Object.keys(programsByDiscipline).sort().map(discipline => (
+                        <div key={discipline} className="mb-8 p-4 bg-white rounded-lg shadow-md border border-gray-200">
                             <h4 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-300">
-                                {area}
+                                {discipline}
                             </h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                {programsByArea[area].map(program => (
+                                {programsByDiscipline[discipline].map(program => (
                                     <div key={program.id} className="border border-gray-200 rounded-md p-4 bg-gray-50 flex flex-col items-center shadow-sm">
-                                        <h5 className="text-sm font-medium text-gray-600 mb-2 text-center">{program.title}</h5>
+                                        <h5 className="text-sm font-medium text-gray-600 mb-2 text-center">{program.name}</h5>
                                         <ParentChart program={program} sessionData={filteredSessionData} />
                                     </div>
                                 ))}
