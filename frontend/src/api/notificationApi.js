@@ -21,12 +21,12 @@ export const getNotifications = async (userId) => {
   }
 };
 
-export const markAsRead = async (notificationId) => {
+export const markAsRead = async (patientId, chatType) => {
   try {
-    console.log('[NOTIFICATION-LOG] markAsRead: Marcando como lida:', notificationId);
+    console.log('[NOTIFICATION-LOG] markAsRead: Marcando como lida - patientId:', patientId, 'chatType:', chatType);
     const token = localStorage.getItem('token');
     const response = await axios.post(`${NOTIFICATION_API_URL}/mark-read`, 
-      { notificationId },
+      { patientId, chatType },
       {
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -31,7 +31,7 @@
 .chat-messages {
   flex-grow: 1;
   overflow-y: auto; /* Permite rolagem vertical */
-  padding: 1rem;
+  padding: 1rem 4rem; /* Aumentei padding lateral para dar espaço aos avatars */
   display: flex;
   flex-direction: column;
   gap: 0.75rem; /* Espaçamento entre as bolhas de mensagem */
@@ -40,26 +40,87 @@
 /* Bolha de mensagem individual */
 .message-bubble {
   max-width: 70%;
-  padding: 0.6rem 0.9rem;
+  padding: 0.8rem 1rem;
   border-radius: 18px;
   word-wrap: break-word;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1rem;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.message-bubble:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 /* Mensagens recebidas (de outros usuários) */
 .message-bubble.received {
-  background-color: #ffffff;
-  border: 1px solid #e9e9e9;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid #e9ecef;
   align-self: flex-start; /* Alinha à esquerda */
   border-top-left-radius: 4px;
+  margin-left: 0; /* Removido margin - agora usa padding do container */
 }
 
 /* Mensagens enviadas (pelo usuário logado) */
 .message-bubble.sent {
-  background-color: #007bff; /* Cor primária, pode ajustar para a cor da sua aplicação */
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   color: white;
   align-self: flex-end; /* Alinha à direita */
   border-top-right-radius: 4px;
+  margin-right: 0; /* Removido margin - agora usa padding do container */
+}
+
+/* Cores por role - bordas laterais */
+.message-bubble.therapist {
+  border-left: 4px solid #3498db;
+}
+
+.message-bubble.parent {
+  border-left: 4px solid #2ecc71;
+}
+
+.message-bubble.admin {
+  border-left: 4px solid #34495e;
+}
+
+.message-bubble.fono {
+  border-left: 4px solid #3498db;
+}
+
+.message-bubble.psico {
+  border-left: 4px solid #e74c3c;
+}
+
+.message-bubble.music {
+  border-left: 4px solid #9b59b6;
+}
+
+.message-bubble.to {
+  border-left: 4px solid #f39c12;
+}
+
+.message-bubble.fisio {
+  border-left: 4px solid #27ae60;
+}
+
+.message-bubble.psicoped {
+  border-left: 4px solid #e67e22;
+}
+
+/* Ajustes para mensagens enviadas (próprias) */
+.message-bubble.sent.therapist,
+.message-bubble.sent.parent,
+.message-bubble.sent.admin,
+.message-bubble.sent.fono,
+.message-bubble.sent.psico,
+.message-bubble.sent.music,
+.message-bubble.sent.to,
+.message-bubble.sent.fisio,
+.message-bubble.sent.psicoped {
+  border-left: none;
+  border-right: 4px solid rgba(255, 255, 255, 0.3);
 }
 
 .message-sender {
@@ -145,4 +206,65 @@
 .chat-info.error {
   color: #d9534f;
   font-weight: 500;
+}
+
+/* Estilos para avatar */
+.message-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.8rem;
+  color: white;
+  position: absolute;
+  top: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 2px solid white;
+  z-index: 1;
+}
+
+.message-avatar.received {
+  left: -50px; /* Posição fixa em relação ao wrapper */
+}
+
+.message-avatar.sent {
+  right: -50px; /* Posição fixa em relação ao wrapper */
+}
+
+/* Container para mensagem com avatar */
+.message-wrapper {
+  display: flex;
+  position: relative;
+  width: 100%;
+}
+
+.message-wrapper.received {
+  justify-content: flex-start;
+}
+
+.message-wrapper.sent {
+  justify-content: flex-end;
+}
+
+/* Badge de especialidade aprimorado */
+.specialty-badge {
+  display: inline-block;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Melhoria no timestamp */
+.message-timestamp {
+  font-size: 0.7rem;
+  text-align: right;
+  margin-top: 6px;
+  opacity: 0.7;
+  font-weight: 400;
 }
