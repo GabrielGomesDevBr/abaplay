@@ -45,7 +45,7 @@ const formatDate = (dateString, format = 'long') => {
 // <<< NOVO COMPONENTE PARA O GRÁFICO DE PRÉ-VISUALIZAÇÃO >>>
 const ReportChart = ({ program, sessionData }) => {
     const programSessionData = (sessionData || [])
-      .filter(session => session.program_id === program.id)
+      .filter(session => session.program_id === program.program_id)
       .sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
 
     if (programSessionData.length === 0) {
@@ -61,7 +61,8 @@ const ReportChart = ({ program, sessionData }) => {
             backgroundColor: 'rgba(79, 70, 229, 0.1)',
             borderWidth: 2,
             pointRadius: 4,
-            pointBackgroundColor: '#4f46e5',
+            pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#f59e0b' : '#4f46e5'),
+            pointStyle: programSessionData.map(s => s.is_baseline ? 'rectRot' : 'circle'),
             fill: true,
             tension: 0.3,
         }]
@@ -87,6 +88,13 @@ const ReportChart = ({ program, sessionData }) => {
                 callbacks: {
                     title: (items) => `Data: ${formatDate(programSessionData[items[0].dataIndex].session_date)}`,
                     label: (context) => `Pontuação: ${context.parsed.y.toFixed(2)}%`,
+                    afterBody: (items) => {
+                        const session = programSessionData[items[0].dataIndex];
+                        let details = [];
+                        if (session.is_baseline) details.push('Tipo: Linha de Base');
+                        if (session.notes) details.push(`Obs: ${session.notes}`);
+                        return details;
+                    }
                 }
             } 
         }
@@ -94,7 +102,8 @@ const ReportChart = ({ program, sessionData }) => {
     
     return (
         <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 shadow-sm">
-            <h5 className="text-sm font-semibold text-gray-700 mb-2 text-center">{program.title}</h5>
+            <h5 className="text-sm font-semibold text-gray-700 mb-2 text-center">{program.program_name}</h5>
+            <p className="text-xs text-gray-500 text-center mb-3">{program.discipline_name}</p>
             <div className="w-full h-56 relative">
                 <Line options={chartOptions} data={chartData} />
             </div>
@@ -216,7 +225,7 @@ const ConsolidatedReportModal = ({ isOpen, onClose }) => {
               {assignedPrograms.length > 0 ? (
                 assignedPrograms.map(program => (
                   <ReportChart 
-                    key={program.id} 
+                    key={program.program_id} 
                     program={program} 
                     sessionData={filteredSessionData} 
                   />

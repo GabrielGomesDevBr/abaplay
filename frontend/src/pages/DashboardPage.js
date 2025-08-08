@@ -60,11 +60,187 @@ const formatDate = (dateString, format = 'long') => {
 };
 
 const OverallProgressChart = ({ sessionData }) => {
-    // ... (código do gráfico mantido, sem alterações)
+  const processDataForChart = () => {
+    if (!sessionData || sessionData.length === 0) {
+      return { labels: [], data: [] };
+    }
+    const monthlyData = {};
+    const interventionSessions = sessionData.filter(s => !s.is_baseline);
+
+    interventionSessions.forEach(session => {
+      const date = new Date(session.session_date);
+      const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { totalScore: 0, count: 0 };
+      }
+      monthlyData[monthKey].totalScore += session.score;
+      monthlyData[monthKey].count += 1;
+    });
+
+    const sortedMonths = Object.keys(monthlyData).sort();
+    const labels = sortedMonths.map(monthKey => {
+        const [year, month] = monthKey.split('-');
+        return new Date(year, month - 1).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
+    });
+    const data = sortedMonths.map(monthKey => {
+      const { totalScore, count } = monthlyData[monthKey];
+      return (totalScore / count).toFixed(1);
+    });
+    return { labels, data };
+  };
+
+  const { labels, data } = processDataForChart();
+
+  if (data.length === 0) {
+    return (
+        <div className="flex items-center justify-center h-full text-center text-gray-400 bg-gray-50 rounded-lg p-4">
+            <p>Não há dados de sessões de intervenção suficientes no período selecionado para gerar o gráfico de progresso mensal.</p>
+        </div>
+    );
+  }
+
+  const chartData = {
+    labels,
+    datasets: [{
+        label: 'Progresso Médio Mensal (%)', data,
+        borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        fill: true, tension: 0.3
+    }]
+  };
+  const chartOptions = { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } };
+  return <Line options={chartOptions} data={chartData} />;
 };
 
-const AllProgramsChartsGrid = ({ activePrograms, sessionData, allProgramsData }) => {
-    // ... (código do gráfico mantido, sem alterações)
+const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
+    if (!activePrograms || activePrograms.length === 0) return null;
+
+    // Organiza os programas por disciplina (usando os dados que vêm do banco)
+    const programsByDiscipline = {};
+    activePrograms.forEach(program => {
+        const disciplineName = program.discipline_name || 'Outros';
+        if (!programsByDiscipline[disciplineName]) {
+            programsByDiscipline[disciplineName] = [];
+        }
+        programsByDiscipline[disciplineName].push(program);
+    });
+    
+    const sortedDisciplines = Object.keys(programsByDiscipline).sort();
+    
+    const MiniChart = ({ program }) => {
+        const programSessionData = (sessionData || [])
+            .filter(session => session.program_id === program.program_id)
+            .sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
+        
+        if (programSessionData.length === 0) {
+            return <div className="flex items-center justify-center h-48 text-xs text-gray-400 p-4">Sem dados neste período.</div>;
+        }
+
+        const chartData = {
+            labels: programSessionData.map(s => formatDate(s.session_date, 'short')),
+            datasets: [{
+                data: programSessionData.map(s => s.score),
+                borderColor: '#4f46e5', 
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                borderWidth: 2,
+                pointRadius: 5,
+                pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#f59e0b' : '#4f46e5'),
+                pointStyle: programSessionData.map(s => s.is_baseline ? 'rectRot' : 'circle'),
+                pointHoverRadius: 7,
+                fill: true,
+                tension: 0.3,
+            }]
+        };
+
+        const chartOptions = { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            scales: { 
+                y: { 
+                    display: true, 
+                    min: 0, 
+                    max: 105, 
+                    ticks: { 
+                        font: { size: 9 },
+                        callback: (value) => value + '%'
+                    } 
+                }, 
+                x: { 
+                    display: true, 
+                    ticks: { font: { size: 9 } } 
+                } 
+            }, 
+            plugins: { 
+                legend: { display: false }, 
+                tooltip: {
+                    enabled: true,
+                    backgroundColor: '#111827',
+                    titleColor: '#fff',
+                    bodyColor: '#e5e7eb',
+                    padding: 12,
+                    cornerRadius: 6,
+                    displayColors: false,
+                    callbacks: {
+                        title: (items) => `Data: ${formatDate(programSessionData[items[0].dataIndex].session_date)}`,
+                        label: (context) => `Pontuação: ${context.parsed.y.toFixed(2)}%`,
+                        afterBody: (items) => {
+                            const session = programSessionData[items[0].dataIndex];
+                            let details = [];
+                            if (session.is_baseline) details.push('Tipo: Linha de Base');
+                            if (session.notes) details.push(`Obs: ${session.notes}`);
+                            return details;
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        goalLine: {
+                            type: 'line',
+                            yMin: 80,
+                            yMax: 80,
+                            borderColor: '#16a34a',
+                            borderWidth: 2,
+                            borderDash: [6, 6],
+                            label: {
+                                content: 'Meta',
+                                enabled: true,
+                                position: 'end',
+                                font: { size: 9 },
+                                yAdjust: -10,
+                            }
+                        }
+                    }
+                } 
+            } 
+        };
+
+        return <div className="h-48 w-full"><Line options={chartOptions} data={chartData} /></div>;
+    };
+
+    return (
+        <div className="mt-8">
+            {sortedDisciplines.map(discipline => {
+                if (!programsByDiscipline[discipline] || programsByDiscipline[discipline].length === 0) return null;
+
+                return (
+                    <div key={discipline} className="mb-8">
+                        <h2 className="text-xl font-semibold text-gray-700 mb-4 flex items-center">
+                            <FontAwesomeIcon icon={faFolderOpen} className="mr-3 text-gray-400" />
+                            {discipline}
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {programsByDiscipline[discipline].map(program => (
+                                <div key={program.program_id} className="bg-white p-4 rounded-lg shadow border border-gray-200 flex flex-col">
+                                    <p className="text-sm font-semibold text-gray-700 truncate" title={program.program_name}>{program.program_name}</p>
+                                    <p className="text-xs text-gray-500 mb-3">Trials: {program.trials || 'N/A'}</p>
+                                    <MiniChart program={program} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
 };
 
 
@@ -77,8 +253,7 @@ const DashboardPage = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // --- CORREÇÃO ---
-  // Adicionamos verificações para garantir que `selectedPatient` e `assigned_programs` existem.
+  // Programas ativos do paciente com dados completos do banco
   const activeAssignedPrograms = useMemo(() => {
     if (!selectedPatient?.assigned_programs) return [];
     return selectedPatient.assigned_programs.filter(p => p.status === 'active');
@@ -158,7 +333,20 @@ const DashboardPage = () => {
             <StatCard title="Progresso Médio no Período (Programas Ativos)" value={`${averageProgressInPeriod}%`} icon={faPercentage} colorClass={{ bg: 'bg-amber-100', text: 'text-amber-600' }} />
           </div>
 
-          {/* O restante do JSX permanece o mesmo */}
+          <div className="mt-8 bg-white p-6 rounded-lg shadow border border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                <FontAwesomeIcon icon={faChartLine} className="mr-3 text-emerald-500" />
+                Progressão Geral (Média Mensal dos Programas Ativos)
+            </h2>
+            <div className="relative h-72">
+                <OverallProgressChart sessionData={filteredSessionData} />
+            </div>
+          </div>
+
+          <AllProgramsChartsGrid 
+            activePrograms={activeAssignedPrograms} 
+            sessionData={filteredSessionData}
+          />
         </>
       ) : (
         <>
