@@ -34,7 +34,7 @@ caseDiscussionController.createMessage = async (req, res) => {
 
     const responseMessage = {
       ...newMessage,
-      user_name: req.user.name
+      user_name: req.user.full_name
     };
 
     // --- LÓGICA DE NOTIFICAÇÕES ---

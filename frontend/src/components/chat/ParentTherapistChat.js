@@ -96,7 +96,7 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
       const messageToSend = {
         id: clientId, // Usar clientId como id temporário
         sender_id: user.id,
-        sender_name: user.name,
+        sender_name: user.full_name,
         message: newMessage,
         created_at: new Date().toISOString(),
         patient_id: patientId,
@@ -106,13 +106,14 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
       setMessages((prevMessages) => [...prevMessages, messageToSend]);
       setNewMessage('');
 
-            const createdMessage = await postChatMessage({ patient_id: patientId, message: newMessage, sender_id: user.id, client_id: clientId }); // Enviar clientId
+            const createdMessage = await postChatMessage({ patient_id: patientId, message: newMessage, sender_id: user.id, clientId: clientId }); // Enviar clientId
 
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg.id === clientId ? { ...createdMessage, sender_name: user.name, isOptimistic: false } : msg
-        )
-      );
+      // Removido: A atualização otimística será feita via Socket.IO
+      // setMessages((prevMessages) =>
+      //   prevMessages.map((msg) =>
+      //     msg.id === clientId ? { ...createdMessage, sender_name: user.full_name, isOptimistic: false } : msg
+      //   )
+      // );
 
       window.dispatchEvent(new CustomEvent('messageSentOrReceived'));
 
