@@ -19,17 +19,19 @@ The project is a full-stack application with separated frontend and backend:
 - **Real-time**: Socket.IO for live chat functionality
 - **Entry Point**: `src/server.js`
 - **Database Connection**: Uses pg Pool in `src/models/db.js` with SSL support
+- **Package Manager**: npm with CommonJS modules
 
 ### Frontend (`/frontend`)
 - **Framework**: React 18 with React Router DOM
 - **Styling**: Tailwind CSS
-- **Icons**: FontAwesome with react-fontawesome
+- **Icons**: FontAwesome with react-fontawesome and Lucide React
 - **Charts**: Chart.js with react-chartjs-2 and chartjs-plugin-annotation
 - **PDF Generation**: jsPDF with jspdf-autotable
 - **HTTP Client**: Axios
 - **Real-time**: Socket.IO client
 - **Authentication**: JWT decode for token management
 - **Entry Point**: `src/index.js` → `src/App.js`
+- **Development Server**: Runs on port 3001 with HOST=0.0.0.0
 
 ## Development Commands
 
@@ -73,13 +75,16 @@ The application uses PostgreSQL with the following key tables:
 - `patient_program_progress` for session tracking and progress data
 - `notification_status` for notification management
 
-Key architectural changes:
+Key architectural features:
 - Programs store materials and procedures as JSONB fields
 - SSL support for production database connections
 - Enhanced security with access control checks
 - Notification system with status tracking
+- Status normalization utility (`/backend/src/utils/statusNormalizer.js`) for consistent program status handling
+- Support for program status: active, archived, paused
 
 Use `DIAGNOSTIC_QUERIES.sql` for database analysis and debugging.
+Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 
 ## Key Application Features
 
@@ -90,11 +95,14 @@ Use `DIAGNOSTIC_QUERIES.sql` for database analysis and debugging.
 
 ### Core Features
 - **Program Management**: Hierarchical program structure with disciplines, areas, and sub-areas
-- **Session Tracking**: Progress tracking with session data and charts
-- **Communication**: Case discussions and parent-therapist chats
-- **Notifications**: Real-time notification system with status management
-- **PDF Reports**: Consolidated patient reports with jsPDF generation
+- **Session Tracking**: Progress tracking with session data and charts  
+- **Communication**: Case discussions and parent-therapist chats with Socket.IO real-time messaging
+- **Notifications**: Real-time notification system with status management and badge indicators
+- **PDF Reports**: Consolidated patient reports with jsPDF generation including progress charts
 - **Program Assignment**: Therapist-patient program assignments with status management
+- **User Management**: Admin interface for managing clinics, users, and patient assignments
+- **Progress Visualization**: Interactive charts grouped by intervention areas for parents and therapists
+- **Status Management**: Normalized program status handling (active/archived/paused) across the system
 
 ### Context Architecture (Frontend)
 - `AuthContext`: User authentication and role-based access
@@ -138,20 +146,53 @@ Use `DIAGNOSTIC_QUERIES.sql` for database analysis and debugging.
 - `src/models/db.js` - Database connection with SSL support
 - `src/config/db.config.js` - Environment configuration
 - `src/controllers/` - Business logic controllers with validation
-- `src/models/` - Database query functions
-- `src/routes/` - API endpoint definitions
+  - `adminController.js` - Admin operations
+  - `assignmentController.js` - Patient-therapist assignments
+  - `authController.js` - Authentication logic
+  - `caseDiscussionController.js` - Case discussion management
+  - `notificationController.js` - Notification system
+  - `parentChatController.js` - Parent-therapist chat
+  - `parentController.js` - Parent-specific operations
+  - `patientController.js` - Patient management
+  - `programController.js` - Program operations
+- `src/models/` - Database query functions (corresponding to controllers)
+- `src/routes/` - API endpoint definitions (corresponding to controllers)
 - `src/middleware/authMiddleware.js` - Authentication middleware
+- `src/utils/statusNormalizer.js` - Status normalization utility
 
 ### Frontend Structure
 - `src/App.js` - React app routing with role-based access
 - `src/context/` - React contexts for state management
+  - `AuthContext.js` - Authentication state
+  - `PatientContext.js` - Patient data and selection persistence
+  - `ProgramContext.js` - Program library management
 - `src/components/` - Reusable UI components organized by feature
+  - `admin/` - Admin-specific components (AssignmentModal, UserFormModal)
+  - `chat/` - Communication components (CaseDiscussionChat, ParentTherapistChat)
+  - `layout/` - Layout components (MainLayout, Navbar, Sidebar)
+  - `notifications/` - Notification components (NotificationBadge, NotificationPanel)
+  - `patient/` - Patient components (PatientDetails, PatientForm, PatientList, ConsolidatedReportModal)
+  - `program/` - Program components (AssignedProgramsList, ProgramCard, ProgramLibrary, SessionChart, SessionProgress)
+  - `shared/` - Shared components (Button, Modal)
 - `src/pages/` - Main page components
-- `src/api/` - Centralized API communication
+  - `AdminPage.js` - Admin dashboard
+  - `AdminProgramsPage.js` - Admin program management
+  - `ClientsPage.js` - Client management
+  - `DashboardPage.js` - Therapist dashboard
+  - `HomePage.js` - Landing page
+  - `LoginPage.js` - Authentication
+  - `NotesPage.js` - Patient notes
+  - `ParentDashboardPage.js` - Parent dashboard
+  - `ProgramSessionPage.js` - Session tracking
+  - `ProgramsPage.js` - Program library
+- `src/api/` - Centralized API communication (corresponding to backend routes)
+- `src/hooks/useApi.js` - Custom API hook
+- `src/utils/pdfGenerator.js` - PDF report generation
 - `src/config.js` - Frontend configuration
 
 ### Database & Analysis
 - `DIAGNOSTIC_QUERIES.sql` - Database debugging and analysis queries
+- `NORMALIZE_STATUS.sql` - Status standardization queries
 
 ## Security Considerations
 
