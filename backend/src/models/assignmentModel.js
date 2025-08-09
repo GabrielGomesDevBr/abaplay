@@ -156,6 +156,97 @@ const Assignment = {
         `;
         const { rows } = await pool.query(query, [assignmentId]);
         return rows;
+    },
+
+    /**
+     * Busca todos os terapeutas atribuídos a um paciente específico.
+     * @param {number} patientId - O ID do paciente.
+     * @returns {Promise<Array<object>>} Uma lista de terapeutas atribuídos.
+     */
+    async getAssignedTherapists(patientId) {
+        const query = `
+            SELECT DISTINCT
+                u.id,
+                u.full_name AS name,
+                u.username,
+                u.role,
+                COUNT(ppa.id) as assignments_count
+            FROM 
+                patient_program_assignments ppa
+            JOIN 
+                users u ON ppa.therapist_id = u.id
+            WHERE 
+                ppa.patient_id = $1
+            GROUP BY 
+                u.id, u.full_name, u.username, u.role
+            ORDER BY 
+                u.full_name;
+        `;
+        const { rows } = await pool.query(query, [patientId]);
+        return rows;
+    },
+
+    /**
+     * Atualiza as atribuições de terapeutas para um paciente específico.
+     * Mantém as atribuições de programa existentes mas atualiza o terapeuta responsável.
+     * Como há constraint de unique (patient_id, program_id), cada programa pode ter apenas um terapeuta.
+     * @param {number} patientId - O ID do paciente.
+     * @param {Array<number>} therapistIds - Array de IDs dos terapeutas a serem atribuídos.
+     * @returns {Promise<void>}
+     */
+    async updateAssignmentsForPatient(patientId, therapistIds) {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            
+            if (therapistIds.length === 0) {
+                // Se nenhum terapeuta foi selecionado, remove todas as atribuições
+                await client.query(
+                    'DELETE FROM patient_program_assignments WHERE patient_id = $1',
+                    [patientId]
+                );
+            } else {
+                // Busca as atribuições de programa existentes para este paciente
+                const existingAssignmentsQuery = `
+                    SELECT program_id, status, therapist_id
+                    FROM patient_program_assignments 
+                    WHERE patient_id = $1
+                `;
+                const { rows: existingAssignments } = await client.query(existingAssignmentsQuery, [patientId]);
+                
+                if (existingAssignments.length > 0) {
+                    // Distribui os programas existentes entre os terapeutas selecionados
+                    // Isso garante que cada programa tenha apenas um terapeuta (respeitando constraint)
+                    // mas permite que múltiplos terapeutas trabalhem com o mesmo paciente
+                    
+                    for (let i = 0; i < existingAssignments.length; i++) {
+                        const assignment = existingAssignments[i];
+                        // Distribui os programas de forma circular entre os terapeutas
+                        const therapistIndex = i % therapistIds.length;
+                        const selectedTherapistId = therapistIds[therapistIndex];
+                        
+                        await client.query(
+                            'UPDATE patient_program_assignments SET therapist_id = $1, updated_at = NOW() WHERE patient_id = $2 AND program_id = $3',
+                            [selectedTherapistId, patientId, assignment.program_id]
+                        );
+                    }
+                    
+                    console.log(`[INFO] ${existingAssignments.length} programa(s) distribuído(s) entre ${therapistIds.length} terapeuta(s) para o paciente ${patientId}.`);
+                } else {
+                    // Se não havia atribuições, não cria nenhuma nova
+                    // O admin terá que atribuir programas separadamente
+                    console.log(`[INFO] Nenhum programa estava atribuído ao paciente ${patientId}. Terapeutas selecionados mas sem programas para atribuir.`);
+                }
+            }
+            
+            await client.query('COMMIT');
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error(`[MODEL-ERROR] Erro ao atualizar atribuições para o paciente ${patientId}:`, error);
+            throw error;
+        } finally {
+            client.release();
+        }
     }
 };
 
