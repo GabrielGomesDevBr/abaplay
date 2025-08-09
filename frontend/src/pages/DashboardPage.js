@@ -961,11 +961,110 @@ const DashboardPage = () => {
         </>
       ) : (
         <>
-          <h1 className="text-2xl font-semibold text-gray-800 mb-6">Dashboard Geral</h1>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <StatCard title="Total de Clientes" value={`${totalPatients} / ${patientLimit}`} icon={faUsers} colorClass={{ bg: 'bg-indigo-100', text: 'text-indigo-600' }} />
-             <StatCard title="Total de Sessões (Todos os Clientes)" value={totalSessions} icon={faClipboardList} colorClass={{ bg: 'bg-emerald-100', text: 'text-emerald-600' }} />
+          <h1 className="text-2xl font-semibold text-gray-800 mb-6">
+            {user?.is_admin ? 'Dashboard da Clínica' : 'Dashboard Geral'}
+          </h1>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {user?.is_admin ? (
+              <>
+                <StatCard 
+                  title="Pacientes Cadastrados" 
+                  value={totalPatients} 
+                  icon={faUsers} 
+                  colorClass={{ bg: 'bg-indigo-100', text: 'text-indigo-600' }}
+                />
+                <StatCard 
+                  title="Limite Contratado" 
+                  value={patientLimit} 
+                  icon={faClipboardList} 
+                  colorClass={{ bg: 'bg-blue-100', text: 'text-blue-600' }} 
+                />
+                <StatCard 
+                  title="Utilização da Licença" 
+                  value={`${patientLimit > 0 ? Math.round((totalPatients / patientLimit) * 100) : 0}%`} 
+                  icon={faPercentage} 
+                  colorClass={{ bg: 'bg-emerald-100', text: 'text-emerald-600' }}
+                  interpretation={
+                    patientLimit > 0 
+                      ? (totalPatients >= patientLimit ? 'critical' : totalPatients >= patientLimit * 0.9 ? 'attention' : 'good')
+                      : 'critical'
+                  }
+                />
+              </>
+            ) : (
+              <>
+                <StatCard 
+                  title="Clientes Atribuídos a Mim" 
+                  value={totalPatients} 
+                  icon={faUsers} 
+                  colorClass={{ bg: 'bg-indigo-100', text: 'text-indigo-600' }} 
+                />
+                <StatCard 
+                  title="Total de Sessões (Meus Clientes)" 
+                  value={totalSessions} 
+                  icon={faClipboardList} 
+                  colorClass={{ bg: 'bg-emerald-100', text: 'text-emerald-600' }} 
+                />
+              </>
+            )}
           </div>
+          
+          {user?.is_admin && (
+            <div className="mt-6 bg-white p-6 rounded-lg shadow border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                  <FontAwesomeIcon icon={faUsers} className="mr-3 text-indigo-500" />
+                  Status da Assinatura
+                </h3>
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  totalPatients >= patientLimit 
+                    ? 'bg-red-100 text-red-800' 
+                    : totalPatients >= patientLimit * 0.9 
+                    ? 'bg-yellow-100 text-yellow-800' 
+                    : 'bg-green-100 text-green-800'
+                }`}>
+                  {totalPatients >= patientLimit 
+                    ? '🚫 Limite Atingido' 
+                    : totalPatients >= patientLimit * 0.9 
+                    ? '⚠️ Próximo do Limite' 
+                    : '✅ Dentro do Limite'
+                  }
+                </div>
+              </div>
+              
+              <div className="relative">
+                <div className="w-full bg-gray-200 rounded-full h-4">
+                  <div 
+                    className={`h-4 rounded-full transition-all duration-500 ${
+                      totalPatients >= patientLimit 
+                        ? 'bg-red-500' 
+                        : totalPatients >= patientLimit * 0.9 
+                        ? 'bg-yellow-500' 
+                        : 'bg-green-500'
+                    }`}
+                    style={{ width: `${Math.min((totalPatients / Math.max(patientLimit, 1)) * 100, 100)}%` }}
+                  ></div>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600 mt-2">
+                  <span>0 pacientes</span>
+                  <span className="font-medium">{totalPatients} / {patientLimit} pacientes</span>
+                  <span>{patientLimit} pacientes (limite)</span>
+                </div>
+              </div>
+              
+              {totalPatients >= patientLimit * 0.8 && (
+                <div className="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg">
+                  <p className="text-yellow-800 text-sm">
+                    <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
+                    {totalPatients >= patientLimit 
+                      ? 'Você atingiu o limite de pacientes da sua assinatura. Entre em contato para atualizar seu plano.'
+                      : 'Você está próximo do limite de pacientes. Considere atualizar sua assinatura.'
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
           <div className="mt-8 text-center text-gray-500 p-8 border-2 border-dashed rounded-lg bg-gray-50">
             <FontAwesomeIcon icon={faTachometerAlt} className="text-4xl text-gray-300 mb-3" />
             <p>Selecione um cliente para ver um dashboard mais detalhado.</p>

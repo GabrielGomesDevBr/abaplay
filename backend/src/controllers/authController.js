@@ -1,4 +1,5 @@
 const User = require('../models/userModel');
+const ClinicModel = require('../models/clinicModel');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -65,6 +66,7 @@ authController.loginUser = async (req, res) => {
         // --- CORREÇÃO APLICADA AQUI ---
         // O payload do token agora inclui o 'associated_patient_id',
         // que é essencial para o login dos pais.
+        // E para admins, inclui também o 'max_patients' da clínica.
         const payload = {
             id: user.id,
             username: user.username,
@@ -74,6 +76,21 @@ authController.loginUser = async (req, res) => {
             clinic_id: user.clinic_id,
             associated_patient_id: user.associated_patient_id || null // LINHA ADICIONADA
         };
+
+        // Se for admin, busca informações da clínica incluindo o limite de pacientes
+        if (user.is_admin && user.clinic_id) {
+            try {
+                const clinic = await ClinicModel.findById(user.clinic_id);
+                if (clinic) {
+                    payload.max_patients = clinic.max_patients || 0;
+                    payload.clinic_name = clinic.name;
+                }
+            } catch (clinicError) {
+                console.error('Erro ao buscar informações da clínica:', clinicError);
+                // Continua sem as informações da clínica se houver erro
+                payload.max_patients = 0;
+            }
+        }
 
         const token = jwt.sign(
             payload,
