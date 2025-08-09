@@ -879,14 +879,28 @@ const DashboardPage = () => {
         <>
           <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
             <h1 className="text-2xl font-semibold text-gray-800">Dashboard: {selectedPatient.name}</h1>
-            <div className="bg-white p-2 rounded-lg shadow-sm border flex flex-wrap items-center gap-2 text-sm">
-                <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400 ml-2" />
-                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="p-1 border rounded-md text-xs" />
-                <span className="text-gray-500">até</span>
-                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="p-1 border rounded-md text-xs" />
-                <button onClick={clearFilter} className="text-xs text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-gray-100" title="Limpar filtro">
-                    <FontAwesomeIcon icon={faTimesCircle} />
+            <div className="flex items-center gap-3">
+              {/* Botão Verificar Progresso - Sempre visível para terapeutas */}
+              {!user?.is_admin && (
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent('checkProgressAlerts'))}
+                  className="bg-amber-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors flex items-center space-x-1"
+                  title="Verificar se há programas prontos para serem marcados como dominados"
+                >
+                  <FontAwesomeIcon icon={faBullseye} />
+                  <span className="hidden sm:inline">Verificar Progresso</span>
                 </button>
+              )}
+              {/* Filtros de Data */}
+              <div className="bg-white p-2 rounded-lg shadow-sm border flex flex-wrap items-center gap-2 text-sm">
+                  <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400 ml-2" />
+                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="p-1 border rounded-md text-xs" />
+                  <span className="text-gray-500">até</span>
+                  <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="p-1 border rounded-md text-xs" />
+                  <button onClick={clearFilter} className="text-xs text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-gray-100" title="Limpar filtro">
+                      <FontAwesomeIcon icon={faTimesCircle} />
+                  </button>
+              </div>
             </div>
           </div>
           
@@ -961,9 +975,21 @@ const DashboardPage = () => {
         </>
       ) : (
         <>
-          <h1 className="text-2xl font-semibold text-gray-800 mb-6">
-            {user?.is_admin ? 'Dashboard da Clínica' : 'Dashboard Geral'}
-          </h1>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-semibold text-gray-800">
+              {user?.is_admin ? 'Dashboard da Clínica' : 'Dashboard Geral'}
+            </h1>
+            {!user?.is_admin && (
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('checkProgressAlerts'))}
+                className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors flex items-center space-x-2"
+                title="Verificar se há programas prontos para serem marcados como dominados"
+              >
+                <FontAwesomeIcon icon={faBullseye} />
+                <span>Verificar Progresso</span>
+              </button>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {user?.is_admin ? (
               <>

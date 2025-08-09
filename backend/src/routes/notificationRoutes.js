@@ -18,4 +18,13 @@ router.post('/mark-read', notificationController.markAsRead);
 // GET /api/notifications/patient/:patientId - Busca notificações de um paciente específico
 router.get('/patient/:patientId', notificationController.getNotificationsByPatientAndType);
 
+// GET /api/notifications/progress-alerts - Busca programas que precisam de alerta de progresso
+router.get('/progress-alerts', notificationController.getProgressAlerts);
+
+// POST /api/notifications/mark-completed - Marca um programa como dominado
+router.post('/mark-completed', notificationController.markProgramAsCompleted);
+
+// POST /api/notifications/run-progress-check - Executa verificação manual de alertas
+router.post('/run-progress-check', notificationController.runProgressCheck);
+
 module.exports = router;

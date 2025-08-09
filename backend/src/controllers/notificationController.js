@@ -1,4 +1,5 @@
 const NotificationStatus = require('../models/notificationStatusModel');
+const ProgressAlerts = require('../utils/progressAlerts');
 
 const notificationController = {};
 
@@ -44,9 +45,9 @@ notificationController.markAsRead = async (req, res) => {
       });
     }
 
-    if (!['case_discussion', 'parent_chat'].includes(chatType)) {
+    if (!['case_discussion', 'parent_chat', 'progress_alert'].includes(chatType)) {
       return res.status(400).json({ 
-        errors: [{ msg: 'chatType deve ser "case_discussion" ou "parent_chat".' }] 
+        errors: [{ msg: 'chatType deve ser "case_discussion", "parent_chat" ou "progress_alert".' }] 
       });
     }
 
@@ -67,9 +68,9 @@ notificationController.getNotificationsByPatientAndType = async (req, res) => {
     const { patientId } = req.params;
     const { chatType } = req.query;
 
-    if (!chatType || !['case_discussion', 'parent_chat'].includes(chatType)) {
+    if (!chatType || !['case_discussion', 'parent_chat', 'progress_alert'].includes(chatType)) {
       return res.status(400).json({ 
-        errors: [{ msg: 'chatType deve ser "case_discussion" ou "parent_chat".' }] 
+        errors: [{ msg: 'chatType deve ser "case_discussion", "parent_chat" ou "progress_alert".' }] 
       });
     }
 
@@ -77,6 +78,68 @@ notificationController.getNotificationsByPatientAndType = async (req, res) => {
     res.status(200).json(notifications);
   } catch (error) {
     console.error('Erro ao buscar notificações específicas:', error);
+    res.status(500).json({ errors: [{ msg: 'Erro interno do servidor.' }] });
+  }
+};
+
+/**
+ * Busca programas que precisam de alerta de progresso para um terapeuta
+ */
+notificationController.getProgressAlerts = async (req, res) => {
+  try {
+    const therapistId = req.user.id;
+    const threshold = parseInt(req.query.threshold) || 80;
+    
+    const programs = await ProgressAlerts.getProgramsNeedingAlert(therapistId, threshold);
+    res.status(200).json(programs);
+  } catch (error) {
+    console.error('Erro ao buscar alertas de progresso:', error);
+    res.status(500).json({ errors: [{ msg: 'Erro interno do servidor.' }] });
+  }
+};
+
+/**
+ * Marca um programa como dominado (arquiva o programa)
+ */
+notificationController.markProgramAsCompleted = async (req, res) => {
+  try {
+    const { assignmentId, patientId } = req.body;
+    const therapistId = req.user.id;
+    
+    if (!assignmentId || !patientId) {
+      return res.status(400).json({ 
+        errors: [{ msg: 'assignmentId e patientId são obrigatórios.' }] 
+      });
+    }
+    
+    // Marca o programa como arquivado
+    const Assignment = require('../models/assignmentModel');
+    await Assignment.updateStatus(assignmentId, 'archived');
+    
+    // Marca a notificação como lida
+    await NotificationStatus.markAsRead(therapistId, patientId, 'progress_alert');
+    
+    res.status(200).json({ message: 'Programa marcado como dominado com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao marcar programa como dominado:', error);
+    res.status(500).json({ errors: [{ msg: 'Erro interno do servidor.' }] });
+  }
+};
+
+/**
+ * Executa verificação manual de alertas de progresso
+ */
+notificationController.runProgressCheck = async (req, res) => {
+  try {
+    const therapistId = req.user.id;
+    const alertsCreated = await ProgressAlerts.createProgressAlerts(therapistId);
+    
+    res.status(200).json({ 
+      message: `Verificação concluída. ${alertsCreated} novos alertas criados.`,
+      alertsCreated 
+    });
+  } catch (error) {
+    console.error('Erro ao executar verificação de progresso:', error);
     res.status(500).json({ errors: [{ msg: 'Erro interno do servidor.' }] });
   }
 };

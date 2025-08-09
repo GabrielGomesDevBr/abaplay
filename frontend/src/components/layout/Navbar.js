@@ -7,6 +7,7 @@ import { usePatients } from '../../context/PatientContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import NotificationBadge from '../notifications/NotificationBadge';
 import NotificationPanel from '../notifications/NotificationPanel';
+import ProgressAlert from '../notifications/ProgressAlert';
 import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faUserShield } from '@fortawesome/free-solid-svg-icons';
 
 const Navbar = ({ toggleSidebar }) => {
@@ -14,6 +15,7 @@ const Navbar = ({ toggleSidebar }) => {
   const { selectedPatient } = usePatients();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isNotificationPanelOpen, setNotificationPanelOpen] = useState(false);
+  const [showProgressAlert, setShowProgressAlert] = useState(false);
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
   const notificationBadgeRef = useRef(null);
@@ -29,14 +31,31 @@ const Navbar = ({ toggleSidebar }) => {
     console.log('Notificação clicada:', notification);
   };
 
+  const handleProgressAlertClose = () => {
+    setShowProgressAlert(false);
+    if (notificationBadgeRef.current?.updateCount) {
+      notificationBadgeRef.current.updateCount();
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target) && buttonRef.current && !buttonRef.current.contains(event.target)) {
         setMobileMenuOpen(false);
       }
     };
+    
+    const handleProgressAlertCheck = () => {
+      setShowProgressAlert(true);
+    };
+    
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('checkProgressAlerts', handleProgressAlertCheck);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('checkProgressAlerts', handleProgressAlertCheck);
+    };
   }, []);
 
   const getInitials = (name) => {
@@ -198,6 +217,14 @@ const Navbar = ({ toggleSidebar }) => {
             onClose={() => setNotificationPanelOpen(false)}
             onNotificationClick={handleNotificationClick}
         />
+
+        {/* Modal de Alertas de Progresso */}
+        {showProgressAlert && (
+          <ProgressAlert
+            onClose={handleProgressAlertClose}
+            onProgramCompleted={handleProgressAlertClose}
+          />
+        )}
     </header>
   );
 };

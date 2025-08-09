@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faComments, faUsers, faEye, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faComments, faUsers, faEye, faTimes, faBullseye } from '@fortawesome/free-solid-svg-icons';
 import { getNotifications, markAsRead } from '../../api/notificationApi';
+import ProgressAlert from './ProgressAlert';
 
 const NotificationPanel = ({ isOpen, onClose, onNotificationClick }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showProgressAlert, setShowProgressAlert] = useState(false);
 
   const fetchNotifications = async () => {
     try {
@@ -35,6 +37,12 @@ const NotificationPanel = ({ isOpen, onClose, onNotificationClick }) => {
 
   const handleMarkAsRead = async (notification) => {
     try {
+      // Para alertas de progresso, abre o modal em vez de marcar como lido
+      if (notification.chatType === 'progress_alert') {
+        setShowProgressAlert(true);
+        return;
+      }
+
       await markAsRead(notification.patientId, notification.chatType);
       
       // Atualiza a lista de notificações
@@ -58,11 +66,21 @@ const NotificationPanel = ({ isOpen, onClose, onNotificationClick }) => {
   };
 
   const getChatTypeLabel = (chatType) => {
-    return chatType === 'case_discussion' ? 'Discussão de Caso' : 'Chat com Pais';
+    switch (chatType) {
+      case 'case_discussion': return 'Discussão de Caso';
+      case 'parent_chat': return 'Chat com Pais';
+      case 'progress_alert': return 'Alerta de Progresso';
+      default: return 'Notificação';
+    }
   };
 
   const getChatTypeIcon = (chatType) => {
-    return chatType === 'case_discussion' ? faUsers : faComments;
+    switch (chatType) {
+      case 'case_discussion': return faUsers;
+      case 'parent_chat': return faComments;
+      case 'progress_alert': return faBullseye;
+      default: return faComments;
+    }
   };
 
   const formatLastRead = (timestamp) => {
@@ -77,6 +95,11 @@ const NotificationPanel = ({ isOpen, onClose, onNotificationClick }) => {
     
     const diffInDays = Math.floor(diffInHours / 24);
     return `Há ${diffInDays} dia${diffInDays > 1 ? 's' : ''}`;
+  };
+
+  const handleProgressAlertClose = () => {
+    setShowProgressAlert(false);
+    fetchNotifications(); // Recarrega notificações após fechar o modal
   };
 
   if (!isOpen) return null;
@@ -166,6 +189,14 @@ const NotificationPanel = ({ isOpen, onClose, onNotificationClick }) => {
           </button>
         </div>
       </div>
+
+      {/* Modal de Alertas de Progresso */}
+      {showProgressAlert && (
+        <ProgressAlert
+          onClose={handleProgressAlertClose}
+          onProgramCompleted={handleProgressAlertClose}
+        />
+      )}
     </div>
   );
 };
