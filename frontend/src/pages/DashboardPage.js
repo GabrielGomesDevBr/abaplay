@@ -487,61 +487,124 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
             .sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
         
         if (programSessionData.length === 0) {
-            return <div className="flex items-center justify-center h-48 text-xs text-gray-400 p-4">Sem dados neste período.</div>;
+            return (
+                <div className="flex items-center justify-center h-48 text-center bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <div>
+                        <div className="bg-gradient-to-br from-gray-100 to-slate-100 p-4 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                            <FontAwesomeIcon icon={faChartLine} className="text-2xl text-gray-400" />
+                        </div>
+                        <p className="text-xs text-gray-500">Sem dados neste período</p>
+                    </div>
+                </div>
+            );
         }
 
         const chartData = {
             labels: programSessionData.map(s => formatDate(s.session_date, 'short')),
             datasets: [{
                 data: programSessionData.map(s => s.score),
-                borderColor: '#4f46e5', 
-                backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                borderWidth: 2,
+                borderColor: '#4f46e5',
+                backgroundColor: (context) => {
+                    const chart = context.chart;
+                    const {ctx, chartArea} = chart;
+                    if (!chartArea) return 'rgba(79, 70, 229, 0.1)';
+                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                    gradient.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
+                    gradient.addColorStop(0.5, 'rgba(79, 70, 229, 0.15)');
+                    gradient.addColorStop(1, 'rgba(67, 56, 202, 0.05)');
+                    return gradient;
+                },
+                borderWidth: 2.5,
                 pointRadius: 5,
                 pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#f59e0b' : '#4f46e5'),
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
                 pointStyle: programSessionData.map(s => s.is_baseline ? 'rectRot' : 'circle'),
-                pointHoverRadius: 7,
+                pointHoverRadius: 8,
+                pointHoverBorderWidth: 3,
                 fill: true,
-                tension: 0.3,
+                tension: 0.35,
+                shadowColor: 'rgba(79, 70, 229, 0.2)',
+                shadowBlur: 8,
+                shadowOffsetX: 0,
+                shadowOffsetY: 3,
             }]
         };
 
         const chartOptions = { 
             responsive: true, 
-            maintainAspectRatio: false, 
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
             scales: { 
                 y: { 
                     display: true, 
                     min: 0, 
-                    max: 105, 
+                    max: 105,
+                    grid: {
+                        display: true,
+                        color: 'rgba(156, 163, 175, 0.2)',
+                        drawBorder: false,
+                    },
                     ticks: { 
-                        font: { size: 9 },
+                        font: { size: 9, weight: 500 },
+                        color: '#6b7280',
                         callback: (value) => value + '%'
-                    } 
+                    },
+                    border: {
+                        display: false
+                    }
                 }, 
                 x: { 
-                    display: true, 
-                    ticks: { font: { size: 9 } } 
+                    display: true,
+                    grid: {
+                        display: true,
+                        color: 'rgba(156, 163, 175, 0.2)',
+                        drawBorder: false,
+                    },
+                    ticks: { 
+                        font: { size: 9, weight: 500 },
+                        color: '#6b7280'
+                    },
+                    border: {
+                        display: false
+                    }
                 } 
             }, 
             plugins: { 
                 legend: { display: false }, 
                 tooltip: {
                     enabled: true,
-                    backgroundColor: '#111827',
-                    titleColor: '#fff',
+                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                    titleColor: '#ffffff',
                     bodyColor: '#e5e7eb',
+                    borderColor: '#4f46e5',
+                    borderWidth: 2,
                     padding: 12,
-                    cornerRadius: 6,
+                    cornerRadius: 8,
                     displayColors: false,
+                    titleFont: {
+                        size: 12,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 11
+                    },
                     callbacks: {
-                        title: (items) => `Data: ${formatDate(programSessionData[items[0].dataIndex].session_date)}`,
-                        label: (context) => `Pontuação: ${context.parsed.y.toFixed(2)}%`,
+                        title: (items) => {
+                            if (!items || !items[0] || items[0].dataIndex === undefined) return 'Sessão';
+                            const isBaseline = programSessionData[items[0].dataIndex]?.is_baseline;
+                            const title = `${formatDate(programSessionData[items[0].dataIndex].session_date)}`;
+                            return isBaseline ? `📋 [BASELINE] ${title}` : `📈 ${title}`;
+                        },
+                        label: (context) => `Pontuação: ${context.parsed.y.toFixed(1)}%`,
                         afterBody: (items) => {
+                            if (!items || !items[0] || items[0].dataIndex === undefined) return '';
                             const session = programSessionData[items[0].dataIndex];
                             let details = [];
-                            if (session.is_baseline) details.push('Tipo: Linha de Base');
-                            if (session.notes) details.push(`Obs: ${session.notes}`);
+                            if (session?.notes) details.push(`\n📝 Obs: ${session.notes}`);
                             return details;
                         }
                     }
@@ -552,15 +615,19 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
                             type: 'line',
                             yMin: 80,
                             yMax: 80,
-                            borderColor: '#16a34a',
+                            borderColor: '#10b981',
                             borderWidth: 2,
                             borderDash: [6, 6],
                             label: {
-                                content: 'Meta',
+                                content: '🎯 Meta (80%)',
                                 enabled: true,
                                 position: 'end',
-                                font: { size: 9 },
-                                yAdjust: -10,
+                                backgroundColor: 'rgba(16, 185, 129, 0.9)',
+                                font: { size: 9, weight: 'bold' },
+                                color: 'white',
+                                padding: 4,
+                                borderRadius: 4,
+                                yAdjust: -8
                             }
                         }
                     }
@@ -568,7 +635,11 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
             } 
         };
 
-        return <div className="h-48 w-full"><Line options={chartOptions} data={chartData} /></div>;
+        return (
+            <div className="h-48 w-full">
+                <Line options={chartOptions} data={chartData} />
+            </div>
+        );
     };
 
     return (
@@ -578,16 +649,29 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
 
                 return (
                     <div key={discipline} className="mb-8">
-                        <h2 className="text-xl font-semibold text-gray-700 mb-4 flex items-center">
-                            <FontAwesomeIcon icon={faFolderOpen} className="mr-3 text-gray-400" />
-                            {discipline}
-                        </h2>
+                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-l-4 border-indigo-500 p-4 rounded-r-lg mb-6">
+                            <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                                <div className="bg-indigo-100 p-2 rounded-full mr-3">
+                                    <FontAwesomeIcon icon={faFolderOpen} className="text-indigo-600" />
+                                </div>
+                                {discipline}
+                            </h2>
+                            <p className="text-sm text-indigo-700 mt-1">
+                                Gráficos de progresso individual por programa
+                            </p>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {programsByDiscipline[discipline].map(program => (
-                                <div key={program.program_id} className="bg-white p-4 rounded-lg shadow border border-gray-200 flex flex-col">
-                                    <p className="text-sm font-semibold text-gray-700 truncate" title={program.program_name}>{program.program_name}</p>
-                                    <p className="text-xs text-gray-500 mb-3">Trials: {program.trials || 'N/A'}</p>
-                                    <MiniChart program={program} />
+                                <div key={program.program_id} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-200 px-4 py-3">
+                                        <p className="text-sm font-semibold text-gray-800 truncate" title={program.program_name}>{program.program_name}</p>
+                                        <p className="text-xs text-indigo-600 mt-1">Trials: {program.trials || 'N/A'}</p>
+                                    </div>
+                                    <div className="p-4">
+                                        <div className="bg-gradient-to-br from-gray-50 to-indigo-50 rounded-lg p-2">
+                                            <MiniChart program={program} />
+                                        </div>
+                                    </div>
                                 </div>
                             ))}
                         </div>

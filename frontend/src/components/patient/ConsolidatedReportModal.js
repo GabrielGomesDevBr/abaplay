@@ -58,41 +58,102 @@ const ReportChart = ({ program, sessionData }) => {
             label: 'Pontuação (%)',
             data: programSessionData.map(session => session.score),
             borderColor: '#4f46e5',
-            backgroundColor: 'rgba(79, 70, 229, 0.1)',
-            borderWidth: 2,
-            pointRadius: 4,
+            backgroundColor: (context) => {
+                const chart = context.chart;
+                const {ctx, chartArea} = chart;
+                if (!chartArea) return 'rgba(79, 70, 229, 0.1)';
+                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                gradient.addColorStop(0, 'rgba(99, 102, 241, 0.3)');
+                gradient.addColorStop(0.5, 'rgba(79, 70, 229, 0.2)');
+                gradient.addColorStop(1, 'rgba(67, 56, 202, 0.1)');
+                return gradient;
+            },
+            borderWidth: 2.5,
+            pointRadius: 5,
             pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#f59e0b' : '#4f46e5'),
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
             pointStyle: programSessionData.map(s => s.is_baseline ? 'rectRot' : 'circle'),
+            pointHoverRadius: 7,
+            pointHoverBorderWidth: 3,
             fill: true,
-            tension: 0.3,
+            tension: 0.4,
         }]
     };
 
     const chartOptions = {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
         scales: { 
-            y: { beginAtZero: true, max: 105, ticks: { callback: (value) => value + '%' } }, 
-            x: {} 
+            y: { 
+                display: true,
+                beginAtZero: true, 
+                max: 105,
+                grid: {
+                    display: true,
+                    color: 'rgba(156, 163, 175, 0.2)',
+                    drawBorder: false,
+                },
+                ticks: { 
+                    font: { size: 10, weight: 500 },
+                    color: '#6b7280',
+                    callback: (value) => value + '%'
+                },
+                border: {
+                    display: false
+                }
+            }, 
+            x: { 
+                display: true,
+                grid: {
+                    display: true,
+                    color: 'rgba(156, 163, 175, 0.2)',
+                    drawBorder: false,
+                },
+                ticks: { 
+                    font: { size: 10, weight: 500 },
+                    color: '#6b7280'
+                },
+                border: {
+                    display: false
+                }
+            } 
         },
         plugins: { 
             legend: { display: false },
             tooltip: {
-                enabled: true,
-                backgroundColor: '#111827',
-                titleColor: '#fff',
+                backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                titleColor: '#ffffff',
                 bodyColor: '#e5e7eb',
-                padding: 12,
-                cornerRadius: 6,
+                borderColor: '#4f46e5',
+                borderWidth: 2,
+                padding: 14,
+                cornerRadius: 10,
                 displayColors: false,
+                titleFont: {
+                    size: 13,
+                    weight: 'bold'
+                },
+                bodyFont: {
+                    size: 12
+                },
                 callbacks: {
-                    title: (items) => `Data: ${formatDate(programSessionData[items[0].dataIndex].session_date)}`,
-                    label: (context) => `Pontuação: ${context.parsed.y.toFixed(2)}%`,
+                    title: (items) => {
+                        const dataIndex = items[0].dataIndex;
+                        const isBaseline = programSessionData[dataIndex]?.is_baseline;
+                        const title = `${formatDate(programSessionData[dataIndex].session_date)}`;
+                        return isBaseline ? `📋 [BASELINE] ${title}` : `📈 ${title}`;
+                    },
+                    label: (context) => `Pontuação: ${context.parsed.y.toFixed(1)}%`,
                     afterBody: (items) => {
+                        if (!items || !items[0] || items[0].dataIndex === undefined) return '';
                         const session = programSessionData[items[0].dataIndex];
                         let details = [];
-                        if (session.is_baseline) details.push('Tipo: Linha de Base');
-                        if (session.notes) details.push(`Obs: ${session.notes}`);
+                        if (session?.notes) details.push(`\n📝 Obs: ${session.notes}`);
                         return details;
                     }
                 }
@@ -101,11 +162,15 @@ const ReportChart = ({ program, sessionData }) => {
     };
     
     return (
-        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 shadow-sm">
-            <h5 className="text-sm font-semibold text-gray-700 mb-2 text-center">{program.program_name}</h5>
-            <p className="text-xs text-gray-500 text-center mb-3">{program.discipline_name}</p>
-            <div className="w-full h-56 relative">
-                <Line options={chartOptions} data={chartData} />
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-200 px-4 py-3">
+                <h5 className="text-sm font-semibold text-gray-800 text-center">{program.program_name}</h5>
+                <p className="text-xs text-indigo-600 text-center mt-1">{program.discipline_name}</p>
+            </div>
+            <div className="p-4">
+                <div className="w-full h-56 relative bg-gradient-to-br from-gray-50 to-indigo-50 rounded-lg p-2">
+                    <Line options={chartOptions} data={chartData} />
+                </div>
             </div>
         </div>
     );

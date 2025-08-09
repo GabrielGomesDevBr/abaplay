@@ -17,6 +17,7 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 // 2. Importar o nosso novo componente de chat
 import ParentTherapistChat from '../components/chat/ParentTherapistChat';
 
@@ -30,7 +31,8 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  annotationPlugin
 );
 
 // Função auxiliar para formatar a data, garantindo consistência
@@ -55,7 +57,16 @@ const ParentChart = ({ program, sessionData }) => {
       .sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
 
     if (programSessionData.length === 0) {
-        return <div className="flex items-center justify-center h-48 text-xs text-gray-400 p-4">Sem dados de sessão.</div>;
+        return (
+            <div className="flex items-center justify-center h-48 text-center bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg border-2 border-dashed border-gray-300">
+                <div>
+                    <div className="bg-gradient-to-br from-gray-100 to-slate-100 p-4 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                        <FontAwesomeIcon icon={faChartLine} className="text-2xl text-gray-400" />
+                    </div>
+                    <p className="text-xs text-gray-500">Sem dados de sessão</p>
+                </div>
+            </div>
+        );
     }
 
     const chartData = {
@@ -64,53 +75,121 @@ const ParentChart = ({ program, sessionData }) => {
             label: 'Pontuação (%)',
             data: programSessionData.map(session => session.score),
             borderColor: '#4f46e5',
-            backgroundColor: 'rgba(79, 70, 229, 0.1)',
-            borderWidth: 2,
-            pointRadius: 5,
+            backgroundColor: (context) => {
+                const chart = context.chart;
+                const {ctx, chartArea} = chart;
+                if (!chartArea) return 'rgba(79, 70, 229, 0.1)';
+                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                gradient.addColorStop(0, 'rgba(99, 102, 241, 0.3)');
+                gradient.addColorStop(0.5, 'rgba(79, 70, 229, 0.2)');
+                gradient.addColorStop(1, 'rgba(67, 56, 202, 0.1)');
+                return gradient;
+            },
+            borderWidth: 3,
+            pointRadius: 6,
             pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#f59e0b' : '#4f46e5'),
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
             pointStyle: programSessionData.map(s => s.is_baseline ? 'rectRot' : 'circle'),
-            pointHoverRadius: 7,
+            pointHoverRadius: 8,
+            pointHoverBorderWidth: 3,
             fill: true,
-            tension: 0.3,
+            tension: 0.4,
+            shadowColor: 'rgba(79, 70, 229, 0.3)',
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowOffsetY: 4,
         }]
     };
 
     const chartOptions = {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
         scales: { 
             y: { 
+                display: true,
                 beginAtZero: true, 
                 max: 105,
+                grid: {
+                    display: true,
+                    color: 'rgba(156, 163, 175, 0.2)',
+                    drawBorder: false,
+                },
                 ticks: { 
-                    font: { size: 9 },
+                    font: { size: 11, weight: 500 },
+                    color: '#6b7280',
                     callback: (value) => value + '%'
-                } 
+                },
+                border: {
+                    display: false
+                }
             }, 
             x: { 
-                ticks: { font: { size: 9 } } 
+                display: true,
+                grid: {
+                    display: true,
+                    color: 'rgba(156, 163, 175, 0.2)',
+                    drawBorder: false,
+                },
+                ticks: { 
+                    font: { size: 11, weight: 500 },
+                    color: '#6b7280'
+                },
+                border: {
+                    display: false
+                }
             } 
         },
         plugins: { 
             legend: { display: false },
             tooltip: {
-                enabled: true,
-                backgroundColor: '#111827',
-                titleColor: '#fff',
+                backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                titleColor: '#ffffff',
                 bodyColor: '#e5e7eb',
-                padding: 12,
-                cornerRadius: 6,
+                borderColor: '#4f46e5',
+                borderWidth: 2,
+                padding: 16,
+                cornerRadius: 12,
                 displayColors: false,
+                titleFont: {
+                    size: 14,
+                    weight: 'bold'
+                },
+                bodyFont: {
+                    size: 13
+                },
                 callbacks: {
-                    title: (items) => `Data: ${formatDate(programSessionData[items[0].dataIndex].session_date)}`,
-                    label: (context) => `Pontuação: ${context.parsed.y.toFixed(2)}%`,
+                    title: (items) => {
+                        const dataIndex = items[0].dataIndex;
+                        const isBaseline = programSessionData[dataIndex]?.is_baseline;
+                        const title = `Sessão de ${formatDate(programSessionData[dataIndex].session_date)}`;
+                        return isBaseline ? `📋 [LINHA DE BASE] ${title}` : `📈 ${title}`;
+                    },
+                    label: (context) => `Pontuação: ${context.parsed.y.toFixed(1)}%`,
+                    afterLabel: (context) => {
+                        const dataIndex = context.dataIndex;
+                        const session = programSessionData[dataIndex];
+                        const attempts = session?.attempts || 0;
+                        const successes = session?.successes || 0;
+                        return attempts > 0 ? `Acertos: ${successes}/${attempts}` : '';
+                    },
+                    afterBody: (context) => {
+                        if (!context || !context[0] || context[0].dataIndex === undefined) return '';
+                        const dataIndex = context[0].dataIndex;
+                        const sessionNotes = programSessionData[dataIndex]?.notes;
+                        return sessionNotes ? `\n📝 Observações:\n${sessionNotes}` : '';
+                    }
                 }
             } 
         }
     };
     
     return (
-        <div className="w-full h-48 sm:h-56 relative">
+        <div className="w-full h-48 sm:h-56 relative bg-gradient-to-br from-gray-50 to-indigo-50 rounded-lg p-2">
             <Line options={chartOptions} data={chartData} />
         </div>
     );
@@ -259,17 +338,29 @@ const ParentDashboardPage = () => {
                 
                 {Object.keys(programsByDiscipline).length > 0 ? (
                     Object.keys(programsByDiscipline).sort().map(discipline => (
-                        <div key={discipline} className="mb-8 p-4 bg-white rounded-lg shadow-md border border-gray-200">
-                            <h4 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-300">
-                                {discipline}
-                            </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                {programsByDiscipline[discipline].map(program => (
-                                    <div key={program.id} className="border border-gray-200 rounded-md p-4 bg-gray-50 flex flex-col items-center shadow-sm">
-                                        <h5 className="text-sm font-medium text-gray-600 mb-2 text-center">{program.name}</h5>
-                                        <ParentChart program={program} sessionData={filteredSessionData} />
+                        <div key={discipline} className="mb-8 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-200 px-6 py-4">
+                                <h4 className="text-lg font-semibold text-gray-800 flex items-center">
+                                    <div className="bg-indigo-100 p-2 rounded-full mr-3">
+                                        <FontAwesomeIcon icon={faChartLine} className="text-indigo-600" />
                                     </div>
-                                ))}
+                                    {discipline}
+                                </h4>
+                                <p className="text-sm text-indigo-700 mt-1">Gráficos de progresso individual</p>
+                            </div>
+                            <div className="p-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {programsByDiscipline[discipline].map(program => (
+                                        <div key={program.id} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                                            <div className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-200 px-4 py-3">
+                                                <h5 className="text-sm font-semibold text-gray-800 text-center">{program.name}</h5>
+                                            </div>
+                                            <div className="p-4">
+                                                <ParentChart program={program} sessionData={filteredSessionData} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     ))

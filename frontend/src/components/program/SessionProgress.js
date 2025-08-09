@@ -160,61 +160,99 @@ const SessionProgress = ({ program, assignment }) => {
         label: 'Pontuação (%)',
         data: evolutionData.map(session => session.score),
         borderColor: '#4f46e5',
-        backgroundColor: 'rgba(79, 70, 229, 0.1)',
-        borderWidth: 2,
-        pointRadius: 5,
-        pointBackgroundColor: evolutionData.map(session => session.details?.isBaseline ? '#facc15' : '#4f46e5'),
+        backgroundColor: (context) => {
+          const chart = context.chart;
+          const {ctx, chartArea} = chart;
+          if (!chartArea) return 'rgba(79, 70, 229, 0.1)';
+          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          gradient.addColorStop(0, 'rgba(99, 102, 241, 0.3)');
+          gradient.addColorStop(0.5, 'rgba(79, 70, 229, 0.2)');
+          gradient.addColorStop(1, 'rgba(67, 56, 202, 0.1)');
+          return gradient;
+        },
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: evolutionData.map(session => session.details?.isBaseline ? '#f59e0b' : '#4f46e5'),
         pointBorderColor: '#ffffff',
-        pointHoverRadius: 7,
+        pointBorderWidth: 2,
+        pointHoverRadius: 8,
+        pointHoverBorderWidth: 3,
         fill: true,
-        tension: 0.3,
+        tension: 0.4,
+        shadowColor: 'rgba(79, 70, 229, 0.3)',
+        shadowBlur: 10,
+        shadowOffsetX: 0,
+        shadowOffsetY: 4,
     }]
   };
   
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
     plugins: {
         legend: { display: false },
         tooltip: {
-            backgroundColor: '#fff',
-            titleColor: '#1f2937',
-            bodyColor: '#4b5563',
-            borderColor: '#e5e7eb',
-            borderWidth: 1,
-            padding: 10,
+            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+            titleColor: '#ffffff',
+            bodyColor: '#e5e7eb',
+            borderColor: '#4f46e5',
+            borderWidth: 2,
+            padding: 16,
+            cornerRadius: 12,
+            displayColors: false,
+            titleFont: {
+              size: 14,
+              weight: 'bold'
+            },
+            bodyFont: {
+              size: 13
+            },
             callbacks: {
                 title: (context) => {
                     const dataIndex = context[0].dataIndex;
                     const isBaselinePoint = evolutionData[dataIndex]?.details?.isBaseline;
                     const title = `Sessão de ${formatDate(context[0].label)}`;
-                    return isBaselinePoint ? `[LINHA DE BASE] ${title}` : title;
+                    return isBaselinePoint ? `📋 [LINHA DE BASE] ${title}` : `📈 ${title}`;
                 },
-                label: (context) => `Pontuação: ${context.parsed.y.toFixed(2)}%`,
+                label: (context) => `Pontuação: ${context.parsed.y.toFixed(1)}%`,
+                afterLabel: (context) => {
+                    if (!context || context.dataIndex === undefined) return '';
+                    const dataIndex = context.dataIndex;
+                    const session = evolutionData[dataIndex];
+                    const attempts = session?.attempts || 0;
+                    const successes = session?.successes || 0;
+                    return `Acertos: ${successes}/${attempts}`;
+                },
                 afterBody: (context) => {
+                    if (!context || !context[0] || context[0].dataIndex === undefined) return '';
                     const dataIndex = context[0].dataIndex;
                     const sessionNotes = evolutionData[dataIndex]?.details?.notes;
-                    return sessionNotes ? `\nObservações:\n${sessionNotes}` : '';
+                    return sessionNotes ? `\n📝 Observações:\n${sessionNotes}` : '';
                 }
             }
         },
         annotation: {
             annotations: {
-                line1: {
+                goalLine: {
                     type: 'line',
                     yMin: 80,
                     yMax: 80,
-                    borderColor: 'rgb(45, 212, 191)',
-                    borderWidth: 2,
-                    borderDash: [6, 6],
+                    borderColor: '#10b981',
+                    borderWidth: 3,
+                    borderDash: [8, 4],
                     label: {
-                        content: 'Meta (80%)',
+                        content: '🎯 Meta (80%)',
                         position: 'end',
-                        backgroundColor: 'rgba(45, 212, 191, 0.8)',
-                        font: { size: 10 },
+                        backgroundColor: 'rgba(16, 185, 129, 0.9)',
+                        font: { size: 12, weight: 'bold' },
                         color: 'white',
-                        padding: 4,
-                        borderRadius: 4,
+                        padding: 8,
+                        borderRadius: 6,
+                        yAdjust: -10
                     }
                 }
             }
@@ -222,33 +260,70 @@ const SessionProgress = ({ program, assignment }) => {
     },
     scales: {
         x: {
+            display: true,
+            grid: {
+              display: true,
+              color: 'rgba(156, 163, 175, 0.2)',
+              drawBorder: false,
+            },
             ticks: {
+                color: '#6b7280',
+                font: {
+                  size: 11,
+                  weight: 500
+                },
+                maxTicksLimit: 8,
                 callback: function(value) {
                     const label = this.getLabelForValue(value);
                     return formatDate(label, 'short');
                 }
+            },
+            border: {
+              display: false
             }
         },
         y: {
+            display: true,
             beginAtZero: true,
-            max: 100,
-            suggestedMin: -10,
-            suggestedMax: 110,
+            max: 105,
+            grid: {
+              display: true,
+              color: 'rgba(156, 163, 175, 0.2)',
+              drawBorder: false,
+            },
             ticks: {
+                color: '#6b7280',
+                font: {
+                  size: 11,
+                  weight: 500
+                },
+                stepSize: 20,
                 callback: (value) => (value >= 0 && value <= 100) ? `${value}%` : ''
+            },
+            border: {
+              display: false
             }
         }
     }
   };
 
-  // *** ALTERAÇÃO PRINCIPAL ***
-  // Verifica se um programa foi selecionado. Se não, exibe a mensagem para o usuário.
+  // Estado vazio redesenhado
   if (!program || !assignment) {
     return (
-        <div className="flex flex-col items-center justify-center text-center text-gray-400 p-10 h-full">
-          <FontAwesomeIcon icon={faChartLine} className="text-4xl mb-4" />
-          <h4 className="font-semibold text-lg text-gray-600">Nenhum Programa Selecionado</h4>
-          <p className="text-sm">Selecione um programa na lista ao lado para começar.</p>
+        <div className="flex flex-col items-center justify-center text-center p-12 h-full">
+          <div className="bg-gradient-to-br from-indigo-100 to-purple-100 p-8 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+            <FontAwesomeIcon icon={faChartLine} className="text-4xl text-indigo-600" />
+          </div>
+          <h4 className="font-semibold text-xl text-gray-700 mb-3">Nenhum Programa Selecionado</h4>
+          <p className="text-gray-500 leading-relaxed max-w-md">
+            Selecione um programa na lista ao lado para visualizar gráficos de progresso e registrar sessões.
+          </p>
+          <div className="mt-6 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-lg p-4">
+            <div className="flex items-center justify-center space-x-2 text-indigo-600">
+              <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium">Aguardando seleção</span>
+            </div>
+          </div>
         </div>
       );
   }
@@ -256,16 +331,29 @@ const SessionProgress = ({ program, assignment }) => {
   return (
     <div>
       {program?.objective && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-          <h5 className="font-semibold text-blue-800 mb-2 flex items-center">
-              <FontAwesomeIcon icon={faBullseye} className="mr-2" />
+        <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+          <h5 className="font-semibold text-blue-800 mb-3 flex items-center">
+              <div className="bg-blue-100 p-2 rounded-full mr-3">
+                <FontAwesomeIcon icon={faBullseye} className="text-blue-600" />
+              </div>
               Objetivo do Programa
           </h5>
-          <p className="text-blue-700 leading-relaxed">{program.objective}</p>
+          <p className="text-blue-700 leading-relaxed text-base">{program.objective}</p>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 mb-6 pb-6 border-b border-gray-200">
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-8">
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-200 px-6 py-4">
+          <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+            <div className="bg-indigo-100 p-2 rounded-full mr-3">
+              <FontAwesomeIcon icon={faSave} className="text-indigo-600" />
+            </div>
+            Registrar Nova Sessão
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">Insira os dados da sessão para acompanhar o progresso</p>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                   <label htmlFor="session-date" className="block text-sm font-medium text-gray-700 mb-1.5">Data</label>
@@ -318,27 +406,92 @@ const SessionProgress = ({ program, assignment }) => {
           </div>
 
           <div className="flex items-center justify-end">
-              <button type="submit" disabled={isSubmitting} className={`font-semibold py-2.5 px-6 rounded-lg text-sm transition-all duration-200 flex items-center justify-center w-40 shadow hover:shadow-lg disabled:opacity-60 active:scale-95 ${saveSuccess ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
-                  <FontAwesomeIcon icon={isSubmitting ? faSpinner : (saveSuccess ? faCheck : faSave)} className={`mr-2 ${isSubmitting && 'fa-spin'}`} />
-                  {isSubmitting ? 'Salvando...' : saveSuccess ? 'Salvo!' : 'Salvar Registo'}
+              <button 
+                type="submit" 
+                disabled={isSubmitting} 
+                className={`
+                  font-semibold py-3 px-8 rounded-lg text-sm transition-all duration-200 flex items-center justify-center min-w-[180px] shadow-sm transform hover:scale-105 disabled:hover:scale-100
+                  ${saveSuccess 
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-green-200' 
+                    : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-indigo-200 disabled:from-gray-300 disabled:to-gray-400'
+                  }
+                `}
+              >
+                <div className="bg-white bg-opacity-20 p-1 rounded-full mr-3">
+                  <FontAwesomeIcon icon={isSubmitting ? faSpinner : (saveSuccess ? faCheck : faSave)} className={`text-sm ${isSubmitting && 'fa-spin'}`} />
+                </div>
+                {isSubmitting ? 'Salvando...' : saveSuccess ? 'Salvo com Sucesso!' : 'Salvar Sessão'}
               </button>
           </div>
-          {error && <p className="text-sm text-red-500 text-center mt-2">{error}</p>}
-      </form>
+          {error && (
+            <div className="bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+              <div className="flex items-start">
+                <FontAwesomeIcon icon={faBullseye} className="text-red-600 mt-1 mr-3" />
+                <div>
+                  <p className="text-red-800 font-medium mb-1">Erro na Sessão</p>
+                  <p className="text-red-700 text-sm">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </form>
+      </div>
 
-      <div className="mt-4">
-          <h4 className="text-base font-semibold text-gray-700 mb-2">Progresso do Programa</h4>
-          <div className="relative h-64 md:h-72">
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-lg font-semibold text-gray-800 flex items-center">
+                <div className="bg-emerald-100 p-2 rounded-full mr-3">
+                  <FontAwesomeIcon icon={faChartLine} className="text-emerald-600" />
+                </div>
+                Gráfico de Evolução
+              </h4>
+              <p className="text-sm text-gray-600 mt-1">Histórico de desempenho ao longo das sessões</p>
+            </div>
+            {evolutionData.length > 0 && (
+              <div className="text-right">
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">{evolutionData.length}</span> sessões registradas
+                </div>
+                <div className="text-xs text-emerald-600 mt-1">
+                  Média: {(evolutionData.reduce((sum, s) => sum + s.score, 0) / evolutionData.length).toFixed(1)}%
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="p-6">
+          <div className="relative h-80 md:h-96">
               {isLoadingHistory ? (
-                  <div className="flex items-center justify-center h-full"><FontAwesomeIcon icon={faSpinner} className="fa-spin text-2xl text-indigo-500" /></div>
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="bg-gradient-to-r from-indigo-100 to-purple-100 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                        <FontAwesomeIcon icon={faSpinner} className="fa-spin text-2xl text-indigo-600" />
+                      </div>
+                      <p className="text-gray-600 font-medium">Carregando histórico...</p>
+                    </div>
+                  </div>
               ) : evolutionData.length > 0 ? (
-                  <Line options={chartOptions} data={chartData} />
+                  <div className="h-full bg-gradient-to-br from-gray-50 to-indigo-50 rounded-lg p-4">
+                    <Line options={chartOptions} data={chartData} />
+                  </div>
               ) : (
-                  <div className="flex items-center justify-center h-full text-center text-gray-400 bg-gray-50 rounded-lg">
-                    <p>Nenhum dado de sessão registado para este programa.</p>
+                  <div className="flex items-center justify-center h-full text-center bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <div>
+                      <div className="bg-gradient-to-br from-gray-100 to-slate-100 p-6 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                        <FontAwesomeIcon icon={faChartLine} className="text-3xl text-gray-400" />
+                      </div>
+                      <h5 className="font-semibold text-gray-600 mb-2">Nenhum Histórico</h5>
+                      <p className="text-gray-500 text-sm leading-relaxed max-w-sm">
+                        Registre a primeira sessão para começar a visualizar o progresso no gráfico.
+                      </p>
+                    </div>
                   </div>
               )}
           </div>
+        </div>
       </div>
     </div>
   );
