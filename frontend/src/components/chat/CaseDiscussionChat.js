@@ -183,6 +183,11 @@ const CaseDiscussionChat = ({ patientId, patientName }) => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    
+    // Disparar evento para atualizar notificações quando as mensagens são visualizadas
+    if (messages.length > 0) {
+      window.dispatchEvent(new CustomEvent('notificationUpdate'));
+    }
   }, [messages]);
 
   // Force re-render para atualizar status de leitura

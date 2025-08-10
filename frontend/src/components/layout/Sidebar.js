@@ -1,29 +1,68 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePatients } from '../../context/PatientContext';
 import { useAuth } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faSearch, faUserFriends, faInfoCircle, faUserCircle } from '@fortawesome/free-solid-svg-icons';
+import usePatientNotifications from '../../hooks/usePatientNotifications';
+import PatientNotificationBadge from '../notifications/PatientNotificationBadge';
 
 const Sidebar = () => {
+  const navigate = useNavigate();
   const { patients, selectedPatient, selectPatient, isLoading } = usePatients();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Hook para notificações dos pacientes
+  const patientIds = useMemo(() => (patients || []).map(p => p.id), [patients]);
+  
+  const { 
+    patientNotifications, 
+    sortPatientsByPriority, 
+    markAsRead
+  } = usePatientNotifications(patientIds);
 
   const handleSelectPatient = (patient) => {
     selectPatient(patient);
+  };
+
+  const handleNavigateToChat = (patientId, chatType) => {
+    // Encontrar o paciente e selecioná-lo
+    const patient = patients.find(p => p.id === patientId);
+    if (patient) {
+      selectPatient(patient);
+      // Marcar como lida as notificações deste tipo
+      markAsRead(patientId, chatType);
+      
+      // Navegar para a página apropriada
+      if (chatType === 'parent_chat') {
+        if (user?.role === 'parent') {
+          navigate('/parent-dashboard');
+        } else {
+          navigate('/notes');
+        }
+      } else if (chatType === 'case_discussion') {
+        navigate('/notes');
+      }
+    }
   };
 
   const filteredPatients = useMemo(() => {
     // --- CORREÇÃO ---
     // Garante que 'patients' seja tratado como um array vazio se for undefined.
     const patientList = patients || [];
-    if (!searchTerm) {
-      return patientList;
+    let filtered = patientList;
+    
+    // Aplicar filtro de busca
+    if (searchTerm) {
+      filtered = patientList.filter(patient =>
+        patient.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
-    return patientList.filter(patient =>
-      patient.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [patients, searchTerm]);
+    
+    // Ordenar por prioridade de notificações
+    return sortPatientsByPriority(filtered);
+  }, [patients, searchTerm, sortPatientsByPriority]);
 
   if (isLoading) {
     return (
@@ -103,7 +142,7 @@ const Sidebar = () => {
                     `}
                   >
                     <div className={`
-                      p-2 rounded-full mr-3 flex-shrink-0
+                      p-2 rounded-full mr-3 flex-shrink-0 relative
                       ${isSelected 
                         ? 'bg-white bg-opacity-20' 
                         : 'bg-gradient-to-r from-indigo-100 to-purple-100'
@@ -114,6 +153,14 @@ const Sidebar = () => {
                         className={`
                           ${isSelected ? 'text-white' : 'text-indigo-600'}
                         `} 
+                      />
+                      {/* Badge de notificações */}
+                      <PatientNotificationBadge
+                        patientId={patient.id}
+                        patientName={patient.name}
+                        notifications={patientNotifications[patient.id]}
+                        onNavigateToChat={handleNavigateToChat}
+                        className="z-10"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -126,6 +173,12 @@ const Sidebar = () => {
                       {isSelected && (
                         <p className="text-indigo-100 text-xs mt-1">
                           ✅ Cliente selecionado
+                        </p>
+                      )}
+                      {/* Mostrar indicador de notificações no nome */}
+                      {patientNotifications[patient.id]?.total > 0 && !isSelected && (
+                        <p className="text-blue-600 text-xs mt-1 font-medium">
+                          🔔 {patientNotifications[patient.id].total} nova{patientNotifications[patient.id].total !== 1 ? 's' : ''} mensagem{patientNotifications[patient.id].total !== 1 ? 'ns' : ''}
                         </p>
                       )}
                     </div>

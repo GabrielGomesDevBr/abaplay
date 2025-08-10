@@ -68,14 +68,46 @@ notificationController.getNotificationsByPatientAndType = async (req, res) => {
     const { patientId } = req.params;
     const { chatType } = req.query;
 
-    if (!chatType || !['case_discussion', 'parent_chat', 'progress_alert'].includes(chatType)) {
-      return res.status(400).json({ 
-        errors: [{ msg: 'chatType deve ser "case_discussion", "parent_chat" ou "progress_alert".' }] 
-      });
+    // Se chatType for fornecido, usar comportamento original
+    if (chatType) {
+      if (!['case_discussion', 'parent_chat', 'progress_alert'].includes(chatType)) {
+        return res.status(400).json({ 
+          errors: [{ msg: 'chatType deve ser "case_discussion", "parent_chat" ou "progress_alert".' }] 
+        });
+      }
+      const notifications = await NotificationStatus.getByUser(userId, patientId, chatType);
+      return res.status(200).json(notifications);
     }
 
-    const notifications = await NotificationStatus.getByUser(userId, patientId, chatType);
-    res.status(200).json(notifications);
+    // Caso contrário, retornar todas as notificações agrupadas por tipo
+    // Removido 'progress_alert' pois não existe no enum do banco
+    const chatTypes = ['parent_chat', 'case_discussion'];
+    const notificationsSummary = [];
+
+    for (const type of chatTypes) {
+      try {
+        const notifications = await NotificationStatus.getByUser(userId, patientId, type);
+        
+        // O unreadCount já vem diretamente da coluna do banco
+        const unreadCount = notifications.reduce((sum, n) => sum + (n.unreadCount || 0), 0);
+        
+        // Retorna todos os tipos, mesmo com unreadCount = 0
+        notificationsSummary.push({
+          chatType: type,
+          unreadCount: unreadCount,
+          totalCount: notifications.length
+        });
+      } catch (error) {
+        console.error(`Erro ao buscar notificações ${type} para paciente ${patientId}:`, error);
+        // Em caso de erro, adiciona com 0 notificações
+        notificationsSummary.push({
+          chatType: type,
+          unreadCount: 0,
+          totalCount: 0
+        });
+      }
+    }
+    res.status(200).json(notificationsSummary);
   } catch (error) {
     console.error('Erro ao buscar notificações específicas:', error);
     res.status(500).json({ errors: [{ msg: 'Erro interno do servidor.' }] });
