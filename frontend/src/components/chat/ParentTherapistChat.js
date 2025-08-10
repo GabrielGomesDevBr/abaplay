@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { getChatMessages, postChatMessage } from '../../api/parentChatApi';
+import { getTherapistContacts } from '../../api/contactApi';
 import { useAuth } from '../../context/AuthContext';
 import { SOCKET_URL } from '../../config';
 import './ParentTherapistChat.css';
@@ -192,9 +193,14 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [therapists, setTherapists] = useState([]);
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState('');
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const { user } = useAuth();
 
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
   const [, forceUpdate] = useState(0);
 
   useEffect(() => {
@@ -214,6 +220,28 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Carregar lista de terapeutas para menções
+  useEffect(() => {
+    const fetchTherapists = async () => {
+      try {
+        console.log('[PARENT-CHAT] Carregando terapeutas para menções:', { patientId, userRole: user?.role });
+        const data = await getTherapistContacts(patientId);
+        console.log('[PARENT-CHAT] Terapeutas carregados:', data.therapists);
+        setTherapists(data.therapists || []);
+      } catch (error) {
+        console.error('[PARENT-CHAT] Erro ao carregar terapeutas:', error);
+        setTherapists([]);
+      }
+    };
+
+    if (patientId) {
+      console.log('[PARENT-CHAT] Iniciando carregamento de terapeutas');
+      fetchTherapists();
+    } else {
+      console.log('[PARENT-CHAT] Não carregando terapeutas - patientId:', patientId);
+    }
+  }, [patientId, user]);
 
   useEffect(() => {
     if (!patientId) return;
@@ -316,6 +344,120 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
     });
   };
 
+  // Função para detectar menções no input
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setNewMessage(value);
+
+    console.log('[PARENT-CHAT] Input mudou:', value);
+    console.log('[PARENT-CHAT] Terapeutas disponíveis:', therapists.length);
+
+    // Detectar se está digitando uma menção
+    const lastAtIndex = value.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      const textAfterAt = value.substring(lastAtIndex + 1);
+      const spaceIndex = textAfterAt.indexOf(' ');
+      
+      console.log('[PARENT-CHAT] Detectou @:', { lastAtIndex, textAfterAt, spaceIndex });
+      
+      if (spaceIndex === -1) {
+        // Ainda digitando a menção
+        setMentionSearch(textAfterAt.toLowerCase());
+        setShowMentionDropdown(true);
+        setSelectedMentionIndex(0); // Reset selection
+        console.log('[PARENT-CHAT] Mostrando dropdown - busca:', textAfterAt.toLowerCase());
+      } else {
+        setShowMentionDropdown(false);
+        console.log('[PARENT-CHAT] Escondendo dropdown - espaço encontrado');
+      }
+    } else {
+      setShowMentionDropdown(false);
+      console.log('[PARENT-CHAT] Escondendo dropdown - sem @');
+    }
+  };
+
+  // Função para lidar com teclas de navegação
+  const handleKeyDown = (e) => {
+    if (!showMentionDropdown || filteredTherapists.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedMentionIndex(prev => 
+          prev < filteredTherapists.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedMentionIndex(prev => 
+          prev > 0 ? prev - 1 : filteredTherapists.length - 1
+        );
+        break;
+      case 'Enter':
+        if (showMentionDropdown && filteredTherapists[selectedMentionIndex]) {
+          e.preventDefault();
+          insertMention(filteredTherapists[selectedMentionIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowMentionDropdown(false);
+        break;
+    }
+  };
+
+  // Função para inserir menção
+  const insertMention = (therapist) => {
+    const lastAtIndex = newMessage.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      const beforeAt = newMessage.substring(0, lastAtIndex);
+      const mention = `@${therapist.full_name} `;
+      setNewMessage(beforeAt + mention);
+    }
+    setShowMentionDropdown(false);
+    inputRef.current?.focus();
+  };
+
+  // Filtrar terapeutas baseado na busca mais inteligente
+  const filteredTherapists = therapists.filter(therapist => {
+    if (!mentionSearch) return true;
+    const searchTerm = mentionSearch.toLowerCase();
+    const fullName = therapist.full_name.toLowerCase();
+    
+    // Busca por qualquer parte do nome ou iniciais
+    const words = fullName.split(' ');
+    const initials = words.map(w => w[0]).join('');
+    
+    return fullName.includes(searchTerm) || 
+           initials.includes(searchTerm) ||
+           words.some(word => word.startsWith(searchTerm));
+  });
+
+  // Função para renderizar mensagem com menções destacadas
+  const renderMessageWithMentions = (content) => {
+    const mentionRegex = /@(\w+(?:\s+\w+)*)/g;
+    const parts = content.split(mentionRegex);
+    
+    return parts.map((part, index) => {
+      if (index % 2 === 1) {
+        // É uma menção
+        const isCurrentUser = user && part.toLowerCase().includes(user.full_name?.toLowerCase());
+        return (
+          <span
+            key={index}
+            className={`px-2 py-1 rounded-md font-semibold ${
+              isCurrentUser 
+                ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                : 'bg-gray-100 text-gray-800 border border-gray-200'
+            }`}
+          >
+            @{part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+
   return (
     <div className="chat-container">
       <header className="chat-header">
@@ -366,7 +508,7 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
                     </span>
                   )}
                 </div>
-                <div className="message-content">{msg.message}</div>
+                <div className="message-content">{renderMessageWithMentions(msg.message)}</div>
                 <div className="message-timestamp">
                   {formatDate(msg.created_at)}
                   {messageStatus && (
@@ -392,18 +534,92 @@ const ParentTherapistChat = ({ patientId, patientName }) => {
       </main>
       <footer className="chat-input-area">
         <form onSubmit={handleSendMessage} className="chat-form">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Digite sua mensagem..."
-            className="chat-input"
-            disabled={loading}
-          />
+          <div className="relative flex-grow">
+            <input
+              ref={inputRef}
+              type="text"
+              value={newMessage}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Digite sua mensagem... (use @nome para mencionar um terapeuta)"
+              className="chat-input"
+              disabled={loading}
+            />
+            
+            {/* Dropdown de menções melhorado */}
+            {showMentionDropdown && filteredTherapists.length > 0 && (
+              <div className="absolute bottom-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto z-10 mb-2">
+                {/* Header do dropdown */}
+                <div className="p-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-600">
+                  💬 Mencionar terapeuta ({filteredTherapists.length} {filteredTherapists.length === 1 ? 'encontrado' : 'encontrados'})
+                </div>
+                
+                {filteredTherapists.map((therapist, index) => {
+                  const specialtyInfo = getSpecialtyBadge(therapist.full_name, getUserRole(therapist.id, user.id, therapist.full_name));
+                  const isSelected = index === selectedMentionIndex;
+                  
+                  return (
+                    <div
+                      key={therapist.id}
+                      onClick={() => insertMention(therapist)}
+                      className={`flex items-center p-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors ${
+                        isSelected 
+                          ? 'bg-blue-50 border-blue-200' 
+                          : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <div 
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs mr-3 shadow-sm"
+                        style={{ backgroundColor: specialtyInfo.color }}
+                      >
+                        {specialtyInfo.avatar}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium truncate ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
+                          {therapist.full_name}
+                        </p>
+                        <div className="flex items-center mt-1">
+                          <span 
+                            className="text-xs px-2 py-0.5 rounded-full text-white mr-2"
+                            style={{ backgroundColor: specialtyInfo.color }}
+                          >
+                            {specialtyInfo.badge}
+                          </span>
+                          {isSelected && (
+                            <span className="text-xs text-blue-600 font-medium">
+                              ↵ Enter para mencionar
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {/* Footer com dicas */}
+                <div className="p-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
+                  💡 Use ↑↓ para navegar, Enter para selecionar, Esc para fechar
+                </div>
+              </div>
+            )}
+          </div>
+          
           <button type="submit" className="send-button" disabled={!newMessage.trim()}>
             <SendIcon />
           </button>
         </form>
+        
+        {/* Dica de uso das menções melhorada */}
+        {therapists.length > 0 && (
+          <div className="text-xs text-gray-500 mt-1 px-3 flex items-center justify-between">
+            <span>
+              💡 Digite @{therapists.length > 3 ? 'nome' : therapists.map(t => t.full_name.split(' ')[0].toLowerCase()).join(', @')} para mencionar um terapeuta específico
+            </span>
+            <span className="text-gray-400">
+              {therapists.length} terapeuta{therapists.length !== 1 ? 's' : ''} disponível{therapists.length !== 1 ? 'is' : ''}
+            </span>
+          </div>
+        )}
       </footer>
     </div>
   );

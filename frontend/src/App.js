@@ -17,7 +17,6 @@ import ParentDashboardPage from './pages/ParentDashboardPage';
 import AdminPage from './pages/AdminPage';
 // --- NOVA IMPORTAÇÃO ---
 import ProgramSessionPage from './pages/ProgramSessionPage';
-import ContactsPage from './pages/ContactsPage';
 import ColleaguesPage from './pages/ColleaguesPage';
 
 
@@ -48,7 +47,6 @@ function App() {
                   {/* Rotas específicas para cada função */}
                   <Route path="clients" element={<ClientsPage />} />
                   <Route path="parent-dashboard" element={<ParentDashboardPage />} />
-                  <Route path="contacts" element={<ContactsPage />} />
                   <Route path="colleagues" element={<ColleaguesPage />} />
                   <Route 
                     path="admin" 

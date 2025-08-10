@@ -275,3 +275,52 @@
   opacity: 0.7;
   font-weight: 400;
 }
+
+/* Estilos para menções destacadas nas mensagens */
+.message-content span[class*="bg-blue-100"],
+.message-content span[class*="bg-gray-100"] {
+  margin: 0 2px;
+  display: inline-block;
+  animation: mentionHighlight 0.3s ease;
+}
+
+@keyframes mentionHighlight {
+  from { 
+    background-color: #fef3c7; 
+    transform: scale(1.05);
+  }
+  to { 
+    background-color: inherit;
+    transform: scale(1);
+  }
+}
+
+/* Estilos específicos para dropdown de menções */
+.relative {
+  position: relative;
+}
+
+/* Responsividade para dropdown de menções */
+@media (max-width: 768px) {
+  .chat-container {
+    height: 500px;
+  }
+  
+  .chat-messages {
+    padding: 1rem 2rem;
+  }
+  
+  .message-avatar.received {
+    left: -35px;
+    width: 32px;
+    height: 32px;
+    font-size: 0.7rem;
+  }
+  
+  .message-avatar.sent {
+    right: -35px;
+    width: 32px;
+    height: 32px;
+    font-size: 0.7rem;
+  }
+}

@@ -4,7 +4,7 @@ import { usePatients } from '../context/PatientContext';
 import { usePrograms } from '../context/ProgramContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 // 1. Importar o novo ícone de chat
-import { faSpinner, faExclamationCircle, faChartLine, faCalendarAlt, faTimesCircle, faComments, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faExclamationCircle, faChartLine, faCalendarAlt, faTimesCircle, faComments } from '@fortawesome/free-solid-svg-icons';
 import DateRangeSelector from '../components/shared/DateRangeSelector';
 import { Line } from 'react-chartjs-2';
 import {
@@ -284,27 +284,51 @@ const ParentDashboardPage = () => {
                 </div>
             </div>
             
-            {/* Botão de Contatos - Simplificado */}
-            <div className="mb-6 text-center">
-                <button 
-                    onClick={() => navigate('/contacts')}
-                    className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-lg"
-                >
-                    <FontAwesomeIcon icon={faUsers} />
-                    <span>Contatos da Equipe</span>
-                </button>
-                <p className="text-xs text-gray-500 mt-2">Para conversas direcionadas com terapeutas específicos</p>
-            </div>
 
-            {/* 3. Chat com largura limitada para melhor visualização */}
-            <div className="mb-8 max-w-4xl mx-auto">
-                <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                    <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-indigo-200 px-6 py-4">
-                        <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                            <FontAwesomeIcon icon={faComments} className="mr-3 text-blue-500" />
-                            Chat da Equipe
-                        </h3>
-                        <p className="text-sm text-indigo-600 mt-1">Converse com todos os terapeutas</p>
+            {/* Chat com design moderno e elegante */}
+            <div className="mb-8 max-w-5xl mx-auto">
+                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
+                    {/* Cabeçalho com gradiente e design sofisticado */}
+                    <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 px-8 py-8 relative overflow-hidden">
+                        {/* Elementos decorativos de fundo */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-white/5 to-transparent rounded-full -translate-y-32 translate-x-32"></div>
+                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-white/5 to-transparent rounded-full translate-y-24 -translate-x-24"></div>
+                        
+                        {/* Conteúdo do cabeçalho */}
+                        <div className="relative z-10 text-center">
+                            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl mb-4">
+                                <FontAwesomeIcon icon={faComments} className="text-3xl text-white" />
+                            </div>
+                            
+                            <h3 className="text-2xl font-bold text-white mb-3 tracking-wide">
+                                Comunicação com a Equipe Terapêutica
+                            </h3>
+                            
+                            <div className="max-w-2xl mx-auto space-y-3">
+                                <p className="text-blue-100 font-medium text-lg leading-relaxed">
+                                    💬 Converse diretamente com todos os terapeutas do seu filho
+                                </p>
+                                
+                                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-6 py-4 border border-white/20">
+                                    <p className="text-white text-sm leading-relaxed">
+                                        ✨ Use <span className="bg-white/20 text-white px-3 py-1 rounded-lg font-mono font-semibold mx-1 border border-white/30">@nome</span> para mencionar um terapeuta específico
+                                    </p>
+                                </div>
+                                
+                                <div className="flex items-center justify-center space-x-6 text-blue-100 text-sm">
+                                    <div className="flex items-center space-x-2">
+                                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                                        <span className="font-medium">📱 Tempo Real</span>
+                                    </div>
+                                    <div className="w-px h-4 bg-white/30"></div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
+                                        <span className="font-medium">🔔 Notificações</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div className="p-4">
                         <ParentTherapistChat 
