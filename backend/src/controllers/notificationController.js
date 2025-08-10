@@ -148,8 +148,8 @@ notificationController.markProgramAsCompleted = async (req, res) => {
     const Assignment = require('../models/assignmentModel');
     await Assignment.updateStatus(assignmentId, 'archived');
     
-    // Marca a notificação como lida
-    await NotificationStatus.markAsRead(therapistId, patientId, 'progress_alert');
+    // Progress alerts não são persistidos no banco, são calculados dinamicamente
+    // Não é necessário marcar como lida pois não fica salva na tabela notificationstatus
     
     res.status(200).json({ message: 'Programa marcado como dominado com sucesso.' });
   } catch (error) {

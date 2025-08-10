@@ -74,8 +74,8 @@ const SessionProgress = ({ program, assignment }) => {
     try {
       const history = await getAssignmentEvolution(assignment.assignment_id);
       const validHistory = Array.isArray(history) ? history : [];
-      const sortedHistory = validHistory.sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
-      setEvolutionData(sortedHistory);
+      // Backend já retorna ordenado por data ascendente
+      setEvolutionData(validHistory);
     } catch (err) {
       setError('Não foi possível carregar o histórico de progresso.');
       console.error(err);

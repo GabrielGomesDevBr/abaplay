@@ -54,8 +54,8 @@ const formatDate = (dateString, format = 'long') => {
 
 const ParentChart = ({ program, sessionData }) => {
     const programSessionData = (sessionData || [])
-      .filter(session => session.program_id === program.id)
-      .sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
+      .filter(session => session.program_id === program.id);
+      // Dados já vêm ordenados do backend
 
     if (programSessionData.length === 0) {
         return (

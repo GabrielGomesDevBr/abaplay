@@ -12,7 +12,7 @@ import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFol
 
 const Navbar = ({ toggleSidebar }) => {
   const { user, logout } = useAuth();
-  const { selectedPatient } = usePatients();
+  const { selectedPatient, refreshPatientData } = usePatients();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isNotificationPanelOpen, setNotificationPanelOpen] = useState(false);
   const [showProgressAlert, setShowProgressAlert] = useState(false);
@@ -36,6 +36,14 @@ const Navbar = ({ toggleSidebar }) => {
     if (notificationBadgeRef.current?.updateCount) {
       notificationBadgeRef.current.updateCount();
     }
+  };
+
+  const handleProgramCompleted = async () => {
+    // Atualiza os dados do paciente para refletir o programa arquivado
+    if (selectedPatient?.id) {
+      await refreshPatientData();
+    }
+    handleProgressAlertClose();
   };
 
   useEffect(() => {
@@ -222,7 +230,7 @@ const Navbar = ({ toggleSidebar }) => {
         {showProgressAlert && (
           <ProgressAlert
             onClose={handleProgressAlertClose}
-            onProgramCompleted={handleProgressAlertClose}
+            onProgramCompleted={handleProgramCompleted}
           />
         )}
     </header>

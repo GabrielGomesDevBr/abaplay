@@ -133,6 +133,24 @@ export const getAssignmentDetails = async (assignmentId) => {
 };
 
 /**
+ * Busca os detalhes de uma atribuição específica pelo seu ID (incluindo programas arquivados).
+ * Usado para dashboards e relatórios - mostra dados históricos completos.
+ * @param {string|number} assignmentId - O ID da designação do programa.
+ * @returns {Promise<Object>}
+ */
+export const getAssignmentDetailsWithHistory = async (assignmentId) => {
+  try {
+    const response = await apiClient.get(`/assignments/${assignmentId}/history`);
+    return response.data;
+  } catch (error) {
+    console.error(`Erro detalhado em getAssignmentDetailsWithHistory para o ID ${assignmentId}:`, {
+        message: error.message, request_url: error.config?.url,
+    });
+    throw error;
+  }
+};
+
+/**
  * Regista o progresso de uma sessão.
  * @param {Object} progressData - Os dados da sessão a serem registados.
  * @returns {Promise<Object>}

@@ -12,8 +12,11 @@ router.delete('/:assignmentId', assignmentController.removeProgramFromPatient);
 // Rota para buscar programas designados de um paciente
 router.get('/patient/:patientId', assignmentController.getAssignedProgramsByPatientId);
 
-// Rota para buscar os detalhes de uma designação específica
+// Rota para buscar os detalhes de uma designação específica (apenas ativos)
 router.get('/:id', assignmentController.getAssignmentDetails);
+
+// Rota para buscar detalhes incluindo programas arquivados (dashboards/relatórios)
+router.get('/:id/history', assignmentController.getAssignmentDetailsWithHistory);
 
 // Rota para ATUALIZAR O STATUS de uma designação
 router.patch('/:id/status', assignmentController.updateAssignmentStatus);

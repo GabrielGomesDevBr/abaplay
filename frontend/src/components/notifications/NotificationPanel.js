@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faComments, faUsers, faEye, faTimes, faBullseye } from '@fortawesome/free-solid-svg-icons';
 import { getNotifications, markAsRead } from '../../api/notificationApi';
+import { usePatients } from '../../context/PatientContext';
 import ProgressAlert from './ProgressAlert';
 
 const NotificationPanel = ({ isOpen, onClose, onNotificationClick }) => {
+  const { selectedPatient, refreshPatientData } = usePatients();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showProgressAlert, setShowProgressAlert] = useState(false);
@@ -102,6 +104,14 @@ const NotificationPanel = ({ isOpen, onClose, onNotificationClick }) => {
     fetchNotifications(); // Recarrega notificações após fechar o modal
   };
 
+  const handleProgramCompleted = async () => {
+    // Atualiza os dados do paciente para refletir o programa arquivado
+    if (selectedPatient?.id) {
+      await refreshPatientData();
+    }
+    handleProgressAlertClose();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -194,7 +204,7 @@ const NotificationPanel = ({ isOpen, onClose, onNotificationClick }) => {
       {showProgressAlert && (
         <ProgressAlert
           onClose={handleProgressAlertClose}
-          onProgramCompleted={handleProgressAlertClose}
+          onProgramCompleted={handleProgramCompleted}
         />
       )}
     </div>

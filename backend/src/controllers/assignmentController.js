@@ -63,12 +63,36 @@ exports.getAssignmentDetails = async (req, res) => {
     try {
         const details = await Assignment.getAssignmentDetailsById(id);
         if (!details) {
-            return res.status(404).send('Designação não encontrada.');
+            return res.status(404).json({ 
+                message: 'Este programa foi arquivado ou não está mais ativo.',
+                error: 'PROGRAM_ARCHIVED'
+            });
         }
         res.json(details);
     } catch (error) {
         console.error(`[CONTROLLER-ERROR] getAssignmentDetails (ID: ${id}):`, error);
         res.status(500).send('Erro ao buscar detalhes da designação.');
+    }
+};
+
+/**
+ * Busca detalhes de uma atribuição incluindo programas arquivados (para dashboards e relatórios).
+ * GET /api/assignments/:id/history
+ */
+exports.getAssignmentDetailsWithHistory = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const details = await Assignment.getAssignmentDetailsWithHistory(id);
+        if (!details) {
+            return res.status(404).json({ 
+                message: 'Atribuição não encontrada.',
+                error: 'ASSIGNMENT_NOT_FOUND'
+            });
+        }
+        res.json(details);
+    } catch (error) {
+        console.error(`[CONTROLLER-ERROR] getAssignmentDetailsWithHistory (ID: ${id}):`, error);
+        res.status(500).send('Erro ao buscar detalhes da atribuição.');
     }
 };
 

@@ -158,7 +158,7 @@ const ProgressAlert = ({ onClose, onProgramCompleted }) => {
                   Nenhum programa precisa de verificação no momento!
                 </p>
                 <div className="text-sm text-gray-500 space-y-1">
-                  <p>• Programas precisam ter ≥3 sessões registradas</p>
+                  <p>• Programas precisam ter ≥5 sessões registradas</p>
                   <p>• Progresso deve estar ≥80% nas últimas sessões</p>
                   <p>• Continue registrando sessões para acompanhar o progresso</p>
                 </div>

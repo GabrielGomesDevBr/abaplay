@@ -8,15 +8,15 @@ const ProgressAlerts = {
     /**
      * Calcula a média de progresso (score) das últimas sessões de um programa
      * @param {number} assignmentId - ID da atribuição do programa
-     * @param {number} minSessions - Mínimo de sessões para considerar (padrão: 3)
+     * @param {number} minSessions - Mínimo de sessões para considerar (padrão: 5)
      * @returns {Promise<{average: number, sessionsCount: number}>}
      */
-    async calculateProgramProgress(assignmentId, minSessions = 3) {
+    async calculateProgramProgress(assignmentId, minSessions = 5) {
         const query = `
             SELECT score, session_date
             FROM patient_program_progress 
             WHERE assignment_id = $1 
-            ORDER BY session_date DESC, created_at DESC
+            ORDER BY session_date ASC, created_at ASC
             LIMIT 10
         `;
         
@@ -70,7 +70,7 @@ const ProgressAlerts = {
             for (const assignment of assignments) {
                 const progress = await this.calculateProgramProgress(assignment.assignment_id);
                 
-                if (progress.average >= threshold && progress.sessionsCount >= 3) {
+                if (progress.average >= threshold && progress.sessionsCount >= 5) {
                     alertPrograms.push({
                         ...assignment,
                         progress_average: progress.average,
@@ -87,60 +87,26 @@ const ProgressAlerts = {
     },
 
     /**
-     * Cria notificações de alerta para programas com progresso alto
+     * Busca programas que precisam de alerta (calculado dinamicamente)
      * @param {number} therapistId - ID do terapeuta
-     * @returns {Promise<number>} Número de alertas criados
+     * @returns {Promise<number>} Número de alertas encontrados
      */
     async createProgressAlerts(therapistId) {
         try {
             const programs = await this.getProgramsNeedingAlert(therapistId);
-            let alertsCreated = 0;
+            const alertsCount = programs.length;
             
-            for (const program of programs) {
-                // Verifica se já existe um alerta similar recente (últimos 7 dias)
-                const existingAlertQuery = `
-                    SELECT id FROM notificationstatus 
-                    WHERE "userId" = $1 
-                        AND "patientId" = $2 
-                        AND "chatType" = 'progress_alert'
-                        AND "createdAt" > NOW() - INTERVAL '7 days'
-                `;
-                
-                const existingAlert = await pool.query(existingAlertQuery, [
-                    therapistId, 
-                    program.patient_id
-                ]);
-                
-                if (existingAlert.rows.length === 0) {
-                    // Cria nova notificação de alerta
-                    await NotificationStatus.createOrUpdate(
-                        therapistId, 
-                        program.patient_id, 
-                        'progress_alert'
-                    );
-                    
-                    // Incrementa contador para mostrar como não lida
-                    await NotificationStatus.incrementUnreadCount(
-                        therapistId, 
-                        program.patient_id, 
-                        'progress_alert'
-                    );
-                    
-                    alertsCreated++;
-                }
-            }
-            
-            console.log(`[PROGRESS-ALERTS] ${alertsCreated} alertas criados para terapeuta ${therapistId}`);
-            return alertsCreated;
+            console.log(`[PROGRESS-ALERTS] ${alertsCount} alertas encontrados para terapeuta ${therapistId}`);
+            return alertsCount;
         } catch (error) {
-            console.error('Erro ao criar alertas de progresso:', error);
+            console.error('Erro ao verificar alertas de progresso:', error);
             throw error;
         }
     },
 
     /**
      * Executa verificação de alertas para todos os terapeutas ativos
-     * @returns {Promise<number>} Total de alertas criados
+     * @returns {Promise<number>} Total de alertas encontrados
      */
     async runProgressAlertCheck() {
         const query = `
@@ -162,7 +128,7 @@ const ProgressAlerts = {
                 totalAlerts += alerts;
             }
             
-            console.log(`[PROGRESS-ALERTS] Total: ${totalAlerts} alertas criados para ${therapists.length} terapeutas`);
+            console.log(`[PROGRESS-ALERTS] Total: ${totalAlerts} alertas encontrados para ${therapists.length} terapeutas`);
             return totalAlerts;
         } catch (error) {
             console.error('Erro na verificação geral de alertas:', error);

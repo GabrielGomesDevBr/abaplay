@@ -73,8 +73,18 @@ const ProgramSessionPage = () => {
           <div className="bg-gradient-to-br from-red-100 to-pink-100 p-6 rounded-2xl w-20 h-20 mx-auto mb-6 flex items-center justify-center">
             <FontAwesomeIcon icon={faExclamationTriangle} className="text-3xl text-red-600" />
           </div>
-          <h3 className="text-xl font-bold text-gray-800 mb-3">Erro ao Carregar Sessão</h3>
+          <h3 className="text-xl font-bold text-gray-800 mb-3">
+            {error.includes('arquivado') ? 'Programa Arquivado' : 'Erro ao Carregar Sessão'}
+          </h3>
           <p className="text-gray-600 mb-8 leading-relaxed">{error}</p>
+          {error.includes('arquivado') && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <p className="text-green-700 text-sm">
+                🎉 Este programa foi marcado como dominado com sucesso! 
+                Volte à lista de programas para selecionar outro.
+              </p>
+            </div>
+          )}
           <Link 
             to="/clients" 
             className="inline-flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"

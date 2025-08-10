@@ -330,8 +330,8 @@ const ProgressByDisciplineChart = ({ sessionData, activePrograms, analytics }) =
       .map(discipline => {
         const average = (discipline.totalScore / discipline.sessionCount);
         
-        // Calcular tendência (últimas 5 sessões vs primeiras 5)
-        const sortedSessions = discipline.sessions.sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
+        // Calcular tendência (últimas 5 sessões vs primeiras 5) - dados já vêm ordenados do backend
+        const sortedSessions = discipline.sessions;
         let trend = 'stable';
         if (sortedSessions.length >= 6) {
           const firstHalf = sortedSessions.slice(0, Math.floor(sortedSessions.length / 2));
@@ -469,6 +469,7 @@ const ProgressByDisciplineChart = ({ sessionData, activePrograms, analytics }) =
 
 const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
     const { user } = useAuth();
+    // activePrograms agora inclui todos os programas (incluindo arquivados) para mostrar histórico completo
     if (!activePrograms || activePrograms.length === 0) return null;
 
     // Organiza os programas por disciplina (usando os dados que vêm do banco)
@@ -485,8 +486,8 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
     
     const MiniChart = ({ program }) => {
         const programSessionData = (sessionData || [])
-            .filter(session => session.program_id === program.program_id)
-            .sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
+            .filter(session => session.program_id === program.program_id);
+            // Dados já vêm ordenados do backend
         
         if (programSessionData.length === 0) {
             return (
@@ -618,7 +619,6 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
                         
                         afterLabel: (context) => {
                             if (!context || context.dataIndex === undefined) return '';
-                            const session = programSessionData[context.dataIndex];
                             
                             // Como attempts e successes são undefined, não mostra nada aqui para evitar duplicação
                             return '';
@@ -736,12 +736,15 @@ const DashboardPage = () => {
   const [endDate, setEndDate] = useState('');
 
   // Programas ativos do paciente com dados completos do banco
-  const activeAssignedPrograms = useMemo(() => {
+  // Para dashboard, mostramos dados históricos completos (incluindo programas arquivados)
+  const allAssignedPrograms = useMemo(() => {
     if (!selectedPatient?.assigned_programs) return [];
-    return selectedPatient.assigned_programs.filter(p => p.status === 'active');
+    return selectedPatient.assigned_programs; // Todos os programas para dados históricos
   }, [selectedPatient]);
+
+  // Nota: activeAssignedPrograms removido pois dashboard agora mostra dados históricos completos
   
-  const activeProgramIds = useMemo(() => new Set(activeAssignedPrograms.map(p => p.program_id)), [activeAssignedPrograms]);
+  const allProgramIds = useMemo(() => new Set(allAssignedPrograms.map(p => p.program_id)), [allAssignedPrograms]);
 
   const filteredSessionData = useMemo(() => {
     if (!selectedPatient?.sessionData) return [];
@@ -750,8 +753,8 @@ const DashboardPage = () => {
     const end = endDate ? new Date(endDate + 'T23:59:59') : null;
 
     return selectedPatient.sessionData.filter(session => {
-        // A verificação agora usa `session.program_id` que vem do backend.
-        if (!activeProgramIds.has(session.program_id)) return false;
+        // Para dashboard, incluímos sessões de todos os programas (histórico completo)
+        if (!allProgramIds.has(session.program_id)) return false;
         
         const sessionDate = new Date(session.session_date);
         if (start && sessionDate < start) return false;
@@ -759,7 +762,7 @@ const DashboardPage = () => {
         
         return true;
     });
-  }, [selectedPatient, startDate, endDate, activeProgramIds]);
+  }, [selectedPatient, startDate, endDate, allProgramIds]);
   
   // --- CORREÇÃO DE SEGURANÇA ---
   // Adicionamos uma verificação para saber se os pacientes já foram carregados.
@@ -781,7 +784,7 @@ const DashboardPage = () => {
   const calculateAnalytics = () => {
     if (!filteredSessionData || filteredSessionData.length === 0) {
       return {
-        assignedProgramsCount: activeAssignedPrograms.length,
+        assignedProgramsCount: allAssignedPrograms.length,
         overallAverage: '--',
         programsAboveGoal: '--',
         sessionFrequency: '--',
@@ -814,7 +817,7 @@ const DashboardPage = () => {
       program.scores.reduce((sum, score) => sum + score, 0) / program.scores.length
     );
     const programsAboveGoal = programAverages.filter(avg => avg >= 80).length;
-    const totalPrograms = Math.max(programAverages.length, activeAssignedPrograms.length);
+    const totalPrograms = Math.max(programAverages.length, allAssignedPrograms.length);
 
     // Taxa de Aquisição (programas que atingiram critério recentemente)
     let recentMasteries = 0;
@@ -896,7 +899,7 @@ const DashboardPage = () => {
     if (interpretations.stabilityIndex === 'critical') recommendations.push('Focar na manutenção - performance inconsistente');
 
     return {
-      assignedProgramsCount: activeAssignedPrograms.length,
+      assignedProgramsCount: allAssignedPrograms.length,
       overallAverage,
       programsAboveGoal: `${programsAboveGoal}/${totalPrograms}`,
       sessionFrequency: sessionFrequency === '--' ? '--' : sessionFrequency,
@@ -997,7 +1000,7 @@ const DashboardPage = () => {
                 Progresso por Área de Intervenção
             </h2>
             <div className="relative">
-                <ProgressByDisciplineChart sessionData={filteredSessionData} activePrograms={activeAssignedPrograms} analytics={analytics} />
+                <ProgressByDisciplineChart sessionData={filteredSessionData} activePrograms={allAssignedPrograms} analytics={analytics} />
             </div>
           </div>
 
@@ -1013,7 +1016,7 @@ const DashboardPage = () => {
           </div>
 
           <AllProgramsChartsGrid 
-            activePrograms={activeAssignedPrograms} 
+            activePrograms={allAssignedPrograms} 
             sessionData={filteredSessionData}
           />
         </>

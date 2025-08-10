@@ -62,10 +62,10 @@ const Assignment = {
     },
 
     /**
-     * Busca os detalhes completos de uma atribuição, incluindo os dados do programa.
-     * Esta função foi refatorada para buscar os detalhes do programa diretamente da tabela 'programs'.
+     * Busca os detalhes completos de uma atribuição de programa por ID (apenas programas ativos).
+     * Usado para registrar novas sessões - só permite programas ativos.
      * @param {number} id - O ID da atribuição.
-     * @returns {Promise<object|null>} Os detalhes da atribuição ou null se não for encontrada.
+     * @returns {Promise<object|null>} Os detalhes da atribuição ou null se não encontrada ou inativa.
      */
     async getAssignmentDetailsById(id) {
         const query = `
@@ -82,6 +82,52 @@ const Assignment = {
                     'name', ther.full_name -- CORRIGIDO: de 'name' para 'full_name'
                 ) AS therapist,
                 -- Constrói o objeto do programa diretamente a partir da tabela 'programs'
+                jsonb_build_object(
+                    'id', p.id,
+                    'name', p.name,
+                    'objective', p.objective,
+                    'program_slug', p.program_slug,
+                    'skill', p.skill,
+                    'materials', p.materials,
+                    'procedure', p.procedure,
+                    'criteria_for_advancement', p.criteria_for_advancement,
+                    'trials', p.trials
+                ) AS program
+            FROM 
+                patient_program_assignments ppa
+            JOIN 
+                patients pat ON ppa.patient_id = pat.id
+            JOIN 
+                users ther ON ppa.therapist_id = ther.id
+            JOIN
+                programs p ON ppa.program_id = p.id
+            WHERE 
+                ppa.id = $1 AND ppa.status = 'active';
+        `;
+        const { rows } = await pool.query(query, [id]);
+        return rows[0] || null;
+    },
+
+    /**
+     * Busca os detalhes completos de uma atribuição de programa por ID (incluindo arquivados).
+     * Usado para dashboards e relatórios - mostra dados históricos completos.
+     * @param {number} id - O ID da atribuição.
+     * @returns {Promise<object|null>} Os detalhes da atribuição ou null se não encontrada.
+     */
+    async getAssignmentDetailsWithHistory(id) {
+        const query = `
+            SELECT
+                ppa.id AS assignment_id,
+                ppa.status,
+                ppa.assigned_at,
+                jsonb_build_object(
+                    'id', pat.id,
+                    'name', pat.name
+                ) AS patient,
+                jsonb_build_object(
+                    'id', ther.id,
+                    'name', ther.full_name
+                ) AS therapist,
                 jsonb_build_object(
                     'id', p.id,
                     'name', p.name,
@@ -152,7 +198,7 @@ const Assignment = {
         const query = `
             SELECT * FROM patient_program_progress 
             WHERE assignment_id = $1 
-            ORDER BY session_date DESC, created_at DESC;
+            ORDER BY session_date ASC, created_at ASC;
         `;
         const { rows } = await pool.query(query, [assignmentId]);
         return rows;
