@@ -5,6 +5,7 @@ import { usePrograms } from '../context/ProgramContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 // 1. Importar o novo ícone de chat
 import { faSpinner, faExclamationCircle, faChartLine, faCalendarAlt, faTimesCircle, faComments, faUsers } from '@fortawesome/free-solid-svg-icons';
+import DateRangeSelector from '../components/shared/DateRangeSelector';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -274,59 +275,54 @@ const ParentDashboardPage = () => {
 
     return (
         <div className="p-4 md:p-6">
-            <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+            <div className="flex flex-wrap justify-between items-start mb-6 gap-4">
                 <div>
                     <h1 className="text-2xl font-semibold text-gray-800 mb-2">
                         Acompanhamento de {selectedPatient.name}
                     </h1>
                     <p className="text-sm text-gray-600">Progresso nos programas de intervenção.</p>
                 </div>
-                <div className="bg-white p-2 rounded-lg shadow-sm border flex flex-wrap items-center gap-2 text-sm">
-                    <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400 ml-2" />
-                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="p-1 border rounded-md text-xs" />
-                    <span className="text-gray-500">até</span>
-                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="p-1 border rounded-md text-xs" />
-                    <button onClick={clearFilter} className="text-xs text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-gray-100" title="Limpar filtro">
-                        <FontAwesomeIcon icon={faTimesCircle} />
-                    </button>
-                </div>
             </div>
             
-            {/* Botão de Acesso aos Contatos */}
-            <div className="mb-6">
-                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg p-4 text-white shadow-lg">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-lg font-semibold mb-2">💬 Quer mencionar um terapeuta específico?</h3>
-                            <p className="text-blue-100 text-sm">
-                                Use @ para mencionar terapeutas específicos no chat. Todos veem a mensagem, garantindo transparência e colaboração.
-                            </p>
-                        </div>
-                        <button 
-                            onClick={() => navigate('/contacts')}
-                            className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg hover:transform hover:scale-105"
-                        >
-                            <span className="text-xl">@</span>
-                            <span>Mencionar Terapeuta</span>
-                        </button>
+            {/* Botão de Contatos - Simplificado */}
+            <div className="mb-6 text-center">
+                <button 
+                    onClick={() => navigate('/contacts')}
+                    className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-lg"
+                >
+                    <FontAwesomeIcon icon={faUsers} />
+                    <span>Contatos da Equipe</span>
+                </button>
+                <p className="text-xs text-gray-500 mt-2">Para conversas direcionadas com terapeutas específicos</p>
+            </div>
+
+            {/* 3. Chat com largura limitada para melhor visualização */}
+            <div className="mb-8 max-w-4xl mx-auto">
+                <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                    <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-indigo-200 px-6 py-4">
+                        <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                            <FontAwesomeIcon icon={faComments} className="mr-3 text-blue-500" />
+                            Chat da Equipe
+                        </h3>
+                        <p className="text-sm text-indigo-600 mt-1">Converse com todos os terapeutas</p>
+                    </div>
+                    <div className="p-4">
+                        <ParentTherapistChat 
+                            patientId={selectedPatient.id} 
+                            patientName={selectedPatient.name} 
+                        />
                     </div>
                 </div>
             </div>
 
-            {/* 3. Bloco de "Observações" substituído pelo novo componente de Chat */}
-            <div className="mb-8">
-                <h3 className="text-xl font-semibold text-gray-700 mb-3 pb-2 border-b border-gray-200 flex items-center">
-                    <FontAwesomeIcon icon={faComments} className="mr-3 text-blue-500" />
-                    Chat Geral da Equipe
-                </h3>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                    <p className="text-sm text-blue-700">
-                        💡 <strong>Dica:</strong> Este chat é compartilhado com toda a equipe. Para conversar com um terapeuta específico, use o botão "Meus Contatos" acima.
-                    </p>
-                </div>
-                <ParentTherapistChat 
-                    patientId={selectedPatient.id} 
-                    patientName={selectedPatient.name} 
+            {/* Seletor de Período - Posicionado entre chat e gráficos */}
+            <div className="mb-6">
+                <DateRangeSelector
+                    startDate={startDate}
+                    endDate={endDate}
+                    onStartDateChange={setStartDate}
+                    onEndDateChange={setEndDate}
+                    onClear={clearFilter}
                 />
             </div>
 

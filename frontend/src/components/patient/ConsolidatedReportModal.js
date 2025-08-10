@@ -4,6 +4,7 @@ import { faTimes, faFilePdf, faSpinner, faCalendarAlt, faTimesCircle, faChartLin
 import { usePatients } from '../../context/PatientContext';
 // A importação do usePrograms não é mais necessária.
 import { generateConsolidatedReportPDF } from '../../utils/pdfGenerator';
+import DateRangeSelector from '../shared/DateRangeSelector';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -255,17 +256,16 @@ const ConsolidatedReportModal = ({ isOpen, onClose }) => {
 
         <div className="p-6 space-y-6 overflow-y-auto">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Período do Relatório (opcional)</label>
-            <div className="bg-gray-50 p-3 rounded-lg border flex flex-wrap items-center gap-2 text-sm">
-                <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400 ml-2" />
-                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="p-1 border rounded-md text-xs" />
-                <span className="text-gray-500">até</span>
-                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="p-1 border rounded-md text-xs" />
-                <button onClick={clearFilter} className="text-xs text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-gray-100" title="Limpar filtro">
-                    <FontAwesomeIcon icon={faTimesCircle} />
-                </button>
-            </div>
-             <p className="text-xs text-gray-500 mt-2">Deixe em branco para incluir todos os dados de sessão.</p>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Período do Relatório</label>
+            <DateRangeSelector
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+              onClear={clearFilter}
+              showInfo={false}
+            />
+            <p className="text-xs text-gray-500 mt-2">Padrão: último mês. Limpe os filtros para incluir todos os dados.</p>
           </div>
         
           <div>

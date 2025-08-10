@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 // simplificando o componente.
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTachometerAlt, faUsers, faClipboardList, faTasks, faPercentage, faChartLine, faFolderOpen, faCalendarAlt, faTimesCircle, faSpinner, faInfoCircle, faExclamationTriangle, faCheckCircle, faBullseye, faClock, faBalanceScale, faLightbulb } from '@fortawesome/free-solid-svg-icons';
+import DateRangeSelector from '../components/shared/DateRangeSelector';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -891,16 +892,6 @@ const DashboardPage = () => {
                   <span className="hidden sm:inline">Verificar Progresso</span>
                 </button>
               )}
-              {/* Filtros de Data */}
-              <div className="bg-white p-2 rounded-lg shadow-sm border flex flex-wrap items-center gap-2 text-sm">
-                  <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400 ml-2" />
-                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="p-1 border rounded-md text-xs" />
-                  <span className="text-gray-500">até</span>
-                  <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="p-1 border rounded-md text-xs" />
-                  <button onClick={clearFilter} className="text-xs text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-gray-100" title="Limpar filtro">
-                      <FontAwesomeIcon icon={faTimesCircle} />
-                  </button>
-              </div>
             </div>
           </div>
           
@@ -966,6 +957,17 @@ const DashboardPage = () => {
             <div className="relative">
                 <ProgressByDisciplineChart sessionData={filteredSessionData} activePrograms={activeAssignedPrograms} analytics={analytics} />
             </div>
+          </div>
+
+          {/* Seletor de Período - Posicionado acima dos gráficos de evolução */}
+          <div className="mt-6">
+            <DateRangeSelector
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+              onClear={clearFilter}
+            />
           </div>
 
           <AllProgramsChartsGrid 
