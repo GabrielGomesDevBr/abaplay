@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-// O 'usePrograms' não é mais necessário aqui, simplificando o componente.
 import { getAssignmentDetails } from '../api/programApi';
 import SessionProgress from '../components/program/SessionProgress';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faExclamationTriangle, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faExclamationTriangle, faArrowLeft, faUserMd, faClipboardList } from '@fortawesome/free-solid-svg-icons';
 
 const ProgramSessionPage = () => {
   const { assignmentId } = useParams();
@@ -50,60 +49,124 @@ const ProgramSessionPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full text-center p-10">
-        <FontAwesomeIcon icon={faSpinner} className="fa-spin text-4xl text-indigo-500" />
-        <p className="ml-4 text-lg text-gray-600">Carregando dados da sessão...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-8">
+        <div className="bg-white rounded-2xl shadow-2xl p-12 text-center max-w-md w-full border border-gray-100">
+          <div className="bg-gradient-to-br from-indigo-100 to-purple-100 p-6 rounded-2xl w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+            <FontAwesomeIcon icon={faSpinner} className="fa-spin text-3xl text-indigo-600" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-800 mb-3">Carregando Sessão</h3>
+          <p className="text-gray-600 leading-relaxed">Preparando os dados da sessão terapêutica...</p>
+          <div className="mt-6 flex items-center justify-center space-x-2">
+            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border-l-4 border-red-400 p-4 m-4 rounded-r-lg text-center">
-        <p className="text-sm text-red-800">
-          <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
-          {error}
-        </p>
-        <Link to="/clients" className="text-indigo-600 hover:text-indigo-800 mt-4 inline-block">
-          Voltar para a lista de clientes
-        </Link>
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-rose-50 flex items-center justify-center p-8">
+        <div className="bg-white rounded-2xl shadow-2xl p-12 text-center max-w-lg w-full border border-red-100">
+          <div className="bg-gradient-to-br from-red-100 to-pink-100 p-6 rounded-2xl w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="text-3xl text-red-600" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-800 mb-3">Erro ao Carregar Sessão</h3>
+          <p className="text-gray-600 mb-8 leading-relaxed">{error}</p>
+          <Link 
+            to="/clients" 
+            className="inline-flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+          >
+            <FontAwesomeIcon icon={faArrowLeft} />
+            <span>Voltar aos Clientes</span>
+          </Link>
+        </div>
       </div>
     );
   }
 
   // Se os dados não foram carregados por algum motivo, mostramos uma mensagem.
   if (!sessionData) {
-    return <div className="text-center p-10">Não foi possível carregar os dados da sessão.</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 flex items-center justify-center p-8">
+        <div className="bg-white rounded-2xl shadow-2xl p-12 text-center max-w-md w-full border border-gray-100">
+          <div className="bg-gradient-to-br from-gray-100 to-slate-100 p-6 rounded-2xl w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+            <FontAwesomeIcon icon={faClipboardList} className="text-3xl text-gray-600" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-800 mb-3">Dados Indisponíveis</h3>
+          <p className="text-gray-600 leading-relaxed">Não foi possível carregar os dados da sessão.</p>
+        </div>
+      </div>
+    );
   }
 
   // Extraímos os dados do nosso estado para usar no JSX.
   const { program, patient, assignment_id } = sessionData;
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="mb-6">
-        <Link to={`/clients/${patient?.id}`} className="text-indigo-600 hover:text-indigo-800 text-sm">
-            <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-            Voltar para os detalhes do paciente
-        </Link>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mt-2">
-          {program?.name || 'Carregando programa...'}
-        </h1>
-        <p className="text-md text-gray-600">
-          Sessão de Terapia para: <span className="font-semibold">{patient?.name}</span>
-        </p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* Cabeçalho Moderno */}
+      <div className="bg-white shadow-xl border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              <Link 
+                to={`/clients/${patient?.id}`} 
+                className="inline-flex items-center space-x-2 text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl font-medium transition-all duration-200"
+              >
+                <FontAwesomeIcon icon={faArrowLeft} />
+                <span>Voltar ao Paciente</span>
+              </Link>
+              
+              <div className="h-8 w-px bg-gray-300"></div>
+              
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800 mb-1">
+                  {program?.name || 'Carregando programa...'}
+                </h1>
+                <div className="flex items-center space-x-3 text-gray-600">
+                  <FontAwesomeIcon icon={faUserMd} className="text-indigo-500" />
+                  <span className="font-medium">Sessão de Terapia para:</span>
+                  <span className="font-bold text-gray-800">{patient?.name}</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Badge de Status */}
+            <div className="bg-gradient-to-r from-green-100 to-emerald-100 px-6 py-3 rounded-2xl border border-green-200">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-green-800 font-semibold text-sm">Sessão Ativa</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        {program && sessionData ? (
-          // Passamos o objeto 'program' e o objeto 'sessionData' (como 'assignment') para o componente filho.
-          <SessionProgress program={program} assignment={sessionData} />
-        ) : (
-          <div className="text-center text-gray-500">
-            <FontAwesomeIcon icon={faSpinner} className="fa-spin text-2xl" />
-            <p className="mt-2">A carregar detalhes do registo de progresso...</p>
-          </div>
-        )}
+      {/* Conteúdo Principal */}
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+          {program && sessionData ? (
+            <SessionProgress program={program} assignment={sessionData} />
+          ) : (
+            <div className="p-16 text-center">
+              <div className="bg-gradient-to-br from-indigo-100 to-purple-100 p-8 rounded-2xl w-24 h-24 mx-auto mb-8 flex items-center justify-center">
+                <FontAwesomeIcon icon={faSpinner} className="fa-spin text-4xl text-indigo-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-4">Preparando Sessão</h3>
+              <p className="text-gray-600 text-lg leading-relaxed max-w-md mx-auto">
+                A carregar detalhes do registo de progresso...
+              </p>
+              <div className="mt-8 flex items-center justify-center space-x-3">
+                <div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
+                <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse" style={{animationDelay: '0.3s'}}></div>
+                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.6s'}}></div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
