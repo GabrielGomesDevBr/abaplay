@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 // A importação do usePrograms foi removida pois não era utilizada diretamente aqui,
 // simplificando o componente.
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTachometerAlt, faUsers, faClipboardList, faTasks, faPercentage, faChartLine, faFolderOpen, faCalendarAlt, faTimesCircle, faSpinner, faInfoCircle, faExclamationTriangle, faCheckCircle, faBullseye, faClock, faBalanceScale, faLightbulb } from '@fortawesome/free-solid-svg-icons';
+import { faTachometerAlt, faUsers, faClipboardList, faTasks, faPercentage, faChartLine, faFolderOpen, faSpinner, faInfoCircle, faExclamationTriangle, faCheckCircle, faBullseye, faClock, faBalanceScale, faLightbulb } from '@fortawesome/free-solid-svg-icons';
 import DateRangeSelector from '../components/shared/DateRangeSelector';
 import { Line } from 'react-chartjs-2';
 import {
@@ -468,6 +468,7 @@ const ProgressByDisciplineChart = ({ sessionData, activePrograms, analytics }) =
 };
 
 const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
+    const { user } = useAuth();
     if (!activePrograms || activePrograms.length === 0) return null;
 
     // Organiza os programas por disciplina (usando os dados que vêm do banco)
@@ -596,17 +597,58 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
                     callbacks: {
                         title: (items) => {
                             if (!items || !items[0] || items[0].dataIndex === undefined) return 'Sessão';
-                            const isBaseline = programSessionData[items[0].dataIndex]?.is_baseline;
-                            const title = `${formatDate(programSessionData[items[0].dataIndex].session_date)}`;
-                            return isBaseline ? `📋 [BASELINE] ${title}` : `📈 ${title}`;
+                            const session = programSessionData[items[0].dataIndex];
+                            const isBaseline = session?.is_baseline;
+                            const sessionDate = formatDate(session.session_date);
+                            
+                            let title = `Sessão de ${sessionDate}`;
+                            if (isBaseline) {
+                                title = `📋 [BASELINE] ${title}`;
+                            } else {
+                                title = `📈 ${title}`;
+                            }
+                            
+                            return title;
                         },
-                        label: (context) => `Pontuação: ${context.parsed.y.toFixed(1)}%`,
+                        
+                        label: (context) => {
+                            const score = context.parsed.y.toFixed(1);
+                            return `🎯 Pontuação: ${score}%`;
+                        },
+                        
+                        afterLabel: (context) => {
+                            if (!context || context.dataIndex === undefined) return '';
+                            const session = programSessionData[context.dataIndex];
+                            
+                            // Como attempts e successes são undefined, não mostra nada aqui para evitar duplicação
+                            return '';
+                        },
+                        
                         afterBody: (items) => {
                             if (!items || !items[0] || items[0].dataIndex === undefined) return '';
                             const session = programSessionData[items[0].dataIndex];
-                            let details = [];
-                            if (session?.notes) details.push(`\n📝 Obs: ${session.notes}`);
-                            return details;
+                            let result = [];
+                            
+                            // Observações da sessão (para todos)
+                            if (session?.notes) {
+                                result.push(`\n📝 Observações:`);
+                                result.push(`${session.notes}`);
+                            }
+                            
+                            // Debug do papel do usuário (apenas no primeiro tooltip)
+                            if (items[0].dataIndex === 0) {
+                                console.log('Dashboard User role:', user?.role);
+                            }
+                            
+                            // Horário do registro para terapeutas e admins (suporta 'therapist'/'terapeuta' e 'admin'/'administrador')
+                            if (user && (user.role === 'therapist' || user.role === 'terapeuta' || user.role === 'admin' || user.role === 'administrador')) {
+                                if (session?.created_at) {
+                                    const recordedTime = new Date(session.created_at).toLocaleString('pt-BR');
+                                    result.push(`\n📅 Registrado: ${recordedTime}`);
+                                }
+                            }
+                            
+                            return result;
                         }
                     }
                 },

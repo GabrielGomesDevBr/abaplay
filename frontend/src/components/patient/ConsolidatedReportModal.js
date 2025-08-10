@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faFilePdf, faSpinner, faCalendarAlt, faTimesCircle, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import { faTimes, faFilePdf, faSpinner, faChartLine } from '@fortawesome/free-solid-svg-icons';
 import { usePatients } from '../../context/PatientContext';
+import { useAuth } from '../../context/AuthContext';
 // A importação do usePrograms não é mais necessária.
 import { generateConsolidatedReportPDF } from '../../utils/pdfGenerator';
 import DateRangeSelector from '../shared/DateRangeSelector';
@@ -45,6 +46,7 @@ const formatDate = (dateString, format = 'long') => {
 
 // <<< NOVO COMPONENTE PARA O GRÁFICO DE PRÉ-VISUALIZAÇÃO >>>
 const ReportChart = ({ program, sessionData }) => {
+    const { user } = useAuth();
     const programSessionData = (sessionData || [])
       .filter(session => session.program_id === program.program_id)
       .sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
@@ -127,37 +129,7 @@ const ReportChart = ({ program, sessionData }) => {
         plugins: { 
             legend: { display: false },
             tooltip: {
-                backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                titleColor: '#ffffff',
-                bodyColor: '#e5e7eb',
-                borderColor: '#4f46e5',
-                borderWidth: 2,
-                padding: 14,
-                cornerRadius: 10,
-                displayColors: false,
-                titleFont: {
-                    size: 13,
-                    weight: 'bold'
-                },
-                bodyFont: {
-                    size: 12
-                },
-                callbacks: {
-                    title: (items) => {
-                        const dataIndex = items[0].dataIndex;
-                        const isBaseline = programSessionData[dataIndex]?.is_baseline;
-                        const title = `${formatDate(programSessionData[dataIndex].session_date)}`;
-                        return isBaseline ? `📋 [BASELINE] ${title}` : `📈 ${title}`;
-                    },
-                    label: (context) => `Pontuação: ${context.parsed.y.toFixed(1)}%`,
-                    afterBody: (items) => {
-                        if (!items || !items[0] || items[0].dataIndex === undefined) return '';
-                        const session = programSessionData[items[0].dataIndex];
-                        let details = [];
-                        if (session?.notes) details.push(`\n📝 Obs: ${session.notes}`);
-                        return details;
-                    }
-                }
+                enabled: false
             } 
         }
     };

@@ -15,6 +15,7 @@ import {
 } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { recordProgress, getAssignmentEvolution } from '../../api/programApi';
+import { useAuth } from '../../context/AuthContext';
 
 ChartJS.register(
   CategoryScale,
@@ -41,6 +42,7 @@ const formatDate = (dateString, format = 'long') => {
 };
 
 const SessionProgress = ({ program, assignment }) => {
+  const { user } = useAuth();
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedStepIndex, setSelectedStepIndex] = useState('');
   const [attempts, setAttempts] = useState(program?.trials || '');
@@ -214,24 +216,73 @@ const SessionProgress = ({ program, assignment }) => {
             callbacks: {
                 title: (context) => {
                     const dataIndex = context[0].dataIndex;
-                    const isBaselinePoint = evolutionData[dataIndex]?.details?.isBaseline;
-                    const title = `Sessão de ${formatDate(context[0].label)}`;
-                    return isBaselinePoint ? `📋 [LINHA DE BASE] ${title}` : `📈 ${title}`;
+                    const session = evolutionData[dataIndex];
+                    const isBaselinePoint = session?.details?.isBaseline;
+                    const sessionDate = formatDate(context[0].label);
+                    
+                    // Título básico para todos os usuários
+                    let title = `Sessão de ${sessionDate}`;
+                    if (isBaselinePoint) {
+                        title = `📋 [LINHA DE BASE] ${title}`;
+                    } else {
+                        title = `📈 ${title}`;
+                    }
+                    
+                    return title;
                 },
-                label: (context) => `Pontuação: ${context.parsed.y.toFixed(1)}%`,
+                
+                label: (context) => {
+                    const score = context.parsed.y.toFixed(1);
+                    return `🎯 Pontuação: ${score}%`;
+                },
+                
                 afterLabel: (context) => {
                     if (!context || context.dataIndex === undefined) return '';
                     const dataIndex = context.dataIndex;
                     const session = evolutionData[dataIndex];
+                    
+                    // Debug: verificar estrutura dos dados (apenas o primeiro)
+                    if (dataIndex === 0) {
+                        console.log('SessionProgress data (FUNCIONA) - attempts:', session?.attempts);
+                        console.log('SessionProgress data (FUNCIONA) - successes:', session?.successes);
+                        console.log('SessionProgress data (FUNCIONA) - created_at:', session?.created_at);
+                        console.log('SessionProgress data (FUNCIONA) - FULL OBJECT:', JSON.stringify(session, null, 2));
+                    }
+                    
                     const attempts = session?.attempts || 0;
                     const successes = session?.successes || 0;
-                    return `Acertos: ${successes}/${attempts}`;
+                    
+                    return [`📊 Acertos: ${successes}/${attempts}`];
                 },
+                
                 afterBody: (context) => {
                     if (!context || !context[0] || context[0].dataIndex === undefined) return '';
                     const dataIndex = context[0].dataIndex;
-                    const sessionNotes = evolutionData[dataIndex]?.details?.notes;
-                    return sessionNotes ? `\n📝 Observações:\n${sessionNotes}` : '';
+                    const session = evolutionData[dataIndex];
+                    const sessionNotes = session?.details?.notes;
+                    
+                    let result = [];
+                    
+                    // Observações da sessão (para todos)
+                    if (sessionNotes) {
+                        result.push(`\n📝 Observações:`); 
+                        result.push(`${sessionNotes}`);
+                    }
+                    
+                    // Debug do papel do usuário (apenas no primeiro tooltip)
+                    if (dataIndex === 0) {
+                        console.log('SessionProgress User role:', user?.role);
+                    }
+                    
+                    // Horário do registro para terapeutas e admins (suporta 'therapist'/'terapeuta' e 'admin'/'administrador')
+                    if (user && (user.role === 'therapist' || user.role === 'terapeuta' || user.role === 'admin' || user.role === 'administrador')) {
+                        if (session?.created_at) {
+                            const recordedTime = new Date(session.created_at).toLocaleString('pt-BR');
+                            result.push(`\n📅 Registrado: ${recordedTime}`);
+                        }
+                    }
+                    
+                    return result.length > 0 ? result : '';
                 }
             }
         },
