@@ -186,7 +186,10 @@ const SessionProgress = ({ program, assignment }) => {
     labels: evolutionData.map(session => session.session_date),
     datasets: [{
         label: 'Pontuação (%)',
-        data: evolutionData.map(session => session.score),
+        data: evolutionData.map(session => {
+          const score = parseFloat(session.score);
+          return isNaN(score) ? 0 : score;
+        }),
         borderColor: '#4f46e5',
         backgroundColor: (context) => {
           const chart = context.chart;
@@ -604,7 +607,30 @@ const SessionProgress = ({ program, assignment }) => {
                   <span className="font-medium">{evolutionData.length}</span> sessões registradas
                 </div>
                 <div className="text-xs text-emerald-600 mt-1">
-                  Média: {(evolutionData.reduce((sum, s) => sum + s.score, 0) / evolutionData.length).toFixed(1)}%
+                  {(() => {
+                    const validScores = evolutionData.filter(s => s.score !== null && s.score !== undefined && !isNaN(s.score));
+                    const hasInvalidScores = validScores.length < evolutionData.length;
+                    
+                    if (validScores.length === 0) {
+                      return 'Média: N/A';
+                    }
+                    
+                    const average = validScores.reduce((sum, s) => sum + parseFloat(s.score), 0) / validScores.length;
+                    const averageText = `Média: ${average.toFixed(1)}%`;
+                    
+                    if (hasInvalidScores && evolutionData.length > 0) {
+                      return (
+                        <>
+                          {averageText}
+                          <span className="text-xs text-gray-500 ml-1">
+                            ({validScores.length} de {evolutionData.length} com pontuação)
+                          </span>
+                        </>
+                      );
+                    }
+                    
+                    return averageText;
+                  })()}
                 </div>
               </div>
             )}
