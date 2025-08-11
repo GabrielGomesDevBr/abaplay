@@ -20,56 +20,64 @@ A aplicação é dividida em dois módulos principais:
 - Controle de acesso e permissões
 
 ### Terapeuta
-- Gerenciamento de pacientes atribuídos
-- Atribuição de programas de intervenção para pacientes
-- Registro detalhado da evolução das sessões com gráficos interativos
-- Anotações gerais sobre o paciente
-- Visualização de gráficos de progresso por área de intervenção
-- Geração de relatórios consolidados em PDF
-- Comunicação com pais através de chat em tempo real
-- Sistema de discussões de caso com outros profissionais
-- Gerenciamento de notificações e alertas
+- Gerenciamento completo de pacientes atribuídos
+- Atribuição inteligente de programas de intervenção com status normalizado
+- Registro avançado de sessões com sistema de níveis de prompting ABA
+- Pontuação automática de progresso baseada em níveis de prompting e taxa de sucesso
+- Anotações detalhadas e documentação de sessões
+- Visualização de gráficos interativos de progresso organizados por área de intervenção
+- Geração automatizada de relatórios consolidados em PDF com gráficos e dados de sessão
+- Comunicação em tempo real com pais através de chat integrado
+- Sistema colaborativo de discussões de caso com outros profissionais
+- Gerenciamento centralizado de notificações, alertas de progresso e badges
+- Interface de contatos e networking profissional
 
 ### Pais/Responsáveis
-- Acesso ao dashboard do(s) filho(s) atribuído(s)
-- Visualização de anotações feitas pelo terapeuta
-- Acompanhamento do progresso da criança através de gráficos de evolução, organizados por área de intervenção
-- Chat direto com terapeutas em tempo real
-- Acesso a relatórios de progresso em PDF
-- Sistema de notificações sobre atualizações do tratamento
+- Dashboard personalizado com dados do(s) filho(s) atribuído(s)
+- Visualização detalhada de anotações e observações do terapeuta
+- Acompanhamento visual do progresso através de gráficos interativos organizados por área de intervenção
+- Acesso aos dados de níveis de prompting e evolução das sessões
+- Chat integrado com comunicação direta e em tempo real com terapeutas
+- Download de relatórios consolidados em PDF com visualizações de progresso
+- Sistema inteligente de notificações sobre marcos, atualizações e alertas do tratamento
+- Interface responsiva otimizada para diferentes dispositivos
 
 ## Tecnologias Utilizadas
 
 ### Frontend
-- **React 18** - Framework principal
-- **Tailwind CSS** - Estilização e responsividade
-- **Chart.js** com react-chartjs-2 - Gráficos de evolução interativos
-- **chartjs-plugin-annotation** - Anotações em gráficos
-- **Axios** - Requisições HTTP
-- **React Router DOM** - Roteamento e navegação
-- **Socket.IO Client** - Comunicação em tempo real
-- **FontAwesome** e **Lucide React** - Ícones
-- **jsPDF** com jspdf-autotable - Geração de relatórios PDF
-- **JWT Decode** - Decodificação de tokens
+- **React 18.3.1** - Framework principal com hooks avançados
+- **Tailwind CSS 3.4.7** - Estilização utilitária e responsividade
+- **Chart.js 4.4.3** com react-chartjs-2 5.2.0 - Gráficos interativos de evolução
+- **chartjs-plugin-annotation 3.0.1** - Anotações e marcadores em gráficos
+- **Axios 1.11.0** - Cliente HTTP com interceptadores
+- **React Router DOM 6.25.1** - Roteamento SPA com lazy loading
+- **Socket.IO Client 4.8.1** - Comunicação bidirecional em tempo real
+- **FontAwesome 6.5.2** e **Lucide React 0.417.0** - Biblioteca de ícones
+- **jsPDF 2.5.1** com jspdf-autotable 3.8.2 - Geração avançada de relatórios PDF
+- **JWT Decode 4.0.0** - Decodificação e validação de tokens
 
-### Backend  
-- **Node.js** com **Express.js** - Framework do servidor
-- **PostgreSQL** - Banco de dados relacional
-- **pg** - Driver Node.js para PostgreSQL
-- **Socket.IO** - Comunicação em tempo real
-- **JWT** - Autenticação com tokens
-- **Bcrypt** - Hash de senhas
-- **Express-validator** - Validação de dados de entrada
-- **Helmet** - Cabeçalhos de segurança
-- **CORS** - Configuração de origem cruzada
-- **Dotenv** - Gerenciamento de variáveis de ambiente
+### Backend (v1.0.0)
+- **Node.js** com **Express.js 4.21.2** - Framework de servidor robusto
+- **PostgreSQL** - Banco de dados relacional com constraints avançadas
+- **pg 8.15.5** - Driver Node.js para PostgreSQL com pool de conexões
+- **Socket.IO 4.8.1** - Comunicação em tempo real bidirecional
+- **jsonwebtoken 9.0.2** - Autenticação JWT stateless
+- **Bcrypt 5.1.1** - Hash seguro de senhas com salt
+- **Express-validator 7.2.1** - Validação e sanitização de dados de entrada
+- **Helmet 8.1.0** - Cabeçalhos de segurança HTTP
+- **CORS 2.8.5** - Configuração de políticas de origem cruzada
+- **Dotenv 16.5.0** - Gerenciamento seguro de variáveis de ambiente
+- **Nodemon 2.0.7** - Auto-reload durante desenvolvimento
 
 ### Recursos Avançados
-- **Arquitetura de Status Normalizado** - Sistema consistente de status de programas (ativo/arquivado/pausado)
-- **Context API** - Gerenciamento de estado no React (AuthContext, PatientContext, ProgramContext)
-- **Estrutura Hierárquica** - Disciplinas → Áreas → Sub-áreas → Programas
-- **Sistema de Notificações** - Badges e painéis de notificação em tempo real
-- **Persistência de Seleção** - Manutenção do estado do paciente selecionado
+- **Sistema de Níveis de Prompting ABA** - 6 níveis de prompting com indicadores visuais e pontuação automática de progresso
+- **Arquitetura de Status Normalizado** - Sistema consistente de status de programas com constraints de banco de dados
+- **Context API Avançado** - Gerenciamento de estado otimizado (AuthContext, PatientContext, ProgramContext)
+- **Estrutura Hierárquica** - Disciplinas → Áreas → Sub-áreas → Programas com navegação intuitiva
+- **Sistema de Notificações** - Badges, painéis e alertas de progresso em tempo real com Socket.IO
+- **Persistência de Seleção** - Manutenção inteligente do estado do paciente selecionado durante navegação
+- **Relatórios PDF Avançados** - Geração automática com gráficos interativos e dados de sessão detalhados
+- **Interface Modernizada** - UI aprimorada com animações e componentes responsivos
 
 ## Configuração e Execução do Projeto
 
@@ -253,6 +261,36 @@ src/
 - **Visualização Aprimorada**: Charts interativos com anotações
 
 ### Gerenciamento de Dados
-- **Normalização de Status**: Sistema consistente para status de programas
-- **Validação Aprimorada**: Sanitização robusta de dados de entrada
-- **Estrutura de Banco Otimizada**: Relacionamentos eficientes e suporte a SSL
+- **Normalização de Status**: Sistema consistente para status de programas com constraints de banco de dados
+- **Validação Aprimorada**: Sanitização robusta de dados de entrada com express-validator
+- **Estrutura de Banco Otimizada**: Relacionamentos eficientes, suporte a SSL e integridade referencial
+
+## Melhorias e Correções Recentes
+
+### Sistema de Níveis de Prompting ABA (Novo)
+- **6 Níveis de Prompting**: Independente, Dica Verbal, Dica Gestual, Ajuda Física Parcial, Ajuda Física Total, Sem Resposta
+- **Indicadores Visuais**: Cores e descrições específicas para cada nível
+- **Pontuação Automática**: Cálculo de progresso baseado no nível de prompting e taxa de sucesso
+- **Interface Intuitiva**: Componente `PromptLevelSelector` com dropdown interativo
+
+### Correções de Bugs Importantes
+- **Erro de Atribuição de Programas**: Corrigida violação de constraint de status no banco de dados
+- **Status Normalizado**: Implementação de valores padronizados (active/archived/paused) em inglês
+- **Tratamento de Erros**: Melhor handling de erros de duplicação e validação
+
+### Melhorias na Interface de Usuário
+- **LoginPage Modernizada**: Novo design com animações e experiência aprimorada
+- **Dashboard de Pais Aprimorado**: Gráficos organizados por área de intervenção
+- **Relatórios PDF Avançados**: Inclusão de dados de sessão e gráficos de progresso
+- **Navegação Intuitiva**: Melhor fluxo de usuário e persistência de estado
+
+### Arquitetura e Performance
+- **Context API Otimizado**: Melhor gerenciamento de estado com PatientContext
+- **API Error Handling**: Tratamento abrangente de erros em todos os endpoints
+- **Socket.IO Integração**: Comunicação em tempo real aprimorada
+- **Componentização**: Melhor organização de componentes por funcionalidade
+
+### Sistema de Notificações Avançado
+- **Badges Inteligentes**: Indicadores de contagem em tempo real
+- **Alertas de Progresso**: Notificações automáticas baseadas em marcos de desenvolvimento
+- **Notificações por Paciente**: Sistema granular de notificações específicas

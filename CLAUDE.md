@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ABAplay is a SaaS platform for pediatric intervention clinics, focused on ABA (Applied Behavior Analysis) therapy. The application manages patients, intervention programs, progress tracking, and communication between therapists and parents.
+ABAplay is a comprehensive SaaS platform for pediatric intervention clinics, focused on ABA (Applied Behavior Analysis) therapy. The application manages patients, intervention programs, progress tracking, and communication between therapists and parents with advanced features for session management and progress analysis.
 
 ## Architecture
 
@@ -20,16 +20,17 @@ The project is a full-stack application with separated frontend and backend:
 - **Entry Point**: `src/server.js`
 - **Database Connection**: Uses pg Pool in `src/models/db.js` with SSL support
 - **Package Manager**: npm with CommonJS modules
+- **Version**: 1.0.0
 
 ### Frontend (`/frontend`)
-- **Framework**: React 18 with React Router DOM
-- **Styling**: Tailwind CSS
-- **Icons**: FontAwesome with react-fontawesome and Lucide React
-- **Charts**: Chart.js with react-chartjs-2 and chartjs-plugin-annotation
-- **PDF Generation**: jsPDF with jspdf-autotable
-- **HTTP Client**: Axios
-- **Real-time**: Socket.IO client
-- **Authentication**: JWT decode for token management
+- **Framework**: React 18 with React Router DOM v6
+- **Styling**: Tailwind CSS v3.4.7
+- **Icons**: FontAwesome v6.5.2 and Lucide React v0.417.0
+- **Charts**: Chart.js v4.4.3 with react-chartjs-2 v5.2.0 and chartjs-plugin-annotation v3.0.1
+- **PDF Generation**: jsPDF v2.5.1 with jspdf-autotable v3.8.2
+- **HTTP Client**: Axios v1.11.0
+- **Real-time**: Socket.IO client v4.8.1
+- **Authentication**: JWT decode v4.0.0 for token management
 - **Entry Point**: `src/index.js` → `src/App.js`
 - **Development Server**: Runs on port 3001 with HOST=0.0.0.0
 
@@ -89,20 +90,23 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 ## Key Application Features
 
 ### User Roles & Authentication
-- **Admin**: Manages clinics, users, and patient assignments
-- **Therapist**: Manages assigned patients, assigns programs, tracks progress
-- **Parent**: Views child's progress and communicates with therapists
+- **Admin**: Manages clinics, users, patient assignments, and program library
+- **Therapist**: Manages assigned patients, assigns programs, tracks progress with detailed session management
+- **Parent**: Views child's progress, communicates with therapists, and accesses detailed reports
 
 ### Core Features
 - **Program Management**: Hierarchical program structure with disciplines, areas, and sub-areas
-- **Session Tracking**: Progress tracking with session data and charts  
+- **Advanced Session Tracking**: Progress tracking with prompt levels, session data, and interactive charts
+- **Prompt Level System**: ABA-compliant prompt levels (Independent, Verbal Cue, Gestural Cue, Partial Physical Help, Total Physical Help, No Response) with visual indicators and progress scoring
 - **Communication**: Case discussions and parent-therapist chats with Socket.IO real-time messaging
 - **Notifications**: Real-time notification system with status management and badge indicators
-- **PDF Reports**: Consolidated patient reports with jsPDF generation including progress charts
-- **Program Assignment**: Therapist-patient program assignments with status management
-- **User Management**: Admin interface for managing clinics, users, and patient assignments
-- **Progress Visualization**: Interactive charts grouped by intervention areas for parents and therapists
-- **Status Management**: Normalized program status handling (active/archived/paused) across the system
+- **PDF Reports**: Consolidated patient reports with jsPDF generation including progress charts and session details
+- **Program Assignment**: Therapist-patient program assignments with normalized status management (active/archived/paused)
+- **User Management**: Admin interface for managing clinics, users, and patient assignments with role-based access
+- **Progress Visualization**: Interactive charts grouped by intervention areas with Chart.js annotations
+- **Status Management**: Normalized program status handling across the system with database constraints
+- **Contact Management**: Integrated contact system for therapists and colleagues
+- **Progress Alerts**: Automated alert system for session progress and milestones
 
 ### Context Architecture (Frontend)
 - `AuthContext`: User authentication and role-based access
@@ -146,58 +150,107 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 - `src/models/db.js` - Database connection with SSL support
 - `src/config/db.config.js` - Environment configuration
 - `src/controllers/` - Business logic controllers with validation
-  - `adminController.js` - Admin operations
-  - `assignmentController.js` - Patient-therapist assignments
-  - `authController.js` - Authentication logic
+  - `adminController.js` - Admin operations and user management
+  - `assignmentController.js` - Patient-therapist assignments with prompt level support
+  - `authController.js` - Authentication logic and JWT management
   - `caseDiscussionController.js` - Case discussion management
-  - `notificationController.js` - Notification system
-  - `parentChatController.js` - Parent-therapist chat
-  - `parentController.js` - Parent-specific operations
-  - `patientController.js` - Patient management
-  - `programController.js` - Program operations
-- `src/models/` - Database query functions (corresponding to controllers)
-- `src/routes/` - API endpoint definitions (corresponding to controllers)
-- `src/middleware/authMiddleware.js` - Authentication middleware
-- `src/utils/statusNormalizer.js` - Status normalization utility
+  - `contactController.js` - Contact and colleague management
+  - `notificationController.js` - Notification system with status tracking
+  - `parentChatController.js` - Parent-therapist chat functionality
+  - `parentController.js` - Parent-specific operations and dashboards
+  - `patientController.js` - Patient management and data access
+  - `programController.js` - Program operations and library management
+- `src/models/` - Database query functions with enhanced error handling
+  - `assignmentModel.js` - Assignment operations with status constraints
+  - `caseDiscussionModel.js` - Case discussion data management
+  - `clinicModel.js` - Clinic information management
+  - `notificationStatusModel.js` - Notification status tracking
+  - `parentChatModel.js` - Parent-therapist chat data
+  - `patientModel.js` - Patient data operations
+  - `programModel.js` - Program library and hierarchy management
+  - `userModel.js` - User authentication and profile management
+- `src/routes/` - API endpoint definitions with middleware integration
+- `src/middleware/authMiddleware.js` - JWT authentication and role verification
+- `src/utils/` - Utility functions and helpers
+  - `statusNormalizer.js` - Status normalization for program consistency
+  - `promptLevels.js` - ABA prompt level definitions and calculations
+  - `progressAlerts.js` - Progress monitoring and alert generation
 
 ### Frontend Structure
-- `src/App.js` - React app routing with role-based access
+- `src/App.js` - React app routing with role-based access and authentication guards
 - `src/context/` - React contexts for state management
-  - `AuthContext.js` - Authentication state
-  - `PatientContext.js` - Patient data and selection persistence
-  - `ProgramContext.js` - Program library management
+  - `AuthContext.js` - Authentication state and user session management
+  - `PatientContext.js` - Patient data, selection persistence, and program management
+  - `ProgramContext.js` - Program library management and hierarchical data
 - `src/components/` - Reusable UI components organized by feature
   - `admin/` - Admin-specific components (AssignmentModal, UserFormModal)
   - `chat/` - Communication components (CaseDiscussionChat, ParentTherapistChat)
+  - `contacts/` - Contact management components (ContactList)
   - `layout/` - Layout components (MainLayout, Navbar, Sidebar)
-  - `notifications/` - Notification components (NotificationBadge, NotificationPanel)
+  - `notifications/` - Notification system (NotificationBadge, NotificationPanel, PatientNotificationBadge, ProgressAlert)
   - `patient/` - Patient components (PatientDetails, PatientForm, PatientList, ConsolidatedReportModal)
-  - `program/` - Program components (AssignedProgramsList, ProgramCard, ProgramLibrary, SessionChart, SessionProgress)
-  - `shared/` - Shared components (Button, Modal)
-- `src/pages/` - Main page components
-  - `AdminPage.js` - Admin dashboard
-  - `AdminProgramsPage.js` - Admin program management
-  - `ClientsPage.js` - Client management
-  - `DashboardPage.js` - Therapist dashboard
-  - `HomePage.js` - Landing page
-  - `LoginPage.js` - Authentication
-  - `NotesPage.js` - Patient notes
-  - `ParentDashboardPage.js` - Parent dashboard
-  - `ProgramSessionPage.js` - Session tracking
-  - `ProgramsPage.js` - Program library
-- `src/api/` - Centralized API communication (corresponding to backend routes)
-- `src/hooks/useApi.js` - Custom API hook
-- `src/utils/pdfGenerator.js` - PDF report generation
-- `src/config.js` - Frontend configuration
+  - `program/` - Program components (AssignedProgramsList, ProgramCard, ProgramLibrary, SessionChart, SessionProgress, PromptLevelSelector)
+  - `shared/` - Shared components (Button, Modal, DateRangeSelector)
+- `src/pages/` - Main page components with enhanced functionality
+  - `AdminPage.js` - Admin dashboard with user and clinic management
+  - `AdminProgramsPage.js` - Admin program library management
+  - `ClientsPage.js` - Patient management for therapists
+  - `ColleaguesPage.js` - Professional network and contacts
+  - `ContactsPage.js` - Contact management interface
+  - `DashboardPage.js` - Therapist dashboard with patient overview
+  - `HomePage.js` - Landing page with role-based redirection
+  - `LoginPage.js` - Enhanced authentication with modern UI
+  - `NotesPage.js` - Patient notes and documentation
+  - `ParentDashboardPage.js` - Parent dashboard with progress visualization
+  - `ProgramSessionPage.js` - Advanced session tracking with prompt levels
+  - `ProgramsPage.js` - Program library and assignment interface
+- `src/api/` - Centralized API communication with error handling
+  - `adminApi.js`, `authApi.js`, `caseDiscussionApi.js`, `contactApi.js`
+  - `notificationApi.js`, `parentApi.js`, `parentChatApi.js`
+  - `patientApi.js`, `programApi.js` - Enhanced with prompt level support
+- `src/hooks/` - Custom React hooks
+  - `useApi.js` - Custom API hook with loading states
+  - `usePatientNotifications.js` - Patient-specific notification management
+- `src/utils/pdfGenerator.js` - Advanced PDF report generation with charts
+- `src/config.js` - Frontend configuration and API endpoints
 
 ### Database & Analysis
 - `DIAGNOSTIC_QUERIES.sql` - Database debugging and analysis queries
 - `NORMALIZE_STATUS.sql` - Status standardization queries
 
+## Recent Improvements & Technical Features
+
+### Prompt Level System Integration
+- **ABA-compliant prompt levels**: 6-level system from Independent (5) to No Response (0)
+- **Visual indicators**: Color-coded prompt levels with descriptive names
+- **Progress scoring**: Automated calculation based on prompt level and success rate
+- **Component**: `PromptLevelSelector.js` provides intuitive UI for session recording
+- **Backend utility**: `promptLevels.js` manages level definitions and progress calculations
+
+### Database Constraints & Status Management
+- **Status normalization**: Database constraints enforce consistent status values (active/archived/paused)
+- **Assignment creation fix**: Default status assignment prevents constraint violations
+- **Error handling**: Proper error messages for duplicate assignments and invalid statuses
+
+### Enhanced User Experience
+- **Modernized Login UI**: Updated LoginPage with improved animations and visual design
+- **Progress visualization**: Advanced Chart.js integration with annotations and area grouping
+- **PDF generation**: Comprehensive reports including session data and progress charts
+- **Real-time notifications**: Socket.IO integration for instant updates and communication
+
+### Technical Architecture Improvements
+- **Context-based state management**: Enhanced PatientContext with selection persistence
+- **API error handling**: Comprehensive error handling across all API endpoints
+- **Component organization**: Improved component structure with feature-based organization
+- **Hook abstractions**: Custom hooks for API calls and notification management
+
 ## Security Considerations
 
-- JWT tokens for stateless authentication
-- Password hashing with bcrypt
+- JWT tokens for stateless authentication with proper expiration handling
+- Password hashing with bcrypt for secure storage
 - CORS configuration for cross-origin requests
 - Environment variables for sensitive configuration
 - SSL support for production database connections
+- Input validation with express-validator across all endpoints
+- Database constraints for data integrity and consistency
+- Role-based access control with middleware verification
