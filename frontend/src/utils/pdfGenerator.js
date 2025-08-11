@@ -239,29 +239,29 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
         let programsByArea = {};
         
         // Se o paciente já tem sessionData (vem do modal), usa diretamente
-        if (patient.sessionData && patient.sessionData.length > 0) {
-            console.log('PDF: Usando dados de sessão do paciente:', patient.sessionData.length, 'sessões');
+        if (patient.sessionData && patient.sessionData.length > 0 && patient.assigned_programs) {
+            console.log('PDF: Usando dados completos do paciente:', patient.assigned_programs.length, 'programas');
             
-            // Identifica programas únicos das sessões
-            const uniquePrograms = {};
-            patient.sessionData.forEach(session => {
-                if (!uniquePrograms[session.program_id]) {
-                    uniquePrograms[session.program_id] = {
-                        id: session.program_id,
-                        program_id: session.program_id,
-                        title: session.program_name || `Programa ${session.program_id}`,
-                        area: session.area_name || session.discipline_name || 'Área não especificada'
-                    };
-                }
+            // Usa os programas atribuídos que já têm todas as informações corretas
+            const programsWithSessions = patient.assigned_programs.filter(program => {
+                // Verifica se este programa tem sessões no período
+                const hasSessions = patient.sessionData.some(session => 
+                    session.program_id === program.program_id || session.program_id === program.id
+                );
+                return hasSessions;
             });
             
-            // Organiza por área
-            Object.values(uniquePrograms).forEach(program => {
-                const areaKey = program.area;
+            // Organiza por área usando os dados completos dos programas
+            programsWithSessions.forEach(program => {
+                const areaKey = program.discipline_name || program.area_name || 'Área não especificada';
                 if (!programsByArea[areaKey]) {
                     programsByArea[areaKey] = [];
                 }
-                programsByArea[areaKey].push(program);
+                programsByArea[areaKey].push({
+                    ...program,
+                    area: areaKey,
+                    title: program.program_name || program.title || `Programa ${program.program_id || program.id}`
+                });
             });
         } else {
             // Fallback: busca dados via API se não há sessionData
@@ -285,13 +285,28 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
             doc.setTextColor(0);
         };
 
-        const checkAndAddPage = (currentY, requiredHeight = 20) => {
-            if (currentY > doc.internal.pageSize.getHeight() - margin - requiredHeight) {
+        // Controle melhorado de quebra de página
+        const checkAndAddPage = (currentY, requiredHeight = 20, forceNewPage = false) => {
+            if (forceNewPage || currentY > doc.internal.pageSize.getHeight() - margin - requiredHeight) {
                 addFooter(pageCount);
                 doc.addPage();
                 pageCount++;
                 return margin + 10;
             }
+            return currentY;
+        };
+        
+        // Função para quebrar texto em múltiplas linhas respeitando limites
+        const addTextWithPageBreaks = (text, x, startY, maxWidth, lineHeight = 5) => {
+            const lines = doc.splitTextToSize(text, maxWidth);
+            let currentY = startY;
+            
+            for (let i = 0; i < lines.length; i++) {
+                currentY = checkAndAddPage(currentY, lineHeight + 5);
+                doc.text(lines[i], x, currentY);
+                currentY += lineHeight;
+            }
+            
             return currentY;
         };
         
@@ -328,12 +343,18 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
         y += 6;
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        const textLines = doc.splitTextToSize(reportText || "Nenhuma observação fornecida.", contentWidth);
-        y = checkAndAddPage(y, textLines.length * 5);
-        doc.text(textLines, margin, y);
-        y += textLines.length * 5 + 10;
+        // Usa a nova função para controlar quebras de página no texto
+        y = addTextWithPageBreaks(reportText || "Nenhuma observação fornecida.", margin, y, contentWidth, 5);
+        y += 10;
 
-        y = checkAndAddPage(y, 15);
+        // Força nova página para os gráficos se há texto suficiente
+        const shouldStartChartsOnNewPage = y > margin + 100; // Se já passou de ~100mm da margem
+        if (shouldStartChartsOnNewPage) {
+            y = checkAndAddPage(y, 0, true); // Força nova página
+        } else {
+            y = checkAndAddPage(y, 15);
+        }
+        
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('Progresso dos Programas Ativos', margin, y);
@@ -345,7 +366,8 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
             programsByArea[area].forEach(program => {
                 allPrograms.push({
                     ...program,
-                    area: area // Adiciona a área do programa
+                    area: area,
+                    title: program.program_name || program.title || `Programa ${program.program_id || program.id}`
                 });
             });
         });
@@ -359,8 +381,8 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
             if (programSessionData.length === 0) return Promise.resolve(null);
             
             const canvas = document.createElement('canvas');
-            canvas.width = 500;
-            canvas.height = 250;
+            canvas.width = 600;
+            canvas.height = 300;
 
             const chartData = {
                 labels: programSessionData.map(s => formatDate(s.session_date, 'short')),
@@ -369,10 +391,10 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
                     data: programSessionData.map(s => s.score),
                     borderColor: '#4f46e5',
                     backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                    borderWidth: 2,
+                    borderWidth: 3,
                     pointRadius: programSessionData.map(session => {
                       // Linha de base = estrela maior
-                      return session.is_baseline ? 5 : 4;
+                      return session.is_baseline ? 6 : 5;
                     }),
                     pointBackgroundColor: programSessionData.map(session => {
                       // Prioridade: Linha de base > Nível de prompting > Padrão
@@ -390,7 +412,7 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
                     }),
                     pointBorderWidth: programSessionData.map(session => {
                       // Linha de base = borda mais grossa para efeito estrela
-                      return session.is_baseline ? 2 : 1;
+                      return session.is_baseline ? 3 : 2;
                     }),
                     pointStyle: programSessionData.map(session => {
                       // Linha de base = estrela, outros = círculo
@@ -404,20 +426,41 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
             const chartOptions = {
                 animation: false,
                 responsive: false,
+                devicePixelRatio: 2,
                 scales: { 
                     y: { 
                         beginAtZero: true, 
                         max: 105,
+                        grid: {
+                            display: true,
+                            color: 'rgba(156, 163, 175, 0.3)',
+                            drawBorder: false,
+                        },
                         ticks: {
-                            padding: 5,
+                            padding: 8,
+                            font: { size: 12, weight: 500 },
+                            color: '#4b5563',
                             callback: function(value) {
                                 return value + '%';
                             }
+                        },
+                        border: {
+                            display: false
                         }
                     },
                     x: {
+                        grid: {
+                            display: true,
+                            color: 'rgba(156, 163, 175, 0.3)',
+                            drawBorder: false,
+                        },
                         ticks: {
-                            padding: 5,
+                            padding: 8,
+                            font: { size: 12, weight: 500 },
+                            color: '#4b5563'
+                        },
+                        border: {
+                            display: false
                         }
                     }
                 },
@@ -447,11 +490,11 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
                 
                 setTimeout(() => {
                     resolve({
-                        title: program.title || program.program_name || 'Programa',
-                        area: program.area || program.area_name || 'Área',
-                        imageData: canvas.toDataURL('image/png')
+                        title: program.title || program.program_name || `Programa ${program.program_id || program.id}`,
+                        area: program.area || program.area_name || program.discipline_name || 'Área',
+                        imageData: canvas.toDataURL('image/png', 0.95)
                     });
-                }, 50);
+                }, 100);
             });
         });
 
@@ -485,60 +528,119 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
                     doc.text(area, margin + 2, y);
                     y += 10;
 
-                    // Desenha os gráficos para esta área
-                    chartsByArea[area].forEach(chartInfo => {
+                    // Desenha os gráficos para esta área com controle rigoroso de página
+                    const chartsInArea = chartsByArea[area];
+                    let chartsOnCurrentPage = 0;
+                    const maxChartsPerPage = 2;
+                    
+                    for (let i = 0; i < chartsInArea.length; i++) {
+                        const chartInfo = chartsInArea[i];
                         const chartHeight = 60; 
-                        y = checkAndAddPage(y, chartHeight + 35); // Mais espaço para legenda organizada
-                        doc.setFontSize(10);
-                        doc.setFont('helvetica', 'bold');
-                        doc.text(chartInfo.title, margin, y);
-                        y += 4;
-                        doc.addImage(chartInfo.imageData, 'PNG', margin, y, contentWidth, chartHeight);
-                        y += chartHeight + 5;
+                        const chartWidth = contentWidth;
+                        const titleHeight = 8;
+                        const legendHeight = 20;
+                        const totalChartHeight = titleHeight + chartHeight + legendHeight + 15; // 15 = espaço entre gráficos
                         
-                        // Adiciona legenda de cores dos níveis de prompting
+                        // Verifica se já tem o máximo de gráficos na página OU não há espaço suficiente
+                        const needsNewPage = chartsOnCurrentPage >= maxChartsPerPage || 
+                                           (y + totalChartHeight > doc.internal.pageSize.getHeight() - margin - 20);
+                        
+                        if (needsNewPage) {
+                            addFooter(pageCount);
+                            doc.addPage();
+                            pageCount++;
+                            y = margin + 10;
+                            chartsOnCurrentPage = 0;
+                            
+                            // Reimprime o cabeçalho da área na nova página
+                            doc.setFontSize(12);
+                            doc.setFont('helvetica', 'bold');
+                            doc.setFillColor(240, 240, 240);
+                            doc.rect(margin, y - 4, contentWidth, 7, 'F');
+                            doc.text(area + ' (continuação)', margin + 2, y);
+                            y += 10;
+                        }
+                        
+                        // Título do programa mais destacado
+                        doc.setFontSize(12);
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(79, 70, 229); // Cor indigo
+                        doc.text(chartInfo.title, margin, y);
+                        doc.setTextColor(0); // Volta para preto
+                        y += titleHeight;
+                        
+                        // Gráfico
+                        doc.addImage(chartInfo.imageData, 'PNG', margin, y, chartWidth, chartHeight);
+                        y += chartHeight + 8;
+                        
+                        // Legenda compacta e organizada
                         doc.setFontSize(8);
                         doc.setFont('helvetica', 'bold');
-                        doc.text('Legenda dos Níveis de Prompting:', margin, y);
-                        y += 3;
+                        doc.text('Níveis de Prompting:', margin, y);
+                        y += 4;
                         
                         doc.setFont('helvetica', 'normal');
                         const legendItems = [
                             { color: [16, 185, 129], text: 'Independente' },
-                            { color: [139, 92, 246], text: 'Dica Verbal' },
-                            { color: [245, 158, 11], text: 'Dica Gestual' },
-                            { color: [239, 68, 68], text: 'Ajuda Física Parcial' },
-                            { color: [220, 38, 38], text: 'Ajuda Física Total' },
-                            { color: [107, 114, 128], text: 'Não Executado' }
+                            { color: [139, 92, 246], text: 'Verbal' },
+                            { color: [245, 158, 11], text: 'Gestual' },
+                            { color: [239, 68, 68], text: 'Física Parcial' },
+                            { color: [220, 38, 38], text: 'Física Total' }
                         ];
                         
-                        // Layout da legenda simplificado para evitar problemas
-                        const itemsPerRow = 2; // Reduzido para 2 itens por linha
-                        for (let i = 0; i < legendItems.length; i += itemsPerRow) {
+                        // Legenda em duas linhas compactas
+                        const itemsPerRow = 3;
+                        for (let j = 0; j < legendItems.length; j += itemsPerRow) {
                             let xPos = margin;
-                            const rowItems = legendItems.slice(i, i + itemsPerRow);
+                            const rowItems = legendItems.slice(j, j + itemsPerRow);
                             
                             rowItems.forEach((item) => {
-                                // Círculo colorido
                                 doc.setFillColor(item.color[0], item.color[1], item.color[2]);
                                 doc.circle(xPos + 1, y - 0.5, 1, 'F');
-                                
-                                // Texto
                                 doc.setTextColor(0);
                                 doc.text(item.text, xPos + 4, y);
-                                xPos += 90; // Mais espaço entre itens
+                                xPos += 60;
                             });
-                            
-                            y += 4; // Próxima linha
+                            y += 4;
                         }
                         
-                        y += 3; // Mais espaço antes da linha de símbolos
+                        // Símbolos especiais como legenda visual
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(0);
+                        doc.text('Símbolos:', margin, y);
+                        y += 4;
                         
-                        // Linha de símbolos separada e controlada
-                        doc.setFontSize(7);
-                        doc.text('Estrela = Linha de Base, Circulo = Sessao Regular', margin, y);
-                        y += 10; // Mais espaço após legenda
-                    });
+                        doc.setFont('helvetica', 'normal');
+                        
+                        // Estrela para linha de base (usando linhas para formar estrela)
+                        const starX = margin + 2;
+                        const starY = y - 1;
+                        const starSize = 1.5;
+                        doc.setDrawColor(245, 158, 11);
+                        doc.setLineWidth(1.5);
+                        
+                        // Desenha estrela usando linhas (formato X com linha vertical e horizontal)
+                        doc.line(starX - starSize, starY - starSize, starX + starSize, starY + starSize); // diagonal \
+                        doc.line(starX + starSize, starY - starSize, starX - starSize, starY + starSize); // diagonal /
+                        doc.line(starX, starY - starSize, starX, starY + starSize); // vertical |
+                        doc.line(starX - starSize, starY, starX + starSize, starY); // horizontal -
+                        doc.setTextColor(0);
+                        doc.text('Linha de Base', starX + 8, y);
+                        
+                        // Círculo para sessão regular
+                        const circleX = margin + 80;
+                        doc.setFillColor(79, 70, 229); // Azul padrão
+                        doc.circle(circleX, y - 1, 1.5, 'F');
+                        doc.text('Sessão Regular', circleX + 6, y);
+                        
+                        y += 12; // Espaço entre gráficos
+                        
+                        chartsOnCurrentPage++;
+                    }
+                    
+                    // Adiciona espaço entre áreas diferentes
+                    y += 5;
                 });
             }
 
