@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { API_URL } from '../config';
 
-const PARENT_CHAT_API_URL = `${API_URL}/api/parent-chat`;
+const PARENT_CHAT_API_URL = `${API_URL}/parent-chat`;
 
 export const getChatMessages = async (patientId) => {
   try {

@@ -8,7 +8,7 @@ import { API_URL } from '../config';
  * @returns {Promise<object>} A resposta da API, contendo a ação a ser tomada.
  */
 export const checkUser = async (username) => {
-  const response = await fetch(`${API_URL}/api/auth/check-user`, {
+  const response = await fetch(`${API_URL}/auth/check-user`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username }),
@@ -28,7 +28,7 @@ export const checkUser = async (username) => {
  * @returns {Promise<object>} A resposta da API.
  */
 export const loginUser = async (credentials) => {
-  const response = await fetch(`${API_URL}/api/auth/login`, {
+  const response = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials),
@@ -49,7 +49,7 @@ export const loginUser = async (credentials) => {
  * @returns {Promise<object>} A resposta da API.
  */
 export const setPassword = async (userId, password) => {
-  const response = await fetch(`${API_URL}/api/auth/set-password`, {
+  const response = await fetch(`${API_URL}/auth/set-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, password }),

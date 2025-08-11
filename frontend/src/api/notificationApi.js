@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { API_URL } from '../config';
 
-const NOTIFICATION_API_URL = `${API_URL}/api/notifications`;
+const NOTIFICATION_API_URL = `${API_URL}/notifications`;
 
 export const getNotifications = async (userId) => {
   try {

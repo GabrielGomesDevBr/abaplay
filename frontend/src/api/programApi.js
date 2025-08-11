@@ -2,7 +2,7 @@ import axios from 'axios';
 import { API_URL } from '../config';
 
 const apiClient = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: API_URL,
 });
 
 // Interceptor para adicionar o token JWT a cada requisição

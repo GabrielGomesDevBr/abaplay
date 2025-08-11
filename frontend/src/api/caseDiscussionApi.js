@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { API_URL } from '../config';
 
-const CASE_DISCUSSION_API_URL = `${API_URL}/api/discussions`;
+const CASE_DISCUSSION_API_URL = `${API_URL}/discussions`;
 
 export const getCaseDiscussionMessages = async (patientId) => {
   try {

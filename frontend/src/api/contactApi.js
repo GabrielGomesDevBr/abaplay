@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { API_URL } from '../config';
 
-const CONTACT_API_URL = `${API_URL}/api/contacts`;
+const CONTACT_API_URL = `${API_URL}/contacts`;
 
 /**
  * Busca terapeutas atribuídos a um paciente
