@@ -1,6 +1,27 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faCheck, faSpinner, faBullseye, faTag } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faCheck, faSpinner, faBullseye, faTag, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+
+// Função para obter descrições resumidas dos códigos ABA
+const getABACodesSummary = (procedure) => {
+  if (!procedure) return null;
+  
+  try {
+    const steps = typeof procedure === 'string' ? JSON.parse(procedure) : procedure;
+    const allCodes = new Set();
+    
+    steps.forEach(step => {
+      if (step.sd) allCodes.add('SD');
+      if (step.r || step.R) allCodes.add('R');
+      if (step.c || step.C) allCodes.add('C');
+      if (step.dica) allCodes.add('Dica');
+    });
+    
+    return allCodes.size > 0 ? Array.from(allCodes).sort() : null;
+  } catch (e) {
+    return null;
+  }
+};
 
 // Função de cores para tags melhorada
 const getTagColor = (tag) => {
@@ -89,6 +110,35 @@ const ProgramCard = ({ program, onAssign, isAssigning, isPatientSelected, isAssi
             {objectiveText.length > 120 ? `${objectiveText.substring(0, 120)}...` : objectiveText}
           </p>
         </div>
+
+        {/* Seção de componentes ABA */}
+        {(() => {
+          const abaCodes = getABACodesSummary(program.procedure);
+          return abaCodes && (
+            <div className="mb-4">
+              <div className="flex items-center mb-2">
+                <FontAwesomeIcon icon={faInfoCircle} className="text-emerald-500 mr-2" />
+                <h4 className="text-sm font-semibold text-gray-700">Componentes ABA</h4>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {abaCodes.map(code => (
+                  <span
+                    key={code}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"
+                    title={
+                      code === 'SD' ? 'Estímulo Discriminativo' :
+                      code === 'R' ? 'Resposta' :
+                      code === 'C' ? 'Consequência' :
+                      code === 'Dica' ? 'Prompt' : code
+                    }
+                  >
+                    {code}
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
         
         {/* Tags (se houver) */}
         {program.tags && program.tags.length > 0 && (

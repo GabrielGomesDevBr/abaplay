@@ -19,6 +19,17 @@ import { useAuth } from '../../context/AuthContext';
 import { usePatients } from '../../context/PatientContext';
 import PromptLevelSelector from './PromptLevelSelector';
 
+// Opções para Modalidade de Ensino
+const TEACHING_MODALITIES = [
+  { value: 'dtt', label: 'DTT (Discrete Trial Training)', description: 'Tentativas Discretas' },
+  { value: 'net', label: 'NET (Natural Environment Teaching)', description: 'Ensino no Ambiente Natural' },
+  { value: 'incidental', label: 'Incidental Teaching', description: 'Ensino Incidental' },
+  { value: 'structured_play', label: 'Structured Play', description: 'Brincadeira Estruturada' },
+  { value: 'group_instruction', label: 'Group Instruction', description: 'Instrução em Grupo' }
+];
+
+
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -47,16 +58,19 @@ const SessionProgress = ({ program, assignment }) => {
   const { user } = useAuth();
   const { selectedPatient, getPromptLevelForProgram, setPromptLevelForProgram } = usePatients();
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedStepIndex, setSelectedStepIndex] = useState('');
   const [attempts, setAttempts] = useState(program?.trials || '');
   const [successes, setSuccesses] = useState('');
   const [notes, setNotes] = useState('');
   const [isBaseline, setIsBaseline] = useState(false);
+  const [teachingModality, setTeachingModality] = useState('');
   
   // Nível de prompting persistente por programa/paciente
   const [promptLevel, setPromptLevel] = useState(() => {
     if (selectedPatient && program) {
-      return getPromptLevelForProgram(selectedPatient.id, program.id);
+      const programId = program.program_id || program.id;
+      if (programId) {
+        return getPromptLevelForProgram(selectedPatient.id, programId);
+      }
     }
     return 5; // Padrão: Independente
   });
@@ -97,9 +111,12 @@ const SessionProgress = ({ program, assignment }) => {
 
   // Função para atualizar o nível de prompting
   const handlePromptLevelChange = useCallback((newLevel) => {
+    // Tenta usar program_id primeiro, depois id como fallback
+    const programId = program?.program_id || program?.id;
+    
     setPromptLevel(newLevel);
-    if (selectedPatient && program) {
-      setPromptLevelForProgram(selectedPatient.id, program.id, newLevel);
+    if (selectedPatient && program && programId) {
+      setPromptLevelForProgram(selectedPatient.id, programId, newLevel);
     }
   }, [selectedPatient, program, setPromptLevelForProgram]);
 
@@ -116,14 +133,11 @@ const SessionProgress = ({ program, assignment }) => {
 
     // Carrega o nível de prompting salvo para este programa/paciente
     if (selectedPatient && program) {
-      const savedLevel = getPromptLevelForProgram(selectedPatient.id, program.id);
-      setPromptLevel(savedLevel);
-    }
-
-    if (procedureSteps.length > 0) {
-      setSelectedStepIndex('0');
-    } else {
-      setSelectedStepIndex('');
+      const programId = program.program_id || program.id;
+      if (programId) {
+        const savedLevel = getPromptLevelForProgram(selectedPatient.id, programId);
+        setPromptLevel(savedLevel);
+      }
     }
   }, [program, assignment, fetchEvolutionHistory, procedureSteps, selectedPatient, getPromptLevelForProgram]);
 
@@ -132,16 +146,16 @@ const SessionProgress = ({ program, assignment }) => {
     const numAttempts = parseInt(attempts, 10);
     const numSuccesses = parseInt(successes, 10);
 
-    if (selectedStepIndex === '') {
-      setError('Por favor, selecione um passo do programa.');
-      return;
-    }
     if (isNaN(numAttempts) || numAttempts <= 0) {
       setError('O número de tentativas é inválido.');
       return;
     }
     if (isNaN(numSuccesses) || numSuccesses < 0 || numSuccesses > numAttempts) {
       setError(`O número de acertos deve ser entre 0 e ${numAttempts}.`);
+      return;
+    }
+    if (!teachingModality) {
+      setError('Por favor, selecione uma modalidade de ensino.');
       return;
     }
 
@@ -151,7 +165,6 @@ const SessionProgress = ({ program, assignment }) => {
     
     const score = (numAttempts > 0) ? (numSuccesses / numAttempts) * 100 : 0;
     
-    const selectedStep = procedureSteps[parseInt(selectedStepIndex, 10)];
     const evolutionPayload = {
       assignment_id: assignment.assignment_id,
       step_id: null,
@@ -161,9 +174,9 @@ const SessionProgress = ({ program, assignment }) => {
       score: parseFloat(score.toFixed(2)),
       details: {
         notes: notes,
-        step: selectedStep,
         isBaseline: isBaseline,
         promptLevel: promptLevel,
+        teachingModality: teachingModality,
       },
     };
 
@@ -172,6 +185,7 @@ const SessionProgress = ({ program, assignment }) => {
         setSuccesses('');
         setNotes('');
         setIsBaseline(false);
+        setTeachingModality('');
         setSaveSuccess(true);
         fetchEvolutionHistory();
         setTimeout(() => setSaveSuccess(false), 2000);
@@ -468,6 +482,7 @@ const SessionProgress = ({ program, assignment }) => {
         </div>
       )}
 
+
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-8">
         <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-200 px-6 py-4">
           <h3 className="text-lg font-semibold text-gray-800 flex items-center">
@@ -480,100 +495,155 @@ const SessionProgress = ({ program, assignment }) => {
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Informações Básicas - Modernizado */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+            <h4 className="text-sm font-semibold text-blue-700 mb-4 flex items-center">
+              <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full mr-2"></div>
+              Informações da Sessão
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                  <label htmlFor="session-date" className="block text-sm font-medium text-gray-700 mb-1.5">Data</label>
-                  <input type="date" id="session-date" required value={sessionDate} onChange={e => setSessionDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500" />
+                <label htmlFor="session-date" className="block text-sm font-medium text-blue-700 mb-2">
+                  Data da Sessão
+                </label>
+                <input 
+                  type="date" 
+                  id="session-date" 
+                  required 
+                  value={sessionDate} 
+                  onChange={e => setSessionDate(e.target.value)} 
+                  className="w-full px-4 py-3 border border-blue-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white" 
+                />
               </div>
               <div>
-                  <div className="flex items-center space-x-2 mb-1.5">
-                      <label htmlFor="program-step" className="block text-sm font-medium text-gray-700">
-                          Passo do Programa
-                      </label>
-                      <div className="group relative">
-                          <FontAwesomeIcon 
-                              icon={faInfoCircle} 
-                              className="text-blue-500 text-xs cursor-help" 
-                          />
-                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none w-64 z-10">
-                              Cada programa ABA é dividido em passos progressivos. Selecione o passo específico que está sendo trabalhado nesta sessão para um acompanhamento mais detalhado do progresso.
-                          </div>
-                      </div>
-                  </div>
-                  <select id="program-step" value={selectedStepIndex} onChange={e => setSelectedStepIndex(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500">
-                      <option value="" disabled>Selecione o passo específico que está trabalhando</option>
-                      {procedureSteps.map((step, index) => (
-                          <option key={index} value={index}>
-                              Passo {index + 1}: {step.term}
-                          </option>
-                      ))}
-                  </select>
-                  {procedureSteps.length === 0 && (
-                      <p className="text-xs text-gray-500 mt-1">
-                          Este programa não possui passos detalhados configurados.
-                      </p>
-                  )}
+                <label htmlFor="teaching-modality" className="block text-sm font-medium text-blue-700 mb-2">
+                  Modalidade de Ensino
+                </label>
+                <select
+                  id="teaching-modality"
+                  value={teachingModality}
+                  onChange={e => setTeachingModality(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 border border-blue-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                >
+                  <option value="" disabled>Selecione a modalidade</option>
+                  {TEACHING_MODALITIES.map(modality => (
+                    <option key={modality.value} value={modality.value} title={modality.description}>
+                      {modality.label}
+                    </option>
+                  ))}
+                </select>
               </div>
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+          {/* Dados Quantitativos - Modernizado */}
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-6">
+            <h4 className="text-sm font-semibold text-emerald-700 mb-4 flex items-center">
+              <div className="w-2 h-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full mr-2"></div>
+              Dados da Sessão
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                  <label htmlFor="session-attempts" className="block text-sm font-medium text-gray-700 mb-1.5">Tentativas</label>
-                  <input 
-                    type="number" 
-                    id="session-attempts" 
-                    value={attempts} 
-                    readOnly 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 cursor-not-allowed" 
-                  />
+                <label htmlFor="session-attempts" className="block text-sm font-medium text-emerald-700 mb-2">
+                  Tentativas
+                </label>
+                <input 
+                  type="number" 
+                  id="session-attempts" 
+                  value={attempts} 
+                  readOnly 
+                  className="w-full px-4 py-3 border border-emerald-200 rounded-xl shadow-sm bg-emerald-100/50 cursor-not-allowed text-emerald-800 font-medium" 
+                />
               </div>
               <div>
-                  <label htmlFor="session-successes" className="block text-sm font-medium text-gray-700 mb-1.5">Acertos</label>
-                  <input type="number" id="session-successes" value={successes} onChange={e => setSuccesses(e.target.value)} min="0" step="1" required placeholder="Ex: 8" className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500" />
+                <label htmlFor="session-successes" className="block text-sm font-medium text-emerald-700 mb-2">
+                  Acertos
+                </label>
+                <input 
+                  type="number" 
+                  id="session-successes" 
+                  value={successes} 
+                  onChange={e => setSuccesses(e.target.value)} 
+                  min="0" 
+                  step="1" 
+                  required 
+                  placeholder="Ex: 8" 
+                  className="w-full px-4 py-3 border border-emerald-300 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white" 
+                />
               </div>
+            </div>
           </div>
-          <div>
-              <label htmlFor="session-notes" className="block text-sm font-medium text-gray-700 mb-1.5">Observações</label>
-              <textarea id="session-notes" value={notes} onChange={e => setNotes(e.target.value)} rows="3" placeholder="Observações sobre a sessão..." className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 resize-vertical"></textarea>
+          {/* Observações - Modernizado */}
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6">
+            <label htmlFor="session-notes" className="block text-sm font-medium text-amber-700 mb-3 flex items-center">
+              <div className="w-2 h-2 bg-gradient-to-r from-amber-500 to-orange-600 rounded-full mr-2"></div>
+              Observações da Sessão
+            </label>
+            <textarea 
+              id="session-notes" 
+              value={notes} 
+              onChange={e => setNotes(e.target.value)} 
+              rows="4" 
+              placeholder="Registre observações importantes sobre a sessão: comportamento, estratégias utilizadas, contexto, etc..." 
+              className="w-full px-4 py-3 border border-amber-300 rounded-xl shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all bg-white resize-none" 
+            />
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <PromptLevelSelector
-                selectedLevel={promptLevel}
-                onLevelChange={handlePromptLevelChange}
-                disabled={isSubmitting}
-              />
+          {/* Nível de Prompting e Linha de Base - Modernizado */}
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6">
+            <h4 className="text-sm font-semibold text-purple-700 mb-4 flex items-center">
+              <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full mr-2"></div>
+              Nível de Suporte e Configurações
+            </h4>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <PromptLevelSelector
+                  selectedLevel={promptLevel}
+                  onLevelChange={handlePromptLevelChange}
+                  disabled={isSubmitting}
+                />
+              </div>
               
-              <div className="flex items-center justify-start pt-2 lg:pt-8">
+              <div className="flex items-center justify-start lg:justify-center pt-2 lg:pt-8">
+                <div className="flex items-center space-x-3 bg-white border border-purple-200 rounded-xl px-4 py-3 shadow-sm">
                   <input 
                     type="checkbox" 
                     id="is-baseline" 
                     checked={isBaseline} 
                     onChange={e => setIsBaseline(e.target.checked)} 
-                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" 
+                    className="h-4 w-4 text-purple-600 border-purple-300 rounded focus:ring-purple-500 transition-all" 
                   />
-                  <label htmlFor="is-baseline" className="ml-2 block text-sm text-gray-900">
+                  <label htmlFor="is-baseline" className="block text-sm font-medium text-purple-700 cursor-pointer">
                     Marcar como Linha de Base
                   </label>
+                </div>
               </div>
+            </div>
           </div>
 
-          <div className="flex items-center justify-end">
+          {/* Botão de Submit - Modernizado */}
+          <div className="bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 rounded-xl p-6">
+            <div className="flex items-center justify-end">
               <button 
                 type="submit" 
                 disabled={isSubmitting} 
                 className={`
-                  font-semibold py-3 px-8 rounded-lg text-sm transition-all duration-200 flex items-center justify-center min-w-[180px] shadow-sm transform hover:scale-105 disabled:hover:scale-100
+                  font-semibold py-4 px-8 rounded-xl text-sm transition-all duration-300 flex items-center justify-center min-w-[200px] shadow-lg transform hover:scale-105 disabled:hover:scale-100 border-2
                   ${saveSuccess 
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-green-200' 
-                    : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-indigo-200 disabled:from-gray-300 disabled:to-gray-400'
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-green-200 border-green-300' 
+                    : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-indigo-200 border-indigo-300 disabled:from-gray-300 disabled:to-gray-400 disabled:border-gray-300'
                   }
                 `}
               >
-                <div className="bg-white bg-opacity-20 p-1 rounded-full mr-3">
-                  <FontAwesomeIcon icon={isSubmitting ? faSpinner : (saveSuccess ? faCheck : faSave)} className={`text-sm ${isSubmitting && 'fa-spin'}`} />
+                <div className="bg-white bg-opacity-20 p-2 rounded-full mr-3">
+                  <FontAwesomeIcon icon={isSubmitting ? faSpinner : (saveSuccess ? faCheck : faSave)} className={`text-base ${isSubmitting && 'fa-spin'}`} />
                 </div>
-                {isSubmitting ? 'Salvando...' : saveSuccess ? 'Salvo com Sucesso!' : 'Salvar Sessão'}
+                <span className="text-base">
+                  {isSubmitting ? 'Salvando...' : saveSuccess ? 'Salvo com Sucesso!' : 'Salvar Sessão'}
+                </span>
               </button>
+            </div>
           </div>
           {error && (
             <div className="bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-500 p-4 rounded-r-lg">
