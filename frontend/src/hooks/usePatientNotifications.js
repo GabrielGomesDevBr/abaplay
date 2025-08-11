@@ -21,7 +21,7 @@ const usePatientNotifications = (patientIds = []) => {
       const promises = patientIds.map(async (patientId) => {
         try {
           const response = await axios.get(
-            `${API_URL}/api/notifications/patient/${patientId}`,
+            `${API_URL}/notifications/patient/${patientId}`,
             {
               headers: { 'Authorization': `Bearer ${token}` }
             }
@@ -68,7 +68,7 @@ const usePatientNotifications = (patientIds = []) => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `${API_URL}/api/notifications/patient/${patientId}`,
+        `${API_URL}/notifications/patient/${patientId}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -100,7 +100,7 @@ const usePatientNotifications = (patientIds = []) => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `${API_URL}/api/notifications/mark-read`,
+        `${API_URL}/notifications/mark-read`,
         {
           patientId,
           chatType
@@ -194,7 +194,7 @@ const usePatientNotifications = (patientIds = []) => {
       const promises = patientIds.map(async (patientId) => {
         try {
           const response = await axios.get(
-            `${API_URL}/api/notifications/patient/${patientId}`,
+            `${API_URL}/notifications/patient/${patientId}`,
             {
               headers: { 'Authorization': `Bearer ${token}` }
             }

@@ -48,7 +48,7 @@ const ProgressAlert = ({ onClose, onProgramCompleted }) => {
         return;
       }
 
-      const response = await axios.get(`${API_URL}/api/notifications/progress-alerts`, {
+      const response = await axios.get(`${API_URL}/notifications/progress-alerts`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -68,7 +68,7 @@ const ProgressAlert = ({ onClose, onProgramCompleted }) => {
   const handleMarkAsCompleted = async (program) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/api/notifications/mark-completed`, {
+      await axios.post(`${API_URL}/notifications/mark-completed`, {
         assignmentId: program.assignment_id,
         patientId: program.patient_id
       }, {
