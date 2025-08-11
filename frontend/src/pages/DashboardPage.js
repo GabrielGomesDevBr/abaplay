@@ -518,11 +518,32 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
                     return gradient;
                 },
                 borderWidth: 2.5,
-                pointRadius: 5,
-                pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#f59e0b' : '#4f46e5'),
-                pointBorderColor: '#ffffff',
-                pointBorderWidth: 2,
-                pointStyle: programSessionData.map(s => s.is_baseline ? 'rectRot' : 'circle'),
+                pointRadius: programSessionData.map(session => {
+                  // Linha de base = estrela maior
+                  return session.is_baseline ? 6 : 5;
+                }),
+                pointBackgroundColor: programSessionData.map(session => {
+                  // Prioridade: Linha de base > Nível de prompting > Padrão
+                  if (session.is_baseline) {
+                    return '#f59e0b'; // Amarelo para linha de base
+                  } else if (session.details?.promptLevelColor) {
+                    return session.details.promptLevelColor; // Cor específica do nível de prompting
+                  } else {
+                    return '#4f46e5'; // Cor padrão (azul)
+                  }
+                }),
+                pointBorderColor: programSessionData.map(session => {
+                  // Linha de base = borda amarela mais grossa
+                  return session.is_baseline ? '#f59e0b' : '#ffffff';
+                }),
+                pointBorderWidth: programSessionData.map(session => {
+                  // Linha de base = borda mais grossa para efeito estrela
+                  return session.is_baseline ? 3 : 2;
+                }),
+                pointStyle: programSessionData.map(session => {
+                  // Linha de base = estrela, outros = círculo
+                  return session.is_baseline ? 'star' : 'circle';
+                }),
                 pointHoverRadius: 8,
                 pointHoverBorderWidth: 3,
                 fill: true,
@@ -619,9 +640,37 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
                         
                         afterLabel: (context) => {
                             if (!context || context.dataIndex === undefined) return '';
+                            const dataIndex = context.dataIndex;
+                            const session = programSessionData[dataIndex];
                             
-                            // Como attempts e successes são undefined, não mostra nada aqui para evitar duplicação
-                            return '';
+                            // Debug: verificar estrutura dos dados (apenas o primeiro)
+                            if (dataIndex === 0) {
+                                console.log('Dashboard data - attempts:', session?.attempts);
+                                console.log('Dashboard data - successes:', session?.successes);
+                                console.log('Dashboard data - created_at:', session?.created_at);
+                                console.log('Dashboard data - therapist_name:', session?.therapist_name);
+                                console.log('Dashboard data - FULL OBJECT:', JSON.stringify(session, null, 2));
+                            }
+                            
+                            const attempts = session?.attempts || 0;
+                            const successes = session?.successes || 0;
+                            
+                            let result = [`📊 Acertos: ${successes}/${attempts}`];
+                            
+                            // Adiciona informações do nível de prompting se disponível
+                            if (session?.details?.promptLevelName) {
+                                result.push(`🎯 Nível: ${session.details.promptLevelName}`);
+                            }
+                            
+                            // Adiciona informações do terapeuta se disponível (Dashboard pode não ter esses dados)
+                            if (session && session.therapist_name && session.therapist_name.trim() !== '') {
+                                result.push(`👨‍⚕️ Terapeuta: ${session.therapist_name}`);
+                            } else if (session && session.therapist_id && session.therapist_id !== null) {
+                                result.push(`👨‍⚕️ Terapeuta ID: ${session.therapist_id}`);
+                            }
+                            // Nota: Dashboard pode não ter dados completos de terapeuta
+                            
+                            return result;
                         },
                         
                         afterBody: (items) => {
@@ -679,8 +728,52 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
         };
 
         return (
-            <div className="h-48 w-full">
-                <Line options={chartOptions} data={chartData} />
+            <div className="w-full">
+                <div className="h-48 w-full">
+                    <Line options={chartOptions} data={chartData} />
+                </div>
+                
+                {/* Legenda de cores dos níveis de prompting */}
+                <div className="mt-3 bg-gray-50 rounded-lg p-2 border border-gray-200">
+                    <div className="mb-2">
+                        <h6 className="text-xs font-medium text-gray-700 mb-1">Níveis de Prompting:</h6>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                            <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#10b981' }}></div>
+                                <span className="text-gray-600">Independente</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#8b5cf6' }}></div>
+                                <span className="text-gray-600">Verbal</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#f59e0b' }}></div>
+                                <span className="text-gray-600">Gestual</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ef4444' }}></div>
+                                <span className="text-gray-600">Física Parcial</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#dc2626' }}></div>
+                                <span className="text-gray-600">Física Total</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="border-t border-gray-200 pt-1">
+                        <div className="flex flex-wrap gap-3 text-xs">
+                            <div className="flex items-center space-x-1">
+                                <span className="text-amber-500 text-sm">⭐</span>
+                                <span className="text-gray-600">Linha de Base</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                                <span className="text-gray-600">Sessão Regular</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     };

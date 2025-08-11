@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faSpinner, faCheck, faBullseye, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faSpinner, faCheck, faBullseye, faChartLine, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -16,6 +16,8 @@ import {
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { recordProgress, getAssignmentEvolution } from '../../api/programApi';
 import { useAuth } from '../../context/AuthContext';
+import { usePatients } from '../../context/PatientContext';
+import PromptLevelSelector from './PromptLevelSelector';
 
 ChartJS.register(
   CategoryScale,
@@ -43,12 +45,21 @@ const formatDate = (dateString, format = 'long') => {
 
 const SessionProgress = ({ program, assignment }) => {
   const { user } = useAuth();
+  const { selectedPatient, getPromptLevelForProgram, setPromptLevelForProgram } = usePatients();
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedStepIndex, setSelectedStepIndex] = useState('');
   const [attempts, setAttempts] = useState(program?.trials || '');
   const [successes, setSuccesses] = useState('');
   const [notes, setNotes] = useState('');
   const [isBaseline, setIsBaseline] = useState(false);
+  
+  // Nível de prompting persistente por programa/paciente
+  const [promptLevel, setPromptLevel] = useState(() => {
+    if (selectedPatient && program) {
+      return getPromptLevelForProgram(selectedPatient.id, program.id);
+    }
+    return 5; // Padrão: Independente
+  });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -84,6 +95,14 @@ const SessionProgress = ({ program, assignment }) => {
     }
   }, [assignment]);
 
+  // Função para atualizar o nível de prompting
+  const handlePromptLevelChange = useCallback((newLevel) => {
+    setPromptLevel(newLevel);
+    if (selectedPatient && program) {
+      setPromptLevelForProgram(selectedPatient.id, program.id, newLevel);
+    }
+  }, [selectedPatient, program, setPromptLevelForProgram]);
+
   useEffect(() => {
     if (!program || !assignment) {
       // Limpa os dados quando nenhum programa é selecionado
@@ -95,12 +114,18 @@ const SessionProgress = ({ program, assignment }) => {
     fetchEvolutionHistory();
     setAttempts(program.trials || '');
 
+    // Carrega o nível de prompting salvo para este programa/paciente
+    if (selectedPatient && program) {
+      const savedLevel = getPromptLevelForProgram(selectedPatient.id, program.id);
+      setPromptLevel(savedLevel);
+    }
+
     if (procedureSteps.length > 0) {
       setSelectedStepIndex('0');
     } else {
       setSelectedStepIndex('');
     }
-  }, [program, assignment, fetchEvolutionHistory, procedureSteps]);
+  }, [program, assignment, fetchEvolutionHistory, procedureSteps, selectedPatient, getPromptLevelForProgram]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -138,6 +163,7 @@ const SessionProgress = ({ program, assignment }) => {
         notes: notes,
         step: selectedStep,
         isBaseline: isBaseline,
+        promptLevel: promptLevel,
       },
     };
 
@@ -173,12 +199,36 @@ const SessionProgress = ({ program, assignment }) => {
           return gradient;
         },
         borderWidth: 3,
-        pointRadius: 6,
-        pointBackgroundColor: evolutionData.map(session => session.details?.isBaseline ? '#f59e0b' : '#4f46e5'),
-        pointBorderColor: '#ffffff',
-        pointBorderWidth: 2,
-        pointHoverRadius: 8,
+        pointRadius: evolutionData.map(session => {
+          // Linha de base = estrela maior
+          return session.details?.isBaseline ? 8 : 6;
+        }),
+        pointBackgroundColor: evolutionData.map(session => {
+          // Prioridade: Linha de base > Nível de prompting > Padrão
+          if (session.details?.isBaseline) {
+            return '#f59e0b'; // Amarelo para linha de base
+          } else if (session.details?.promptLevelColor) {
+            return session.details.promptLevelColor; // Cor específica do nível de prompting
+          } else {
+            return '#4f46e5'; // Cor padrão (azul)
+          }
+        }),
+        pointBorderColor: evolutionData.map(session => {
+          // Linha de base = borda amarela mais grossa
+          return session.details?.isBaseline ? '#f59e0b' : '#ffffff';
+        }),
+        pointBorderWidth: evolutionData.map(session => {
+          // Linha de base = borda mais grossa para efeito estrela
+          return session.details?.isBaseline ? 4 : 2;
+        }),
+        pointHoverRadius: evolutionData.map(session => {
+          return session.details?.isBaseline ? 10 : 8;
+        }),
         pointHoverBorderWidth: 3,
+        pointStyle: evolutionData.map(session => {
+          // Linha de base = estrela, outros = círculo
+          return session.details?.isBaseline ? 'star' : 'circle';
+        }),
         fill: true,
         tension: 0.4,
         shadowColor: 'rgba(79, 70, 229, 0.3)',
@@ -246,13 +296,35 @@ const SessionProgress = ({ program, assignment }) => {
                         console.log('SessionProgress data (FUNCIONA) - attempts:', session?.attempts);
                         console.log('SessionProgress data (FUNCIONA) - successes:', session?.successes);
                         console.log('SessionProgress data (FUNCIONA) - created_at:', session?.created_at);
+                        console.log('SessionProgress data (FUNCIONA) - therapist_name:', session?.therapist_name);
                         console.log('SessionProgress data (FUNCIONA) - FULL OBJECT:', JSON.stringify(session, null, 2));
                     }
                     
                     const attempts = session?.attempts || 0;
                     const successes = session?.successes || 0;
                     
-                    return [`📊 Acertos: ${successes}/${attempts}`];
+                    let result = [`📊 Acertos: ${successes}/${attempts}`];
+                    
+                    // Adiciona informações do nível de prompting se disponível
+                    if (session?.details?.promptLevelName) {
+                        result.push(`🎯 Nível: ${session.details.promptLevelName}`);
+                    }
+                    
+                    // Adiciona informações do terapeuta se disponível
+                    if (session && session.therapist_name && session.therapist_name.trim() !== '') {
+                        result.push(`👨‍⚕️ Terapeuta: ${session.therapist_name}`);
+                    } else if (session && session.therapist_id && session.therapist_id !== null) {
+                        result.push(`👨‍⚕️ Terapeuta ID: ${session.therapist_id}`);
+                    }
+                    
+                    // Debug adicional do terapeuta
+                    if (dataIndex === 0) {
+                        console.log('DEBUG Terapeuta - therapist_name:', session?.therapist_name);
+                        console.log('DEBUG Terapeuta - therapist_id:', session?.therapist_id);
+                        console.log('DEBUG Terapeuta - therapist_email:', session?.therapist_email);
+                    }
+                    
+                    return result;
                 },
                 
                 afterBody: (context) => {
@@ -411,15 +483,33 @@ const SessionProgress = ({ program, assignment }) => {
                   <input type="date" id="session-date" required value={sessionDate} onChange={e => setSessionDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500" />
               </div>
               <div>
-                  <label htmlFor="program-step" className="block text-sm font-medium text-gray-700 mb-1.5">Passo do Programa</label>
+                  <div className="flex items-center space-x-2 mb-1.5">
+                      <label htmlFor="program-step" className="block text-sm font-medium text-gray-700">
+                          Passo do Programa
+                      </label>
+                      <div className="group relative">
+                          <FontAwesomeIcon 
+                              icon={faInfoCircle} 
+                              className="text-blue-500 text-xs cursor-help" 
+                          />
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none w-64 z-10">
+                              Cada programa ABA é dividido em passos progressivos. Selecione o passo específico que está sendo trabalhado nesta sessão para um acompanhamento mais detalhado do progresso.
+                          </div>
+                      </div>
+                  </div>
                   <select id="program-step" value={selectedStepIndex} onChange={e => setSelectedStepIndex(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500">
-                      <option value="" disabled>Selecione um passo</option>
+                      <option value="" disabled>Selecione o passo específico que está trabalhando</option>
                       {procedureSteps.map((step, index) => (
                           <option key={index} value={index}>
                               Passo {index + 1}: {step.term}
                           </option>
                       ))}
                   </select>
+                  {procedureSteps.length === 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                          Este programa não possui passos detalhados configurados.
+                      </p>
+                  )}
               </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -443,17 +533,25 @@ const SessionProgress = ({ program, assignment }) => {
               <textarea id="session-notes" value={notes} onChange={e => setNotes(e.target.value)} rows="3" placeholder="Observações sobre a sessão..." className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 resize-vertical"></textarea>
           </div>
           
-          <div className="flex items-center justify-start pt-2">
-              <input 
-                type="checkbox" 
-                id="is-baseline" 
-                checked={isBaseline} 
-                onChange={e => setIsBaseline(e.target.checked)} 
-                className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <PromptLevelSelector
+                selectedLevel={promptLevel}
+                onLevelChange={handlePromptLevelChange}
+                disabled={isSubmitting}
               />
-              <label htmlFor="is-baseline" className="ml-2 block text-sm text-gray-900">
-                Marcar como Linha de Base
-              </label>
+              
+              <div className="flex items-center justify-start pt-2 lg:pt-8">
+                  <input 
+                    type="checkbox" 
+                    id="is-baseline" 
+                    checked={isBaseline} 
+                    onChange={e => setIsBaseline(e.target.checked)} 
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" 
+                  />
+                  <label htmlFor="is-baseline" className="ml-2 block text-sm text-gray-900">
+                    Marcar como Linha de Base
+                  </label>
+              </div>
           </div>
 
           <div className="flex items-center justify-end">
@@ -525,9 +623,65 @@ const SessionProgress = ({ program, assignment }) => {
                     </div>
                   </div>
               ) : evolutionData.length > 0 ? (
-                  <div className="h-full bg-gradient-to-br from-gray-50 to-indigo-50 rounded-lg p-4">
-                    <Line options={chartOptions} data={chartData} />
-                  </div>
+                  <>
+                    <div className="h-full bg-gradient-to-br from-gray-50 to-indigo-50 rounded-lg p-4">
+                      <Line options={chartOptions} data={chartData} />
+                    </div>
+                    
+                    {/* Legenda de cores dos níveis de prompting */}
+                    <div className="mt-4 bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <div className="mb-3">
+                        <h6 className="text-xs font-medium text-gray-700 mb-2">Legenda dos Níveis de Prompting:</h6>
+                        <div className="flex flex-wrap gap-3 text-xs">
+                          <div className="flex items-center space-x-1">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10b981' }}></div>
+                            <span className="text-gray-600">Independente</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#8b5cf6' }}></div>
+                            <span className="text-gray-600">Dica Verbal</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#f59e0b' }}></div>
+                            <span className="text-gray-600">Dica Gestual</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ef4444' }}></div>
+                            <span className="text-gray-600">Ajuda Física Parcial</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#dc2626' }}></div>
+                            <span className="text-gray-600">Ajuda Física Total</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#6b7280' }}></div>
+                            <span className="text-gray-600">Não Executado</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="border-t border-gray-200 pt-2">
+                        <h6 className="text-xs font-medium text-gray-700 mb-2">Formas dos Pontos:</h6>
+                        <div className="flex flex-wrap gap-4 text-xs">
+                          <div className="flex items-center space-x-2">
+                            <div className="relative">
+                              <span className="text-amber-500 text-sm">⭐</span>
+                            </div>
+                            <span className="text-gray-600">Linha de Base</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                            <span className="text-gray-600">Sessão Regular</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-2 text-xs text-amber-700 flex items-center space-x-1">
+                        <span>💡</span>
+                        <span>Apenas sessões "Independente" contam para critério de domínio (80%+)</span>
+                      </div>
+                    </div>
+                  </>
               ) : (
                   <div className="flex items-center justify-center h-full text-center bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg border-2 border-dashed border-gray-300">
                     <div>

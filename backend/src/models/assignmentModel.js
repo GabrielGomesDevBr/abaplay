@@ -7,13 +7,13 @@ const Assignment = {
      * @returns {Promise<object>} A atribuição criada.
      */
     async create(assignmentData) {
-        const { patient_id, program_id, therapist_id } = assignmentData;
+        const { patient_id, program_id, therapist_id, status = 'active' } = assignmentData;
         const query = `
-            INSERT INTO patient_program_assignments (patient_id, program_id, therapist_id) 
-            VALUES ($1, $2, $3) 
+            INSERT INTO patient_program_assignments (patient_id, program_id, therapist_id, status) 
+            VALUES ($1, $2, $3, $4) 
             RETURNING *;
         `;
-        const { rows } = await pool.query(query, [patient_id, program_id, therapist_id]);
+        const { rows } = await pool.query(query, [patient_id, program_id, therapist_id, status]);
         return rows[0];
     },
 
@@ -195,13 +195,29 @@ const Assignment = {
      * @returns {Promise<Array<object>>} Uma lista de registros de progresso.
      */
     async findProgressByAssignmentId(assignmentId) {
-        const query = `
-            SELECT * FROM patient_program_progress 
-            WHERE assignment_id = $1 
-            ORDER BY session_date ASC, created_at ASC;
-        `;
-        const { rows } = await pool.query(query, [assignmentId]);
-        return rows;
+        try {
+            const query = `
+                SELECT 
+                    ppp.*,
+                    COALESCE(u.full_name, u.username, 'Terapeuta') as therapist_name
+                FROM patient_program_progress ppp
+                LEFT JOIN users u ON ppp.therapist_id = u.id
+                WHERE ppp.assignment_id = $1 
+                ORDER BY ppp.session_date ASC, ppp.created_at ASC;
+            `;
+            const { rows } = await pool.query(query, [assignmentId]);
+            return rows;
+        } catch (error) {
+            console.error('Erro na query findProgressByAssignmentId:', error);
+            // Fallback para query original sem join se houver erro
+            const fallbackQuery = `
+                SELECT * FROM patient_program_progress 
+                WHERE assignment_id = $1 
+                ORDER BY session_date ASC, created_at ASC;
+            `;
+            const { rows } = await pool.query(fallbackQuery, [assignmentId]);
+            return rows;
+        }
     },
 
     /**

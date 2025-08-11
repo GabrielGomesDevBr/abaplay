@@ -3,6 +3,12 @@ const router = express.Router();
 const assignmentController = require('../controllers/assignmentController');
 // O middleware de autenticação foi removido daqui, pois já é aplicado no server.js
 
+// Rota para buscar níveis de prompting disponíveis (deve vir antes de rotas com parâmetros)
+router.get('/prompt-levels', assignmentController.getPromptLevels);
+
+// Rota para registrar progresso (evolução)
+router.post('/progress', assignmentController.recordProgress);
+
 // Rota para atribuir um programa a um paciente
 router.post('/', assignmentController.assignProgramToPatient);
 
@@ -20,9 +26,6 @@ router.get('/:id/history', assignmentController.getAssignmentDetailsWithHistory)
 
 // Rota para ATUALIZAR O STATUS de uma designação
 router.patch('/:id/status', assignmentController.updateAssignmentStatus);
-
-// Rota para registrar progresso (evolução)
-router.post('/progress', assignmentController.recordProgress);
 
 // Rota para buscar a evolução de uma designação específica
 router.get('/:assignmentId/progress', assignmentController.getEvolutionForAssignment);

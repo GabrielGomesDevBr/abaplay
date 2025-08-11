@@ -72,11 +72,32 @@ const ReportChart = ({ program, sessionData }) => {
                 return gradient;
             },
             borderWidth: 2.5,
-            pointRadius: 5,
-            pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#f59e0b' : '#4f46e5'),
-            pointBorderColor: '#ffffff',
-            pointBorderWidth: 2,
-            pointStyle: programSessionData.map(s => s.is_baseline ? 'rectRot' : 'circle'),
+            pointRadius: programSessionData.map(session => {
+              // Linha de base = estrela maior
+              return session.is_baseline ? 6 : 5;
+            }),
+            pointBackgroundColor: programSessionData.map(session => {
+              // Prioridade: Linha de base > Nível de prompting > Padrão
+              if (session.is_baseline) {
+                return '#f59e0b'; // Amarelo para linha de base
+              } else if (session.details?.promptLevelColor) {
+                return session.details.promptLevelColor; // Cor específica do nível de prompting
+              } else {
+                return '#4f46e5'; // Cor padrão (azul)
+              }
+            }),
+            pointBorderColor: programSessionData.map(session => {
+              // Linha de base = borda amarela mais grossa
+              return session.is_baseline ? '#f59e0b' : '#ffffff';
+            }),
+            pointBorderWidth: programSessionData.map(session => {
+              // Linha de base = borda mais grossa para efeito estrela
+              return session.is_baseline ? 3 : 2;
+            }),
+            pointStyle: programSessionData.map(session => {
+              // Linha de base = estrela, outros = círculo
+              return session.is_baseline ? 'star' : 'circle';
+            }),
             pointHoverRadius: 7,
             pointHoverBorderWidth: 3,
             fill: true,
@@ -143,6 +164,48 @@ const ReportChart = ({ program, sessionData }) => {
             <div className="p-4">
                 <div className="w-full h-56 relative bg-gradient-to-br from-gray-50 to-indigo-50 rounded-lg p-2">
                     <Line options={chartOptions} data={chartData} />
+                </div>
+                
+                {/* Legenda de cores dos níveis de prompting */}
+                <div className="mt-3 bg-gray-50 rounded-lg p-2 border border-gray-200">
+                    <div className="mb-2">
+                        <h6 className="text-xs font-medium text-gray-700 mb-1">Níveis de Prompting:</h6>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                            <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#10b981' }}></div>
+                                <span className="text-gray-600">Independente</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#8b5cf6' }}></div>
+                                <span className="text-gray-600">Verbal</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#f59e0b' }}></div>
+                                <span className="text-gray-600">Gestual</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ef4444' }}></div>
+                                <span className="text-gray-600">Física Parcial</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#dc2626' }}></div>
+                                <span className="text-gray-600">Física Total</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="border-t border-gray-200 pt-1">
+                        <div className="flex flex-wrap gap-3 text-xs">
+                            <div className="flex items-center space-x-1">
+                                <span className="text-amber-500 text-sm">⭐</span>
+                                <span className="text-gray-600">Linha de Base</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                                <span className="text-gray-600">Sessão Regular</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -29,6 +29,12 @@ export const PatientProvider = ({ children }) => {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [patientToEdit, setPatientToEdit] = useState(null);
   
+  // Estado para persistir níveis de prompting por programa/paciente
+  const [promptLevels, setPromptLevels] = useState(() => {
+    const saved = localStorage.getItem('promptLevels');
+    return saved ? JSON.parse(saved) : {};
+  });
+  
   const refreshData = useCallback(async (patientIdToReselect = null) => {
     if (!isAuthenticated || !user || !token) {
       setPatients([]);
@@ -116,6 +122,19 @@ export const PatientProvider = ({ children }) => {
   const addSession = (sessionData) => performActionAndReload(() => createSession(selectedPatient.id, sessionData, token));
   const saveNotes = (notes) => performActionAndReload(() => updatePatientNotes(selectedPatient.id, notes, token));
 
+  // Funções para gerenciar níveis de prompting persistentes
+  const getPromptLevelForProgram = useCallback((patientId, programId) => {
+    const key = `${patientId}_${programId}`;
+    return promptLevels[key] || 5; // Padrão: Independente
+  }, [promptLevels]);
+
+  const setPromptLevelForProgram = useCallback((patientId, programId, level) => {
+    const key = `${patientId}_${programId}`;
+    const newLevels = { ...promptLevels, [key]: level };
+    setPromptLevels(newLevels);
+    localStorage.setItem('promptLevels', JSON.stringify(newLevels));
+  }, [promptLevels]);
+
   const value = {
     patients, selectedPatient, 
     isLoading, 
@@ -129,7 +148,8 @@ export const PatientProvider = ({ children }) => {
     openReportModal: useCallback(() => setIsReportModalOpen(true), []),
     closeReportModal: useCallback(() => setIsReportModalOpen(false), []),
     assignProgram, removeProgram, toggleProgramStatus, addSession, saveNotes,
-    refreshPatientData: refreshData
+    refreshPatientData: refreshData,
+    getPromptLevelForProgram, setPromptLevelForProgram
   };
 
   return (

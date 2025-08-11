@@ -236,11 +236,39 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
     }
 
     try {
-        // Importa a função da API dinamicamente para obter dados completos dos programas
-        const { getPatientProgramsGrade } = await import('../api/programApi');
+        let programsByArea = {};
         
-        // Busca os programas organizados com dados completos
-        const programsByArea = await getPatientProgramsGrade(patient.id);
+        // Se o paciente já tem sessionData (vem do modal), usa diretamente
+        if (patient.sessionData && patient.sessionData.length > 0) {
+            console.log('PDF: Usando dados de sessão do paciente:', patient.sessionData.length, 'sessões');
+            
+            // Identifica programas únicos das sessões
+            const uniquePrograms = {};
+            patient.sessionData.forEach(session => {
+                if (!uniquePrograms[session.program_id]) {
+                    uniquePrograms[session.program_id] = {
+                        id: session.program_id,
+                        program_id: session.program_id,
+                        title: session.program_name || `Programa ${session.program_id}`,
+                        area: session.area_name || session.discipline_name || 'Área não especificada'
+                    };
+                }
+            });
+            
+            // Organiza por área
+            Object.values(uniquePrograms).forEach(program => {
+                const areaKey = program.area;
+                if (!programsByArea[areaKey]) {
+                    programsByArea[areaKey] = [];
+                }
+                programsByArea[areaKey].push(program);
+            });
+        } else {
+            // Fallback: busca dados via API se não há sessionData
+            console.log('PDF: Buscando dados via API - sem sessionData disponível');
+            const { getPatientProgramsGrade } = await import('../api/programApi');
+            programsByArea = await getPatientProgramsGrade(patient.id);
+        }
 
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const margin = 15;
@@ -323,9 +351,10 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
         });
         
         const chartPromises = allPrograms.map(program => {
+            // Volta à lógica original: busca sessões do paciente filtradas por programa
             const programSessionData = (patient.sessionData || [])
-                .filter(session => session.program_id === program.id);
-                // Dados já vêm ordenados do backend
+                .filter(session => session.program_id === program.program_id || session.program_id === program.id);
+            // Dados já vêm ordenados do backend
 
             if (programSessionData.length === 0) return Promise.resolve(null);
             
@@ -341,9 +370,32 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
                     borderColor: '#4f46e5',
                     backgroundColor: 'rgba(79, 70, 229, 0.1)',
                     borderWidth: 2,
-                    pointRadius: 4,
-                    pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#f59e0b' : '#4f46e5'),
-                    pointStyle: programSessionData.map(s => s.is_baseline ? 'rectRot' : 'circle'),
+                    pointRadius: programSessionData.map(session => {
+                      // Linha de base = estrela maior
+                      return session.is_baseline ? 5 : 4;
+                    }),
+                    pointBackgroundColor: programSessionData.map(session => {
+                      // Prioridade: Linha de base > Nível de prompting > Padrão
+                      if (session.is_baseline) {
+                        return '#f59e0b'; // Amarelo para linha de base
+                      } else if (session.details && session.details.promptLevelColor) {
+                        return session.details.promptLevelColor; // Cor específica do nível de prompting
+                      } else {
+                        return '#4f46e5'; // Cor padrão (azul)
+                      }
+                    }),
+                    pointBorderColor: programSessionData.map(session => {
+                      // Linha de base = borda amarela mais grossa
+                      return session.is_baseline ? '#f59e0b' : '#ffffff';
+                    }),
+                    pointBorderWidth: programSessionData.map(session => {
+                      // Linha de base = borda mais grossa para efeito estrela
+                      return session.is_baseline ? 2 : 1;
+                    }),
+                    pointStyle: programSessionData.map(session => {
+                      // Linha de base = estrela, outros = círculo
+                      return session.is_baseline ? 'star' : 'circle';
+                    }),
                     fill: true,
                     tension: 0.3,
                 }]
@@ -395,8 +447,8 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
                 
                 setTimeout(() => {
                     resolve({
-                        title: program.title,
-                        area: program.area,
+                        title: program.title || program.program_name || 'Programa',
+                        area: program.area || program.area_name || 'Área',
                         imageData: canvas.toDataURL('image/png')
                     });
                 }, 50);
@@ -436,13 +488,56 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
                     // Desenha os gráficos para esta área
                     chartsByArea[area].forEach(chartInfo => {
                         const chartHeight = 60; 
-                        y = checkAndAddPage(y, chartHeight + 10);
+                        y = checkAndAddPage(y, chartHeight + 35); // Mais espaço para legenda organizada
                         doc.setFontSize(10);
                         doc.setFont('helvetica', 'bold');
                         doc.text(chartInfo.title, margin, y);
                         y += 4;
                         doc.addImage(chartInfo.imageData, 'PNG', margin, y, contentWidth, chartHeight);
-                        y += chartHeight + 10;
+                        y += chartHeight + 5;
+                        
+                        // Adiciona legenda de cores dos níveis de prompting
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('Legenda dos Níveis de Prompting:', margin, y);
+                        y += 3;
+                        
+                        doc.setFont('helvetica', 'normal');
+                        const legendItems = [
+                            { color: [16, 185, 129], text: 'Independente' },
+                            { color: [139, 92, 246], text: 'Dica Verbal' },
+                            { color: [245, 158, 11], text: 'Dica Gestual' },
+                            { color: [239, 68, 68], text: 'Ajuda Física Parcial' },
+                            { color: [220, 38, 38], text: 'Ajuda Física Total' },
+                            { color: [107, 114, 128], text: 'Não Executado' }
+                        ];
+                        
+                        // Layout da legenda simplificado para evitar problemas
+                        const itemsPerRow = 2; // Reduzido para 2 itens por linha
+                        for (let i = 0; i < legendItems.length; i += itemsPerRow) {
+                            let xPos = margin;
+                            const rowItems = legendItems.slice(i, i + itemsPerRow);
+                            
+                            rowItems.forEach((item) => {
+                                // Círculo colorido
+                                doc.setFillColor(item.color[0], item.color[1], item.color[2]);
+                                doc.circle(xPos + 1, y - 0.5, 1, 'F');
+                                
+                                // Texto
+                                doc.setTextColor(0);
+                                doc.text(item.text, xPos + 4, y);
+                                xPos += 90; // Mais espaço entre itens
+                            });
+                            
+                            y += 4; // Próxima linha
+                        }
+                        
+                        y += 3; // Mais espaço antes da linha de símbolos
+                        
+                        // Linha de símbolos separada e controlada
+                        doc.setFontSize(7);
+                        doc.text('Estrela = Linha de Base, Circulo = Sessao Regular', margin, y);
+                        y += 10; // Mais espaço após legenda
                     });
                 });
             }

@@ -151,6 +151,20 @@ export const getAssignmentDetailsWithHistory = async (assignmentId) => {
 };
 
 /**
+ * Busca os níveis de prompting disponíveis.
+ * @returns {Promise<Array>}
+ */
+export const getPromptLevels = async () => {
+  try {
+    const response = await apiClient.get('/assignments/prompt-levels');
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao buscar níveis de prompting:', error);
+    throw error;
+  }
+};
+
+/**
  * Regista o progresso de uma sessão.
  * @param {Object} progressData - Os dados da sessão a serem registados.
  * @returns {Promise<Object>}

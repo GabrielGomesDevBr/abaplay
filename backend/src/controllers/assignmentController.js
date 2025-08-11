@@ -1,4 +1,5 @@
 const Assignment = require('../models/assignmentModel');
+const { getAllPromptLevels, getPromptLevel, isValidPromptLevel, calculateProgressScore } = require('../utils/promptLevels');
 
 /**
  * @description Atribui um programa a um paciente.
@@ -117,8 +118,34 @@ exports.updateAssignmentStatus = async (req, res) => {
  * @route POST /api/assignments/progress
  */
 exports.recordProgress = async (req, res) => {
-    const progressData = { ...req.body, therapist_id: req.user.id };
     try {
+        const progressData = { ...req.body, therapist_id: req.user.id };
+        
+        // Processa níveis de prompting se fornecidos
+        if (progressData.details && progressData.details.promptLevel !== undefined) {
+            const promptLevelId = progressData.details.promptLevel;
+            
+            // Valida nível de prompting
+            if (!isValidPromptLevel(promptLevelId)) {
+                return res.status(400).json({ 
+                    errors: [{ msg: 'Nível de prompting inválido. Deve ser entre 0 e 5.' }] 
+                });
+            }
+            
+            // Adiciona informações do nível de prompting
+            const promptLevel = getPromptLevel(promptLevelId);
+            progressData.details.promptLevelName = promptLevel.name;
+            progressData.details.promptLevelColor = promptLevel.color;
+            
+            // Calcula score de progresso se necessário
+            if (progressData.attempts > 0) {
+                const successRate = progressData.successes / progressData.attempts;
+                progressData.details.progressScore = calculateProgressScore(promptLevelId, successRate);
+                
+                console.log(`[PROMPT-LEVEL] Nível: ${promptLevel.name} (${promptLevelId}), Taxa: ${Math.round(successRate * 100)}%, Score Progresso: ${progressData.details.progressScore}%`);
+            }
+        }
+        
         const progress = await Assignment.createProgress(progressData);
         res.status(201).json(progress);
     } catch (error) {
@@ -141,5 +168,19 @@ exports.getEvolutionForAssignment = async (req, res) => {
     } catch (error) {
         console.error(`[CONTROLLER-ERROR] getEvolutionForAssignment (AssignmentID: ${assignmentId}):`, error);
         res.status(500).send('Erro ao buscar evolução do paciente.');
+    }
+};
+
+/**
+ * Busca todos os níveis de prompting disponíveis
+ * GET /api/assignments/prompt-levels
+ */
+exports.getPromptLevels = async (req, res) => {
+    try {
+        const levels = getAllPromptLevels();
+        res.status(200).json(levels);
+    } catch (error) {
+        console.error('[CONTROLLER-ERROR] getPromptLevels:', error);
+        res.status(500).json({ errors: [{ msg: 'Erro interno do servidor.' }] });
     }
 };
