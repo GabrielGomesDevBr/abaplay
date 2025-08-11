@@ -87,13 +87,36 @@ const ParentChart = ({ program, sessionData }) => {
                 return gradient;
             },
             borderWidth: 3,
-            pointRadius: 6,
-            pointBackgroundColor: programSessionData.map(s => s.is_baseline ? '#f59e0b' : '#4f46e5'),
-            pointBorderColor: '#ffffff',
-            pointBorderWidth: 2,
-            pointStyle: programSessionData.map(s => s.is_baseline ? 'rectRot' : 'circle'),
-            pointHoverRadius: 8,
+            pointRadius: programSessionData.map(session => {
+                // Linha de base = estrela maior
+                return session.is_baseline ? 8 : 6;
+            }),
+            pointBackgroundColor: programSessionData.map(session => {
+                // Prioridade: Linha de base > Nível de prompting > Padrão
+                if (session.is_baseline) {
+                    return '#f59e0b'; // Amarelo para linha de base
+                } else if (session.details && session.details.promptLevelColor) {
+                    return session.details.promptLevelColor; // Cor específica do nível de prompting
+                } else {
+                    return '#4f46e5'; // Cor padrão (azul)
+                }
+            }),
+            pointBorderColor: programSessionData.map(session => {
+                // Linha de base = borda amarela mais grossa
+                return session.is_baseline ? '#f59e0b' : '#ffffff';
+            }),
+            pointBorderWidth: programSessionData.map(session => {
+                // Linha de base = borda mais grossa para efeito estrela
+                return session.is_baseline ? 4 : 2;
+            }),
+            pointHoverRadius: programSessionData.map(session => {
+                return session.is_baseline ? 10 : 8;
+            }),
             pointHoverBorderWidth: 3,
+            pointStyle: programSessionData.map(session => {
+                // Linha de base = estrela, outros = círculo
+                return session.is_baseline ? 'star' : 'circle';
+            }),
             fill: true,
             tension: 0.4,
             shadowColor: 'rgba(79, 70, 229, 0.3)',
@@ -190,8 +213,56 @@ const ParentChart = ({ program, sessionData }) => {
     };
     
     return (
-        <div className="w-full h-48 sm:h-56 relative bg-gradient-to-br from-gray-50 to-indigo-50 rounded-lg p-2">
-            <Line options={chartOptions} data={chartData} />
+        <div className="w-full relative bg-gradient-to-br from-gray-50 to-indigo-50 rounded-lg p-2">
+            <div className="h-48 sm:h-56 mb-4">
+                <Line options={chartOptions} data={chartData} />
+            </div>
+            
+            {/* Legenda de cores dos níveis de prompting */}
+            <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="text-xs font-semibold text-gray-700 mb-2">Níveis de Prompting:</div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                    <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded-full" style={{backgroundColor: '#10b981'}}></div>
+                        <span className="text-gray-600">Independente</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded-full" style={{backgroundColor: '#8b5cf6'}}></div>
+                        <span className="text-gray-600">Verbal</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded-full" style={{backgroundColor: '#f59e0b'}}></div>
+                        <span className="text-gray-600">Gestual</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded-full" style={{backgroundColor: '#ef4444'}}></div>
+                        <span className="text-gray-600">Física Parcial</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded-full" style={{backgroundColor: '#dc2626'}}></div>
+                        <span className="text-gray-600">Física Total</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded-full" style={{backgroundColor: '#6b7280'}}></div>
+                        <span className="text-gray-600">Sem Resposta</span>
+                    </div>
+                </div>
+                
+                {/* Símbolos especiais */}
+                <div className="mt-3 pt-2 border-t border-gray-100">
+                    <div className="text-xs font-semibold text-gray-700 mb-2">Símbolos:</div>
+                    <div className="flex items-center space-x-4 text-xs">
+                        <div className="flex items-center space-x-2">
+                            <span className="text-yellow-500 text-base">⭐</span>
+                            <span className="text-gray-600">Linha de Base</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <span className="text-indigo-500 text-base">●</span>
+                            <span className="text-gray-600">Sessão Regular</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
