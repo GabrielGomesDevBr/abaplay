@@ -12,7 +12,38 @@
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     
-    <!-- Tailwind CSS será incluído via build process -->
+    <!-- Tailwind CSS - Fallback CDN apenas para produção -->
+    <script>
+      // Só carrega CDN em produção quando Tailwind falha
+      document.addEventListener('DOMContentLoaded', function() {
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+          // Aguarda um pouco para CSS carregar
+          setTimeout(function() {
+            // Cria elemento teste
+            var testDiv = document.createElement('div');
+            testDiv.className = 'bg-blue-500 text-white p-4 hidden';
+            document.body.appendChild(testDiv);
+            
+            // Verifica se estilos estão aplicados
+            var styles = getComputedStyle(testDiv);
+            var hasTailwind = styles.backgroundColor === 'rgb(59, 130, 246)' || 
+                             styles.padding === '16px' || 
+                             styles.color === 'rgb(255, 255, 255)';
+            
+            document.body.removeChild(testDiv);
+            
+            if (!hasTailwind) {
+              console.log('🚨 Tailwind CSS não detectado, carregando CDN...');
+              var script = document.createElement('script');
+              script.src = 'https://cdn.tailwindcss.com';
+              document.head.appendChild(script);
+            } else {
+              console.log('✅ Tailwind CSS funcionando corretamente');
+            }
+          }, 1000);
+        }
+      });
+    </script>
     
     <!-- Font Awesome (Ícones) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
