@@ -26,7 +26,9 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3001", // Permitir acesso do frontend em desenvolvimento
+    origin: process.env.NODE_ENV === 'production' 
+      ? process.env.FRONTEND_URL || "https://abaplay-frontend.onrender.com"
+      : "http://localhost:3001", // Permitir acesso do frontend
     methods: ["GET", "POST"]
   }
 });
@@ -54,7 +56,12 @@ io.on('connection', (socket) => {
 // --- FIM DA CONFIGURAÇÃO DO SOCKET.IO ---
 
 // Configuração de Middlewares
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL || "https://abaplay-frontend.onrender.com"
+    : "http://localhost:3001",
+  credentials: true
+}));
 app.use(express.json());
 
 // Middleware de Log para depuração

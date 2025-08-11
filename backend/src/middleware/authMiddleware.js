@@ -28,8 +28,10 @@ const verifyToken = (req, res, next) => {
     // MELHORIA: Log detalhado do erro no console do backend para depuração.
     console.error('ERRO NA VERIFICAÇÃO DO TOKEN:', {
         errorMessage: error.message,
-        tokenReceived: token, // Cuidado ao logar tokens em produção real.
+        tokenReceived: process.env.NODE_ENV === 'production' ? '[HIDDEN]' : token, // Não loga token em produção
         errorType: error.name,
+        JWT_SECRET_EXISTS: !!dbConfig.JWT_SECRET,
+        JWT_SECRET_LENGTH: dbConfig.JWT_SECRET ? dbConfig.JWT_SECRET.length : 0
     });
     
     // CORREÇÃO: Usa o formato de erro padronizado para todas as respostas.
