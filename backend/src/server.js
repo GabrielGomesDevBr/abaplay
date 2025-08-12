@@ -24,11 +24,19 @@ const server = http.createServer(app);
 
 // --- INÍCIO DA CONFIGURAÇÃO DO SOCKET.IO ---
 
+// Debug: verificar variáveis de ambiente
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ["https://abaplay.app.br", "https://www.abaplay.app.br"]
+  : "http://localhost:3001";
+
+console.log('CORS allowedOrigins:', allowedOrigins);
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? process.env.FRONTEND_URL || ["https://abaplay.app.br", "https://www.abaplay.app.br"]
-      : "http://localhost:3001", // Permitir acesso do frontend
+    origin: allowedOrigins,
     methods: ["GET", "POST"]
   }
 });
@@ -57,9 +65,7 @@ io.on('connection', (socket) => {
 
 // Configuração de Middlewares
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || ["https://abaplay.app.br", "https://www.abaplay.app.br"]
-    : "http://localhost:3001",
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json());
