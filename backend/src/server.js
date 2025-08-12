@@ -27,7 +27,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production' 
-      ? process.env.FRONTEND_URL || "https://abaplay-frontend.onrender.com"
+      ? process.env.FRONTEND_URL || ["https://abaplay.app.br", "https://www.abaplay.app.br"]
       : "http://localhost:3001", // Permitir acesso do frontend
     methods: ["GET", "POST"]
   }
@@ -58,7 +58,7 @@ io.on('connection', (socket) => {
 // Configuração de Middlewares
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || "https://abaplay-frontend.onrender.com"
+    ? process.env.FRONTEND_URL || ["https://abaplay.app.br", "https://www.abaplay.app.br"]
     : "http://localhost:3001",
   credentials: true
 }));
