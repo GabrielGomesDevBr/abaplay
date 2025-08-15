@@ -39,6 +39,27 @@ export const getAllPrograms = async () => {
 };
 
 /**
+ * Busca programas por termo de pesquisa
+ * @param {string} searchTerm - Termo de busca
+ * @param {string} discipline - Nome da disciplina (opcional)
+ * @returns {Promise<Array>}
+ */
+export const searchPrograms = async (searchTerm, discipline = null) => {
+  try {
+    const params = { search: searchTerm };
+    if (discipline) {
+      params.discipline = discipline;
+    }
+    
+    const response = await apiClient.get('/programs', { params });
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao buscar programas:', error);
+    throw error;
+  }
+};
+
+/**
  * Busca os detalhes completos de um único programa pelo seu ID.
  * @param {string|number} programId - O ID do programa a ser buscado.
  * @returns {Promise<Object>}

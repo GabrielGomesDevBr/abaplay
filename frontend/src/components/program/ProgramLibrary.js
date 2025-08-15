@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePrograms } from '../../context/ProgramContext';
 import ProgramCard from './ProgramCard';
+import ProgramSearch from './ProgramSearch';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faExclamationTriangle, faLayerGroup, faSearch, faGraduationCap } from '@fortawesome/free-solid-svg-icons';
 
@@ -115,6 +116,19 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
       <div className="p-6">
         {activeDiscipline && Object.keys(areas).length > 0 ? (
           <div className="space-y-8">
+            {/* Componente de busca */}
+            <ProgramSearch 
+              onProgramSelect={() => {}} // TODO: implementar visualização
+              onAssign={onAssign}
+              assigningId={assigningId}
+              assignedPrograms={assignedPrograms}
+              isPatientSelected={isPatientSelected}
+              disciplineName={formatDisciplineName(activeDiscipline)}
+              disciplineColors={getDisciplineColors(activeDiscipline)}
+            />
+            
+            {/* Divisor visual */}
+            <div className="border-b border-gray-200 my-6"></div>
             {Object.keys(areas).map((areaName) => {
               const subAreas = areas[areaName];
               const disciplineColors = getDisciplineColors(activeDiscipline);

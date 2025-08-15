@@ -23,9 +23,17 @@ exports.createProgram = async (req, res) => {
  */
 exports.getAllPrograms = async (req, res) => {
     try {
-        // A função no model buscará os dados do novo schema, que já contém tudo que precisamos.
-        const programs = await Program.getAllWithHierarchy();
-        res.json(programs);
+        const { search, discipline } = req.query;
+        
+        if (search) {
+            // Se há termo de busca, usar função específica de busca
+            const programs = await Program.searchPrograms(search, discipline);
+            res.json(programs);
+        } else {
+            // Busca normal hierárquica
+            const programs = await Program.getAllWithHierarchy();
+            res.json(programs);
+        }
     } catch (error) {
         console.error('[CONTROLLER-ERROR] getAllPrograms:', error);
         res.status(500).send('Erro ao buscar programas.');

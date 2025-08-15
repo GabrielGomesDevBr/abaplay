@@ -306,6 +306,56 @@ const getAssignedProgramsForGrade = async (patientId) => {
     }
 };
 
+/**
+ * @description Busca programas por termo de pesquisa, com filtro opcional por disciplina
+ * @param {string} searchTerm - Termo de busca
+ * @param {string} discipline - Nome da disciplina (opcional)
+ * @returns {Promise<Array>} Lista de programas encontrados
+ */
+const searchPrograms = async (searchTerm, discipline = null) => {
+    let query = `
+        SELECT 
+            p.id,
+            p.name,
+            p.objective,
+            p.skill,
+            p.program_slug,
+            p.trials,
+            d.name AS discipline_name,
+            pa.name AS area_name,
+            psa.name AS sub_area_name
+        FROM programs p
+        JOIN program_sub_areas psa ON p.sub_area_id = psa.id
+        JOIN program_areas pa ON psa.area_id = pa.id
+        JOIN disciplines d ON pa.discipline_id = d.id
+        WHERE (
+            LOWER(p.name) LIKE LOWER($1) OR
+            LOWER(p.objective) LIKE LOWER($1) OR
+            LOWER(p.skill) LIKE LOWER($1) OR
+            LOWER(pa.name) LIKE LOWER($1) OR
+            LOWER(psa.name) LIKE LOWER($1)
+        )
+    `;
+    
+    const values = [`%${searchTerm}%`];
+    
+    // Adiciona filtro por disciplina se fornecido
+    if (discipline) {
+        query += ` AND LOWER(d.name) = LOWER($2)`;
+        values.push(discipline);
+    }
+    
+    query += ` ORDER BY d.name, pa.name, psa.name, p.name LIMIT 50`;
+    
+    try {
+        const { rows } = await pool.query(query, values);
+        return rows;
+    } catch (error) {
+        console.error('[MODEL-ERROR] Erro na busca de programas:', error);
+        throw error;
+    }
+};
+
 // Exporta os métodos com os nomes que o controller espera
 module.exports = {
     create,
@@ -313,5 +363,6 @@ module.exports = {
     findById,
     update,
     deleteById,
-    getAssignedProgramsForGrade
+    getAssignedProgramsForGrade,
+    searchPrograms
 };
