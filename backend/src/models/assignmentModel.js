@@ -50,6 +50,7 @@ const Assignment = {
             SELECT
                 ppa.id AS assignment_id, 
                 ppa.status, 
+                ppa.current_prompt_level,
                 p.id AS program_id,
                 p.name AS program_name, 
                 p.objective
@@ -72,6 +73,7 @@ const Assignment = {
             SELECT
                 ppa.id AS assignment_id,
                 ppa.status,
+                ppa.current_prompt_level,
                 ppa.assigned_at,
                 jsonb_build_object(
                     'id', pat.id,
@@ -119,6 +121,7 @@ const Assignment = {
             SELECT
                 ppa.id AS assignment_id,
                 ppa.status,
+                ppa.current_prompt_level,
                 ppa.assigned_at,
                 jsonb_build_object(
                     'id', pat.id,
@@ -309,6 +312,54 @@ const Assignment = {
         } finally {
             client.release();
         }
+    },
+
+    /**
+     * Atualiza o nível de prompting atual para uma atribuição específica.
+     * @param {number} assignmentId - O ID da atribuição.
+     * @param {number} promptLevel - O novo nível de prompting (0-5).
+     * @returns {Promise<object>} A atribuição atualizada.
+     */
+    async updatePromptLevel(assignmentId, promptLevel) {
+        const query = `
+            UPDATE patient_program_assignments 
+            SET current_prompt_level = $1, updated_at = now()
+            WHERE id = $2 
+            RETURNING id, patient_id, program_id, current_prompt_level, updated_at;
+        `;
+        const { rows } = await pool.query(query, [promptLevel, assignmentId]);
+        return rows[0];
+    },
+
+    /**
+     * Busca o nível de prompting atual para uma atribuição específica.
+     * @param {number} assignmentId - O ID da atribuição.
+     * @returns {Promise<number|null>} O nível de prompting atual ou null se não encontrado.
+     */
+    async getCurrentPromptLevel(assignmentId) {
+        const query = `
+            SELECT current_prompt_level 
+            FROM patient_program_assignments 
+            WHERE id = $1;
+        `;
+        const { rows } = await pool.query(query, [assignmentId]);
+        return rows[0] ? rows[0].current_prompt_level : null;
+    },
+
+    /**
+     * Busca o nível de prompting para um programa específico de um paciente.
+     * @param {number} patientId - O ID do paciente.
+     * @param {number} programId - O ID do programa.
+     * @returns {Promise<number|null>} O nível de prompting atual ou null se não encontrado.
+     */
+    async getPromptLevelByPatientAndProgram(patientId, programId) {
+        const query = `
+            SELECT current_prompt_level 
+            FROM patient_program_assignments 
+            WHERE patient_id = $1 AND program_id = $2;
+        `;
+        const { rows } = await pool.query(query, [patientId, programId]);
+        return rows[0] ? rows[0].current_prompt_level : null;
     }
 };
 

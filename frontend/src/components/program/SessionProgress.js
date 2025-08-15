@@ -65,15 +65,27 @@ const SessionProgress = ({ program, assignment }) => {
   const [teachingModality, setTeachingModality] = useState('');
   
   // Nível de prompting persistente por programa/paciente
-  const [promptLevel, setPromptLevel] = useState(() => {
-    if (selectedPatient && program) {
-      const programId = program.program_id || program.id;
-      if (programId) {
-        return getPromptLevelForProgram(selectedPatient.id, programId);
+  const [promptLevel, setPromptLevel] = useState(5); // Inicializa com padrão
+  
+  // Carrega o nível de prompting de forma assíncrona
+  useEffect(() => {
+    const loadPromptLevel = async () => {
+      if (selectedPatient && program) {
+        const programId = program.program_id || program.id;
+        if (programId) {
+          try {
+            const level = await getPromptLevelForProgram(selectedPatient.id, programId);
+            setPromptLevel(level);
+          } catch (error) {
+            console.warn('Erro ao carregar prompt level:', error);
+            setPromptLevel(5); // Fallback para independente
+          }
+        }
       }
-    }
-    return 5; // Padrão: Independente
-  });
+    };
+    
+    loadPromptLevel();
+  }, [selectedPatient, program, getPromptLevelForProgram]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -110,15 +122,17 @@ const SessionProgress = ({ program, assignment }) => {
   }, [assignment]);
 
   // Função para atualizar o nível de prompting
-  const handlePromptLevelChange = useCallback((newLevel) => {
+  const handlePromptLevelChange = useCallback(async (newLevel) => {
     // Tenta usar program_id primeiro, depois id como fallback
     const programId = program?.program_id || program?.id;
+    const assignmentId = assignment?.assignment_id || assignment?.id;
     
     setPromptLevel(newLevel);
     if (selectedPatient && program && programId) {
-      setPromptLevelForProgram(selectedPatient.id, programId, newLevel);
+      // Passa assignmentId para salvar no banco também
+      await setPromptLevelForProgram(selectedPatient.id, programId, newLevel, assignmentId);
     }
-  }, [selectedPatient, program, setPromptLevelForProgram]);
+  }, [selectedPatient, program, assignment, setPromptLevelForProgram]);
 
   useEffect(() => {
     if (!program || !assignment) {

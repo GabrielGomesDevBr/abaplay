@@ -15,6 +15,7 @@ const programRoutes = require('./routes/programRoutes');
 // --- Adicionada a importação da nova rota ---
 const assignmentRoutes = require('./routes/assignmentRoutes');
 const contactRoutes = require('./routes/contactRoutes');
+const promptLevelRoutes = require('./routes/promptLevelRoutes');
 
 // Importa o middleware de autenticação
 const { verifyToken } = require('./middleware/authMiddleware');
@@ -85,6 +86,8 @@ app.use('/api/programs', verifyToken, programRoutes);
 app.use('/api/assignments', verifyToken, assignmentRoutes);
 // --- Nova rota de contatos para sistema de chat iniciado ---
 app.use('/api/contacts', verifyToken, contactRoutes);
+// --- Nova rota para gerenciar níveis de prompting ---
+app.use('/api/prompt-levels', verifyToken, promptLevelRoutes);
 
 
 // Rota de autenticação (não precisa de token)

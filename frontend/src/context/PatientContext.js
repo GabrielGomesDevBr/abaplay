@@ -122,17 +122,56 @@ export const PatientProvider = ({ children }) => {
   const addSession = (sessionData) => performActionAndReload(() => createSession(selectedPatient.id, sessionData, token));
   const saveNotes = (notes) => performActionAndReload(() => updatePatientNotes(selectedPatient.id, notes, token));
 
-  // Funções para gerenciar níveis de prompting persistentes
-  const getPromptLevelForProgram = useCallback((patientId, programId) => {
+  // Funções para gerenciar níveis de prompting persistentes com fallback
+  const getPromptLevelForProgram = useCallback(async (patientId, programId) => {
     const key = `${patientId}_${programId}`;
-    return promptLevels[key] || 5; // Padrão: Independente
+    
+    // 1. Tenta localStorage primeiro (rápido)
+    const localStorageLevel = promptLevels[key];
+    if (localStorageLevel !== undefined) {
+      return localStorageLevel;
+    }
+    
+    // 2. Se não encontrou no localStorage, tenta buscar no banco
+    try {
+      const { getPromptLevelByPatientAndProgram } = await import('../api/promptLevelApi');
+      const response = await getPromptLevelByPatientAndProgram(patientId, programId);
+      const bankLevel = response.currentPromptLevel;
+      
+      // Salva no localStorage para próximas consultas
+      if (bankLevel !== null && bankLevel !== undefined) {
+        const newLevels = { ...promptLevels, [key]: bankLevel };
+        setPromptLevels(newLevels);
+        localStorage.setItem('promptLevels', JSON.stringify(newLevels));
+        return bankLevel;
+      }
+    } catch (error) {
+      console.warn('Erro ao buscar prompt level do banco:', error);
+    }
+    
+    // 3. Fallback final: padrão 5 (Independente)
+    return 5;
   }, [promptLevels]);
 
-  const setPromptLevelForProgram = useCallback((patientId, programId, level) => {
+  const setPromptLevelForProgram = useCallback(async (patientId, programId, level, assignmentId = null) => {
     const key = `${patientId}_${programId}`;
+    
+    // 1. Salva no localStorage imediatamente (experiência rápida)
     const newLevels = { ...promptLevels, [key]: level };
     setPromptLevels(newLevels);
     localStorage.setItem('promptLevels', JSON.stringify(newLevels));
+    
+    // 2. Tenta salvar no banco de dados (persistência segura)
+    if (assignmentId) {
+      try {
+        const { updatePromptLevel } = await import('../api/promptLevelApi');
+        await updatePromptLevel(assignmentId, level);
+        console.log(`[PROMPT-LEVEL] Salvo no banco: Assignment ${assignmentId} → Nível ${level}`);
+      } catch (error) {
+        console.warn('Erro ao salvar prompt level no banco:', error);
+        // Não remove do localStorage - mantém a funcionalidade mesmo com erro de rede
+      }
+    }
   }, [promptLevels]);
 
   const value = {

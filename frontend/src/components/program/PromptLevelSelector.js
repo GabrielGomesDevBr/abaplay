@@ -19,10 +19,7 @@ const PromptLevelSelector = ({ selectedLevel, onLevelChange, disabled = false })
       const levelsData = await getPromptLevels();
       setLevels(levelsData);
       
-      // Se não há nível selecionado, seleciona o nível 5 (Independente) como padrão
-      if (selectedLevel === undefined || selectedLevel === null) {
-        onLevelChange(5);
-      }
+      // Não força mais um nível padrão - deixa o componente pai decidir
     } catch (err) {
       console.error('Erro ao carregar níveis de prompting:', err);
       setError('Erro ao carregar níveis de prompting');
