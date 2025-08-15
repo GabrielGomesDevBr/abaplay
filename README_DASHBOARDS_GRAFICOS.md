@@ -20,12 +20,12 @@
 O ABAplay possui dois dashboards especializados que apresentam análises detalhadas do progresso dos pacientes usando metodologias ABA (Applied Behavior Analysis). O sistema gera automaticamente recomendações clínicas baseadas nos dados registrados e oferece visualizações interativas para acompanhamento do desenvolvimento.
 
 ### Características Principais:
-- **Análise baseada em evidências ABA** com cálculos automáticos de progresso
-- **Recomendações clínicas automáticas** baseadas em algoritmos especializados
-- **Sistema de alertas inteligentes** para programas prontos para domínio
-- **Visualizações interativas** com gráficos Chart.js avançados
-- **Relatórios PDF profissionais** com dados consolidados
-- **Interface de comunicação em tempo real** entre terapeutas e pais
+- **Metodologia ABA rigorosa** com progressão hierárquica pura (sem mistura de níveis)
+- **Critério de domínio exclusivo** no nível independente com consistência comprovada
+- **Sistema de alertas inteligentes** que só identifica verdadeiros candidatos a domínio
+- **Visualizações por nível atual** mostrando a progressão real do paciente
+- **Relatórios PDF profissionais** refletindo a metodologia de trabalho aplicada
+- **Interface de comunicação em tempo real** para coordenação da equipe terapêutica
 
 ---
 
@@ -38,14 +38,14 @@ O dashboard do terapeuta é uma ferramenta analítica avançada que fornece insi
 ### 📈 Funcionalidades Principais
 
 #### 1. **Guia de Métricas ABA**
-Uma seção educativa que explica todas as métricas utilizadas no sistema:
+Uma seção educativa que explica todas as métricas baseadas na **metodologia rigorosa** de progressão hierárquica:
 
-- **Progresso Médio**: Média de todas as sessões de intervenção (meta: ≥70%)
-- **Taxa de Aquisição**: Percentual de programas que atingiram critério recentemente (meta: ≥30%)
+- **Progresso Médio**: Média de acertos nas sessões do nível atual (meta: ≥80% para avanço)
+- **Taxa de Aquisição**: Percentual de programas que atingiram domínio (nível independente) recentemente
 - **Frequência Semanal**: Número de dias únicos com sessões por semana (ideal ABA: 3-5 dias)
-- **Estabilidade**: Consistência da performance (alta: ≥80%)
-- **Programas na Meta**: Quantidade que atingiu ≥80% de desempenho
-- **Dias até Critério**: Tempo médio para dominar habilidades
+- **Estabilidade**: Consistência da performance no nível atual (alta: ≥80% para considerar avanço)
+- **Programas Dominados**: Quantidade que atingiu consistência no nível independente
+- **Dias até Critério**: Tempo médio para atingir nível independente e dominar habilidades
 
 #### 2. **Sistema de Interpretação Visual**
 ```javascript
@@ -64,18 +64,20 @@ const interpretations = {
 - 🔴 **Vermelho (Crítico)**: Ação imediata necessária
 
 #### 3. **Recomendações Clínicas Automáticas**
-O sistema gera recomendações baseadas nos dados:
+O sistema gera recomendações baseadas na **metodologia de progressão rigorosa**:
 
 ```javascript
 const recommendations = [];
 if (interpretations.overallAverage === 'critical') 
-  recommendations.push('Revisar estratégias de intervenção - progresso abaixo do esperado');
+  recommendations.push('Revisar estratégias no nível atual - baixa taxa de acertos');
 if (interpretations.sessionFrequency === 'critical') 
-  recommendations.push('Aumentar frequência de atendimentos para acelerar aquisições');
+  recommendations.push('Aumentar frequência de atendimentos - consolidação requer prática regular');
 if (parseFloat(acquisitionRate) < 20) 
-  recommendations.push('Analisar critérios de domínio - poucos programas atingindo metas');
+  recommendations.push('Poucos programas atingindo independência - revisar critérios de avanço');
 if (regressionAlerts > 0) 
-  recommendations.push(`Atenção: ${regressionAlerts} programa(s) apresentando regressão`);
+  recommendations.push(`Atenção: ${regressionAlerts} programa(s) com queda de performance - possível necessidade de voltar ao nível anterior`);
+if (independentButUnstable > 0)
+  recommendations.push('Programas no nível independente mas instáveis - consolidar antes de marcar como dominado');
 ```
 
 #### 4. **Análise por Disciplina**
@@ -133,9 +135,9 @@ Componente `DateRangeSelector` permite:
 
 ### Localização: `/backend/src/utils/promptLevels.js`
 
-O ABAplay implementa o sistema padrão de prompting da análise comportamental aplicada.
+O ABAplay implementa o sistema rigoroso de prompting da análise comportamental aplicada com **progressão hierárquica pura**.
 
-### 📊 Hierarquia dos Níveis
+### 📊 Hierarquia dos Níveis (Menos Intrusiva → Mais Intrusiva)
 
 ```javascript
 const PROMPT_LEVELS = {
@@ -143,56 +145,99 @@ const PROMPT_LEVELS = {
         name: 'Independente',
         description: 'Realiza a tarefa sem qualquer ajuda',
         color: '#10b981', // Verde
-        weight: 100
     },
     4: {
         name: 'Dica Verbal', 
         description: 'Precisa de instrução verbal',
         color: '#8b5cf6', // Roxo
-        weight: 75
     },
     3: {
         name: 'Dica Gestual',
         description: 'Precisa de gesto ou apontamento', 
         color: '#3b82f6', // Azul
-        weight: 50
     },
     2: {
         name: 'Ajuda Física Parcial',
         description: 'Precisa de ajuda física reduzida',
         color: '#eab308', // Amarelo
-        weight: 25
     },
     1: {
         name: 'Ajuda Física Total',
         description: 'Precisa de controle total do movimento',
         color: '#f97316', // Laranja
-        weight: 0
     },
     0: {
         name: 'Não realizou',
         description: 'Não tentou ou se recusou',
         color: '#ef4444', // Vermelho
-        weight: 0
     }
 };
 ```
 
-### 🔢 Cálculo de Progresso
+### 🎯 Metodologia de Progressão Rigorosa
 
-```javascript
-// Fórmula do Score de Progresso
-const calculateProgressScore = (levelId, successRate) => {
-    const level = getPromptLevel(levelId);
-    // Score = taxa de acerto × peso do nível
-    return Math.round(successRate * level.weight * 100) / 100;
-};
+#### **Princípios Fundamentais:**
+
+1. **Progressão Hierárquica**: O paciente só avança para o próximo nível quando domina completamente o atual
+2. **Sem Mistura de Níveis**: Cada sessão é realizada integralmente em um único nível de prompting
+3. **Critério de Domínio**: Programa só é considerado dominado quando atinge consistência no nível **Independente**
+4. **Dica Menos Intrusiva**: Sempre inicia com o menor nível de ajuda necessário
+
+#### **Fluxo de Trabalho Real:**
+
+```
+Programa Novo
+    ↓
+Avaliação de Linha de Base (identifica nível inicial necessário)
+    ↓
+Trabalho Consistente no Nível Atual
+    ↓
+Atingiu 80%+ de acertos consistentes? → SIM → Tenta nível menos intrusivo
+    ↓ NÃO                                       ↓
+Permanece no nível atual                    Conseguiu manter 80%+? → SIM → Continua subindo
+    ↑                                           ↓ NÃO
+    ←───────────────────────────────────────────┘
+                Volta ao nível anterior
 ```
 
-**Exemplo Prático:**
-- Paciente acerta 8 de 10 tentativas (80% de sucesso)
-- Nível de prompting: Independente (peso 100)
-- Score final: 80 × 1.00 = 80%
+#### **Exemplo Prático Real:**
+
+**João aprendendo a identificar cores:**
+
+**Fase 1 - Linha de Base**: Identifica que precisa começar com "Dica Gestual"
+**Fase 2 - Trabalho Consistente**: 10 sessões com Dica Gestual
+- Sessão 1-5: 60-70% de acertos (continua no mesmo nível)
+- Sessão 6-10: 85-90% de acertos (candidato a avanço)
+
+**Fase 3 - Teste de Progressão**: Tenta "Dica Verbal"
+- Sessão 11-13: 45-60% de acertos (volta para Dica Gestual)
+- Sessão 14-20: Consolida novamente em Dica Gestual (80%+)
+
+**Fase 4 - Nova Tentativa**: Tenta novamente "Dica Verbal"
+- Sessão 21-25: 80-85% de acertos (progride!)
+- Sessão 26-30: Tenta "Independente"
+- Sessão 31-35: 85-95% independente (DOMINADO!)
+
+### 🏆 Critério de Domínio (Alerta de Progresso)
+
+Um programa só aparece no **"Verificar Progresso"** quando:
+
+1. ✅ **Nível Independente** consistente
+2. ✅ **Mínimo 5 sessões** no nível independente  
+3. ✅ **≥80% de acertos** nas sessões independentes
+4. ✅ **Estabilidade** (pouca variação entre sessões)
+
+### 📊 Cálculo de Progresso Simplificado
+
+```javascript
+// Não há pesos mistos - score direto baseado em acertos
+const sessionScore = (acertos / tentativas) * 100;
+
+// Exemplo:
+// - 8 acertos em 10 tentativas = 80%
+// - Não importa o nível de prompting para o cálculo
+// - O nível é mostrado visualmente, mas o score é puro
+```
 
 ---
 
@@ -222,9 +267,10 @@ async getProgramsNeedingAlert(therapistId, threshold = 80) {
 ### ⚠️ Quando um Alerta é Gerado
 
 1. **Programa ativo** do terapeuta
-2. **Mínimo 5 sessões** registradas
-3. **Média de progresso ≥80%** nas sessões
+2. **Mínimo 5 sessões** registradas **no nível independente**
+3. **Média de progresso ≥80%** nas sessões independentes
 4. **Status "active"** no sistema
+5. **Consistência** nas últimas sessões (baixa variação)
 
 ### 🎯 Como Funciona o Botão "Verificar Progresso"
 
@@ -241,10 +287,10 @@ async getProgramsNeedingAlert(therapistId, threshold = 80) {
 
 **Fluxo de Funcionamento:**
 1. Terapeuta clica em "Verificar Progresso"
-2. Sistema busca programas com critérios de alerta
-3. Modal `ProgressAlert` exibe programas candidatos
-4. Terapeuta pode marcar como "Dominado"
-5. Programa é automaticamente arquivado
+2. Sistema busca programas que estão consistentemente no **nível independente**
+3. Modal `ProgressAlert` exibe apenas candidatos reais a domínio
+4. Terapeuta revisa e confirma se realmente foi dominado
+5. Programa é automaticamente arquivado (removido da lista ativa)
 
 ---
 
@@ -334,16 +380,22 @@ const chartOptions = {
 
 ### 🧮 Algoritmos de Análise
 
-#### 1. **Cálculo de Taxa de Aquisição**
+#### 1. **Cálculo de Taxa de Aquisição (Programas Dominados)**
 ```javascript
-// Programas que atingiram critério recentemente
+// Programas que atingiram domínio real (nível independente consistente)
 let recentMasteries = 0;
 Object.values(programStats).forEach(program => {
-    const recentSessions = program.sessions.slice(-5); // últimas 5 sessões
-    const recentAverage = recentSessions.reduce((sum, s) => sum + s.score, 0) / recentSessions.length;
+    // Filtra apenas sessões no nível independente
+    const independentSessions = program.sessions.filter(s => s.promptLevel === 5);
+    const recentIndependentSessions = independentSessions.slice(-5);
     
-    if (recentAverage >= 80 && recentSessions.length >= 3) {
-        recentMasteries++;
+    if (recentIndependentSessions.length >= 5) {
+        const recentAverage = recentIndependentSessions.reduce((sum, s) => sum + s.score, 0) / recentIndependentSessions.length;
+        
+        // Só conta como dominado se está consistente no independente
+        if (recentAverage >= 80) {
+            recentMasteries++;
+        }
     }
 });
 const acquisitionRate = totalPrograms > 0 ? ((recentMasteries / totalPrograms) * 100).toFixed(1) : '--';
@@ -351,17 +403,22 @@ const acquisitionRate = totalPrograms > 0 ? ((recentMasteries / totalPrograms) *
 
 #### 2. **Índice de Estabilidade**
 ```javascript
-// Baseado no desvio padrão das últimas sessões
+// Baseado no desvio padrão das últimas sessões NO NÍVEL ATUAL
 Object.values(programStats).forEach(program => {
     if (program.scores.length >= 5) {
-        const recentScores = program.scores.slice(-5);
+        const recentScores = program.scores.slice(-5); // Últimas 5 sessões do nível atual
         const avg = recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length;
         const variance = recentScores.reduce((sum, score) => sum + Math.pow(score - avg, 2), 0) / recentScores.length;
         const stdDev = Math.sqrt(variance);
-        const stability = Math.max(0, 100 - stdDev * 2); // Inverte: menos desvio = mais estabilidade
+        const stability = Math.max(0, 100 - stdDev * 2); // Menos variação = mais estável
     }
 });
 ```
+
+**Interpretação Correta:**
+- **Alta Estabilidade (≥80%)**: Paciente consistente no nível atual → Candidato a avanço ou domínio
+- **Baixa Estabilidade (<60%)**: Performance irregular → Consolidar no nível atual
+- **Para Domínio**: Estabilidade alta + Nível Independente + 80%+ de acertos
 
 #### 3. **Detecção de Regressão**
 ```javascript
@@ -448,9 +505,10 @@ const sessionFrequency = totalWeeks > 0 ? (uniqueDates.length / totalWeeks).toFi
 #### **P: Quando um programa aparece no alerta de progresso?**
 **R:** Critérios obrigatórios:
 1. Status "active" no sistema
-2. Mínimo 5 sessões registradas
-3. Média das sessões ≥80%
-4. Atribuído ao terapeuta logado
+2. Paciente está no **nível independente** consistentemente
+3. Mínimo 5 sessões registradas **no nível independente**
+4. Média das sessões independentes ≥80%
+5. Atribuído ao terapeuta logado
 
 #### **P: Por que alguns gráficos aparecem sem dados?**
 **R:** Possíveis causas:
