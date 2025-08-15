@@ -63,12 +63,24 @@ const AssignedProgramsList = ({ onProgramSelect, selectedProgramId }) => {
 
   const programDisciplines = Object.keys(groupedPrograms).sort();
 
+  // Lógica dinâmica de altura baseada na quantidade de programas
+  const totalPrograms = programsToShow.length;
+  const dynamicHeight = useMemo(() => {
+    if (totalPrograms <= 3) {
+      return 'max-h-[50vh]'; // Modal compacto para poucos programas
+    } else if (totalPrograms <= 6) {
+      return 'max-h-[65vh]'; // Modal médio 
+    } else {
+      return 'max-h-[80vh]'; // Modal alto para muitos programas
+    }
+  }, [totalPrograms]);
+
   if (patientIsLoading) {
     return <div className="text-center py-4"><FontAwesomeIcon icon={faSpinner} className="fa-spin text-indigo-500" /></div>;
   }
   
   return (
-    <div className="md:col-span-1 lg:col-span-1 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+    <div className={`md:col-span-1 lg:col-span-1 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col ${dynamicHeight}`}>
       {/* Cabeçalho redesenhado */}
       <div className="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
         <div className="flex justify-between items-center">
@@ -76,8 +88,16 @@ const AssignedProgramsList = ({ onProgramSelect, selectedProgramId }) => {
             <h3 className="text-xl font-bold text-white flex items-center">
               <FontAwesomeIcon icon={faArchive} className="mr-3" />
               Programas Atribuídos
+              <span className="ml-auto bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                {totalPrograms} programa{totalPrograms !== 1 ? 's' : ''}
+              </span>
             </h3>
-            <p className="text-emerald-100 text-sm mt-1">Lista de programas de intervenção do cliente</p>
+            <p className="text-emerald-100 text-sm mt-1">
+              Lista de programas de intervenção do cliente
+              {totalPrograms > 6 && (
+                <span className="ml-2 text-emerald-200">• Painel expandido automaticamente</span>
+              )}
+            </p>
           </div>
         </div>
       </div>
@@ -101,7 +121,7 @@ const AssignedProgramsList = ({ onProgramSelect, selectedProgramId }) => {
         </div>
       </div>
       
-      <div className="p-6 overflow-y-auto flex-1 max-h-[calc(100vh-450px)]">
+      <div className="p-6 overflow-y-auto flex-1">
         {programsToShow.length > 0 ? (
           <div className="space-y-6">
             {programDisciplines.map(discipline => {
