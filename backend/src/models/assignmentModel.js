@@ -360,6 +360,23 @@ const Assignment = {
         `;
         const { rows } = await pool.query(query, [patientId, programId]);
         return rows[0] ? rows[0].current_prompt_level : null;
+    },
+
+    /**
+     * Verifica se um terapeuta tem acesso a um paciente específico
+     * (ou seja, se tem alguma atribuição com esse paciente)
+     * @param {number} therapistId - ID do terapeuta
+     * @param {number} patientId - ID do paciente
+     * @returns {Promise<boolean>} True se o terapeuta tem acesso ao paciente
+     */
+    async therapistHasAccessToPatient(therapistId, patientId) {
+        const query = `
+            SELECT COUNT(*) as count
+            FROM patient_program_assignments
+            WHERE therapist_id = $1 AND patient_id = $2
+        `;
+        const { rows } = await pool.query(query, [therapistId, patientId]);
+        return parseInt(rows[0].count) > 0;
     }
 };
 

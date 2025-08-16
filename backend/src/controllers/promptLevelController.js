@@ -34,14 +34,21 @@ promptLevelController.updatePromptLevel = async (req, res) => {
       });
     }
 
-    // Verifica se o usuário tem permissão (terapeuta da atribuição ou admin)
+    // Verifica se o usuário tem permissão (admin ou terapeuta com acesso ao paciente)
     const userRole = req.user.role;
-    const isTherapistOfAssignment = assignmentDetails.therapist.id === userId;
     const isAdmin = userRole === 'admin' || userRole === 'administrador';
+    
+    let hasPermission = isAdmin;
+    
+    // Se não é admin, verifica se o terapeuta tem acesso ao paciente
+    if (!isAdmin && (userRole === 'terapeuta' || userRole === 'therapist')) {
+      const patientId = assignmentDetails.patient.id;
+      hasPermission = await Assignment.therapistHasAccessToPatient(userId, patientId);
+    }
 
-    if (!isTherapistOfAssignment && !isAdmin) {
+    if (!hasPermission) {
       return res.status(403).json({ 
-        errors: [{ msg: 'Sem permissão para atualizar este programa.' }] 
+        errors: [{ msg: 'Sem permissão para atualizar este programa. Você precisa ter atribuições com este paciente.' }] 
       });
     }
 
@@ -83,13 +90,20 @@ promptLevelController.getCurrentPromptLevel = async (req, res) => {
       });
     }
 
-    // Verifica permissões (terapeuta, admin ou pai do paciente)
+    // Verifica permissões (admin, pai do paciente ou terapeuta com acesso ao paciente)
     const userRole = req.user.role;
-    const isTherapistOfAssignment = assignmentDetails.therapist.id === userId;
     const isAdmin = userRole === 'admin' || userRole === 'administrador';
     const isParent = userRole === 'parent' || userRole === 'pai';
+    
+    let hasPermission = isAdmin || isParent;
+    
+    // Se não é admin nem pai, verifica se o terapeuta tem acesso ao paciente
+    if (!hasPermission && (userRole === 'terapeuta' || userRole === 'therapist')) {
+      const patientId = assignmentDetails.patient.id;
+      hasPermission = await Assignment.therapistHasAccessToPatient(userId, patientId);
+    }
 
-    if (!isTherapistOfAssignment && !isAdmin && !isParent) {
+    if (!hasPermission) {
       return res.status(403).json({ 
         errors: [{ msg: 'Sem permissão para visualizar este programa.' }] 
       });
