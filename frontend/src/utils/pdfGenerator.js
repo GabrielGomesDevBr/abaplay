@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Chart from 'chart.js/auto';
+import { getLegendLevels } from './promptLevelColors';
 
 // Função auxiliar para formatar a data
 const formatDate = (dateString, format = 'long') => {
@@ -580,13 +581,11 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
                         y += 4;
                         
                         doc.setFont('helvetica', 'normal');
-                        const legendItems = [
-                            { color: [16, 185, 129], text: 'Independente' },
-                            { color: [139, 92, 246], text: 'Verbal' },
-                            { color: [245, 158, 11], text: 'Gestual' },
-                            { color: [239, 68, 68], text: 'Física Parcial' },
-                            { color: [220, 38, 38], text: 'Física Total' }
-                        ];
+                        // Items da legenda usando cores centralizadas
+                        const legendItems = getLegendLevels().map(level => ({
+                            color: level.rgb,
+                            text: level.name
+                        }));
                         
                         // Legenda em duas linhas compactas
                         const itemsPerRow = 3;

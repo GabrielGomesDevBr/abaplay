@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 // A importação do usePrograms não é mais necessária.
 import { generateConsolidatedReportPDF } from '../../utils/pdfGenerator';
 import DateRangeSelector from '../shared/DateRangeSelector';
+import { getLegendLevels } from '../../utils/promptLevelColors';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -171,26 +172,12 @@ const ReportChart = ({ program, sessionData }) => {
                     <div className="mb-2">
                         <h6 className="text-xs font-medium text-gray-700 mb-1">Níveis de Prompting:</h6>
                         <div className="flex flex-wrap gap-2 text-xs">
-                            <div className="flex items-center space-x-1">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#10b981' }}></div>
-                                <span className="text-gray-600">Independente</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#8b5cf6' }}></div>
-                                <span className="text-gray-600">Verbal</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#f59e0b' }}></div>
-                                <span className="text-gray-600">Gestual</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ef4444' }}></div>
-                                <span className="text-gray-600">Física Parcial</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#dc2626' }}></div>
-                                <span className="text-gray-600">Física Total</span>
-                            </div>
+                            {getLegendLevels().map(level => (
+                                <div key={level.id} className="flex items-center space-x-1">
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: level.hex }}></div>
+                                    <span className="text-gray-600">{level.name}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                     
@@ -323,13 +310,40 @@ const ConsolidatedReportModal = ({ isOpen, onClose }) => {
             </h3>
             <div className="space-y-4">
               {assignedPrograms.length > 0 ? (
-                assignedPrograms.map(program => (
-                  <ReportChart 
-                    key={program.program_id} 
-                    program={program} 
-                    sessionData={filteredSessionData} 
-                  />
-                ))
+                (() => {
+                  // Agrupa programas por disciplina (área)
+                  const programsByArea = assignedPrograms.reduce((acc, program) => {
+                    const areaKey = program.discipline_name;
+                    if (!acc[areaKey]) {
+                      acc[areaKey] = [];
+                    }
+                    acc[areaKey].push(program);
+                    return acc;
+                  }, {});
+                  
+                  // Ordena áreas alfabeticamente (igual ao PDF)
+                  const sortedAreas = Object.keys(programsByArea).sort();
+                  
+                  return sortedAreas.map(areaName => (
+                    <div key={areaName}>
+                      {/* Cabeçalho da área */}
+                      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-3 mb-3">
+                        <h4 className="text-sm font-semibold text-indigo-800">{areaName}</h4>
+                      </div>
+                      
+                      {/* Gráficos da área */}
+                      <div className="space-y-3 mb-6">
+                        {programsByArea[areaName].map(program => (
+                          <ReportChart 
+                            key={program.program_id} 
+                            program={program} 
+                            sessionData={filteredSessionData} 
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                })()
               ) : (
                 <p className="text-center text-gray-500 py-4">Nenhum programa para exibir.</p>
               )}
