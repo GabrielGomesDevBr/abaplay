@@ -68,6 +68,7 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
       'TerapiaOcupacional': { bg: 'from-orange-500 to-amber-600', light: 'from-orange-50 to-amber-50', border: 'border-orange-300', text: 'text-orange-700' },
       'Psicomotricidade': { bg: 'from-green-500 to-emerald-600', light: 'from-green-50 to-emerald-50', border: 'border-green-300', text: 'text-green-700' },
       'Psicopedagogia': { bg: 'from-yellow-500 to-orange-600', light: 'from-yellow-50 to-orange-50', border: 'border-yellow-300', text: 'text-yellow-700' },
+      'VB-MAPP': { bg: 'from-teal-500 to-cyan-600', light: 'from-teal-50 to-cyan-50', border: 'border-teal-300', text: 'text-teal-700' },
     };
     return colorMap[disciplineName] || { bg: 'from-gray-500 to-slate-600', light: 'from-gray-50 to-slate-50', border: 'border-gray-300', text: 'text-gray-700' };
   };
@@ -75,6 +76,7 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
   const formatDisciplineName = (name) => {
     return name.replace(/([A-Z])/g, ' $1').trim();
   };
+
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
@@ -123,9 +125,11 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
               assigningId={assigningId}
               assignedPrograms={assignedPrograms}
               isPatientSelected={isPatientSelected}
-              disciplineName={formatDisciplineName(activeDiscipline)}
+              disciplineName={activeDiscipline}
+              disciplineDisplayName={formatDisciplineName(activeDiscipline)}
               disciplineColors={getDisciplineColors(activeDiscipline)}
             />
+
             
             {/* Divisor visual */}
             <div className="border-b border-gray-200 my-6"></div>
@@ -147,6 +151,12 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
                   {Object.keys(subAreas).map((subAreaName) => {
                     const programs = subAreas[subAreaName];
                     const totalPrograms = programs?.length || 0;
+                    
+                    // Não mostrar sub-área se não há programas
+                    if (totalPrograms === 0) {
+                      return null;
+                    }
+                    
                     const assignedCount = programs?.filter(program => 
                       Array.isArray(assignedPrograms) && assignedPrograms.some(p => p.program_id === program.id)
                     ).length || 0;

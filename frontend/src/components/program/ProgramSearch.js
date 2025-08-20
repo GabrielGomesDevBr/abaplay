@@ -10,6 +10,7 @@ const ProgramSearch = ({
   assignedPrograms = [], 
   isPatientSelected = false,
   disciplineName = '',
+  disciplineDisplayName = '',
   disciplineColors = {}
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -124,7 +125,7 @@ const ProgramSearch = ({
         
         <input 
           type="text"
-          placeholder={`Buscar programas de ${disciplineName}...`}
+          placeholder={`Buscar programas de ${disciplineDisplayName || disciplineName}...`}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className={`

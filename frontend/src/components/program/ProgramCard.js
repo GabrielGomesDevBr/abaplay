@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faCheck, faSpinner, faBullseye, faTag, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faCheck, faSpinner, faBullseye, faTag, faInfoCircle, faStar } from '@fortawesome/free-solid-svg-icons';
 
 // Função para obter descrições resumidas dos códigos ABA
 const getABACodesSummary = (procedure) => {
@@ -34,10 +34,16 @@ const getTagColor = (tag) => {
     return colors[tag] || { bg: "bg-gray-100", text: "text-gray-800", border: "border-gray-200" };
 };
 
+// Função para detectar se é programa VB-MAPP
+const isVBMAPPProgram = (program) => {
+  return program.skill && program.skill.includes('vbmapp');
+};
+
 // SOLUÇÃO: As props 'onRemove' e 'isRemoving' foram removidas.
 const ProgramCard = ({ program, onAssign, isAssigning, isPatientSelected, isAssigned }) => {
   
   const objectiveText = program.objective ? program.objective : 'Nenhum objetivo definido.';
+  const isVBMAPP = isVBMAPPProgram(program);
 
   const renderButton = () => {
     if (isAssigned) {
@@ -88,11 +94,22 @@ const ProgramCard = ({ program, onAssign, isAssigning, isPatientSelected, isAssi
       <div className="p-6">
         {/* Cabeçalho do programa */}
         <div className="flex items-start justify-between mb-4">
-          <h3 className={`text-lg font-bold leading-tight flex-1 pr-3 ${
-            isAssigned ? 'text-green-800' : 'text-gray-800'
-          }`}>
-            {program.name}
-          </h3>
+          <div className="flex-1 pr-3">
+            <h3 className={`text-lg font-bold leading-tight ${
+              isAssigned ? 'text-green-800' : 'text-gray-800'
+            }`}>
+              {program.name}
+            </h3>
+            {/* Badge VB-MAPP */}
+            {isVBMAPP && (
+              <div className="mt-2">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-teal-100 to-cyan-100 text-teal-800 border border-teal-200">
+                  <FontAwesomeIcon icon={faStar} className="mr-1 text-teal-600" />
+                  VB-MAPP
+                </span>
+              </div>
+            )}
+          </div>
           {isAssigned && (
             <div className="bg-green-100 p-2 rounded-full">
               <FontAwesomeIcon icon={faCheck} className="text-green-600 text-sm" />

@@ -343,12 +343,15 @@ const searchPrograms = async (searchTerm, discipline = null) => {
     if (discipline) {
         query += ` AND LOWER(d.name) = LOWER($2)`;
         values.push(discipline);
+        
+        console.log(`[SEARCH-DEBUG] Buscando na disciplina: "${discipline}"`);
     }
     
     query += ` ORDER BY d.name, pa.name, psa.name, p.name LIMIT 50`;
     
     try {
         const { rows } = await pool.query(query, values);
+        console.log(`[SEARCH-DEBUG] Busca por "${searchTerm}"${discipline ? ` na disciplina "${discipline}"` : ''}: ${rows.length} resultados`);
         return rows;
     } catch (error) {
         console.error('[MODEL-ERROR] Erro na busca de programas:', error);
