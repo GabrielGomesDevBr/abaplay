@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { loginUser, setPassword, checkUser } from '../api/authApi';
+import { loginUser, setPassword, checkUser, acceptTerms } from '../api/authApi';
+import TermsModal from '../components/shared/TermsModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faBrain, faKey, faUser, faSpinner, faArrowRight, faEye, faEyeSlash,
   faChartLine, faComments, faUsers, faClock, faAward, faHeart,
-  faLightbulb, faRocket, faShieldAlt, faGraduationCap
+  faLightbulb, faRocket, faShieldAlt, faGraduationCap, faEnvelope
 } from '@fortawesome/free-solid-svg-icons';
+import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 
 // Componente de animação de fundo modernizado
 const AnimatedBackground = () => (
@@ -211,6 +213,10 @@ const LoginPage = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Estados para modal de termos
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [pendingLoginData, setPendingLoginData] = useState(null);
 
   const from = location.state?.from?.pathname || '/';
 
@@ -242,6 +248,17 @@ const LoginPage = () => {
     setError('');
     try {
       const data = await loginUser({ username, password });
+      
+      // Verificar se é admin que precisa aceitar termos
+      if (data.user && data.user.is_admin && !data.user.terms_accepted_at) {
+        // Admin precisa aceitar termos antes de continuar
+        setPendingLoginData(data);
+        setShowTermsModal(true);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Login normal - fazer login e redirecionar
       login(data.token);
       
       let redirectPath = '/';
@@ -287,6 +304,16 @@ const LoginPage = () => {
       const data = await setPassword(userForPasswordSet.userId, newPassword);
       
       if (data && data.token) {
+        // Verificar se é admin que precisa aceitar termos
+        if (data.user && data.user.is_admin && !data.user.terms_accepted_at) {
+          // Admin precisa aceitar termos antes de continuar
+          setPendingLoginData(data);
+          setShowTermsModal(true);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Login normal - fazer login e redirecionar
         login(data.token);
         let redirectPath = '/';
         if (data.user && data.user.role) {
@@ -314,6 +341,50 @@ const LoginPage = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Funções para lidar com o modal de termos
+  const handleAcceptTerms = async () => {
+    if (!pendingLoginData) return;
+    
+    try {
+      await acceptTerms(pendingLoginData.user.id);
+      
+      // Fazer login e redirecionar após aceitar termos
+      login(pendingLoginData.token);
+      
+      let redirectPath = '/';
+      if (pendingLoginData.user && pendingLoginData.user.role) {
+        const userRole = pendingLoginData.user.role.toLowerCase();
+        switch (userRole) {
+          case 'admin':
+          case 'therapist':
+            redirectPath = '/dashboard';
+            break;
+          case 'pai':
+            redirectPath = '/parent-dashboard';
+            break;
+          default:
+            redirectPath = '/';
+            break;
+        }
+      }
+      
+      setShowTermsModal(false);
+      setPendingLoginData(null);
+      navigate(redirectPath, { replace: true });
+    } catch (error) {
+      console.error('Erro ao aceitar termos:', error);
+      setError('Erro ao processar aceitação dos termos. Tente novamente.');
+      setShowTermsModal(false);
+      setPendingLoginData(null);
+    }
+  };
+
+  const handleDeclineTerms = () => {
+    setShowTermsModal(false);
+    setPendingLoginData(null);
+    setError('É necessário aceitar os termos para continuar.');
   };
 
   const renderFormContent = () => {
@@ -607,25 +678,70 @@ const LoginPage = () => {
               </div>
 
               {/* Footer Links */}
-              <div className="mt-8 text-center space-y-3">
+              <div className="mt-8 text-center space-y-4">
                 <p className="text-sm text-gray-500">
                   Primeira vez na plataforma?{' '}
-                  <button className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                  <a 
+                    href="mailto:abaplayoficial@gmail.com?subject=Solicitar Acesso - ABAplay"
+                    className="font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                  >
                     Solicite seu acesso
-                  </button>
+                  </a>
                 </p>
                 
-                <p className="text-xs text-gray-400">
-                  Problemas com o acesso?{' '}
-                  <button className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-                    Nossa equipe te ajuda
-                  </button>
-                </p>
+                {/* Seção de Suporte */}
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">
+                    Problemas com o acesso?
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    {/* Email de Suporte */}
+                    <a
+                      href="mailto:abaplayoficial@gmail.com?subject=Suporte - Problema de Acesso"
+                      className="flex items-center justify-center space-x-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 text-gray-700 hover:text-blue-700 group"
+                    >
+                      <FontAwesomeIcon 
+                        icon={faEnvelope} 
+                        className="text-gray-500 group-hover:text-blue-600 transition-colors" 
+                      />
+                      <span className="text-sm font-medium">Email Suporte</span>
+                    </a>
+                    
+                    {/* WhatsApp */}
+                    <a
+                      href="https://wa.me/5511988543437?text=Olá! Preciso de ajuda com o acesso à plataforma ABAplay."
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center space-x-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-all duration-200 shadow-sm hover:shadow-md group"
+                    >
+                      <FontAwesomeIcon 
+                        icon={faWhatsapp} 
+                        className="text-green-100 group-hover:text-white transition-colors" 
+                      />
+                      <span className="text-sm font-medium">WhatsApp</span>
+                    </a>
+                  </div>
+                  
+                  <p className="text-xs text-gray-500 mt-3">
+                    <FontAwesomeIcon icon={faEnvelope} className="mr-1" />
+                    abaplayoficial@gmail.com
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal de Termos de Uso */}
+      <TermsModal
+        isOpen={showTermsModal}
+        onAccept={handleAcceptTerms}
+        onDecline={handleDeclineTerms}
+        isLoading={isLoading}
+        userInfo={pendingLoginData?.user}
+      />
     </div>
   );
 };

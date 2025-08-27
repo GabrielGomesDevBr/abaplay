@@ -39,4 +39,14 @@ router.post(
     authController.setPassword
 );
 
+// Rota para Aceitar Termos de Uso
+// POST /api/auth/accept-terms
+router.post(
+    '/accept-terms',
+    [
+        body('userId', 'O ID do utilizador é obrigatório e deve ser um número.').isInt(),
+    ],
+    authController.acceptTerms
+);
+
 module.exports = router;

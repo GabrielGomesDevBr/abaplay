@@ -62,3 +62,23 @@ export const setPassword = async (userId, password) => {
 
   return response.json();
 };
+
+/**
+ * Aceita os termos de uso para um utilizador.
+ * @param {number} userId - O ID do utilizador.
+ * @returns {Promise<object>} A resposta da API.
+ */
+export const acceptTerms = async (userId) => {
+  const response = await fetch(`${API_URL}/auth/accept-terms`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.errors?.[0]?.msg || 'Não foi possível aceitar os termos.');
+  }
+
+  return response.json();
+};

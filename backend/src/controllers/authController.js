@@ -74,7 +74,8 @@ authController.loginUser = async (req, res) => {
             role: user.role,
             is_admin: user.is_admin,
             clinic_id: user.clinic_id,
-            associated_patient_id: user.associated_patient_id || null // LINHA ADICIONADA
+            associated_patient_id: user.associated_patient_id || null, // LINHA ADICIONADA
+            terms_accepted_at: user.terms_accepted_at // Para verificar se precisa aceitar termos
         };
 
         // Se for admin, busca informações da clínica incluindo o limite de pacientes
@@ -141,7 +142,8 @@ authController.setPassword = async (req, res) => {
             role: loggedInUser.role,
             is_admin: loggedInUser.is_admin,
             clinic_id: loggedInUser.clinic_id,
-            associated_patient_id: loggedInUser.associated_patient_id || null // LINHA ADICIONADA
+            associated_patient_id: loggedInUser.associated_patient_id || null, // LINHA ADICIONADA
+            terms_accepted_at: loggedInUser.terms_accepted_at // Para verificar se precisa aceitar termos
         };
 
         const token = jwt.sign(
@@ -158,6 +160,41 @@ authController.setPassword = async (req, res) => {
 
     } catch (error) {
         console.error('Erro ao definir a senha:', error);
+        res.status(500).json({ errors: [{ msg: 'Erro interno do servidor.' }] });
+    }
+};
+
+authController.acceptTerms = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { userId } = req.body;
+    const clientIp = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 
+                     (req.connection.socket ? req.connection.socket.remoteAddress : null) || '127.0.0.1';
+
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ errors: [{ msg: 'Utilizador não encontrado.' }] });
+        }
+
+        if (user.terms_accepted_at) {
+            return res.status(400).json({ errors: [{ msg: 'Os termos já foram aceitos por este utilizador.' }] });
+        }
+
+        // Salvar aceitação dos termos
+        await User.acceptTerms(userId, '1.0', clientIp);
+
+        res.status(200).json({ 
+            msg: 'Termos aceitos com sucesso.',
+            terms_accepted_at: new Date().toISOString(),
+            terms_version: '1.0'
+        });
+
+    } catch (error) {
+        console.error('Erro ao aceitar termos:', error);
         res.status(500).json({ errors: [{ msg: 'Erro interno do servidor.' }] });
     }
 };

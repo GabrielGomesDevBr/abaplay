@@ -171,6 +171,32 @@ const UserModel = {
       console.error(`Erro ao apagar utilizador com ID ${userId} da clínica ${clinicId}:`, error);
       throw error;
     }
+  },
+
+  /**
+   * Marca os termos como aceitos para um utilizador.
+   * @param {number} userId - O ID do utilizador.
+   * @param {string} termsVersion - A versão dos termos aceitos.
+   * @param {string} clientIp - O endereço IP do cliente.
+   * @returns {Promise<boolean>} True se a atualização foi bem-sucedida.
+   */
+  async acceptTerms(userId, termsVersion, clientIp) {
+    const query = `
+      UPDATE users 
+      SET 
+        terms_accepted_at = CURRENT_TIMESTAMP,
+        terms_version = $1,
+        terms_ip_address = $2::inet,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+    `;
+    try {
+      const { rowCount } = await pool.query(query, [termsVersion, clientIp, userId]);
+      return rowCount > 0;
+    } catch (error) {
+      console.error(`Erro ao aceitar termos para utilizador ${userId}:`, error);
+      throw error;
+    }
   }
 };
 
