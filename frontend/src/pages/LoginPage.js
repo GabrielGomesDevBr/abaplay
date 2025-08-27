@@ -7,9 +7,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faBrain, faKey, faUser, faSpinner, faArrowRight, faEye, faEyeSlash,
   faChartLine, faComments, faUsers, faClock, faAward, faHeart,
-  faLightbulb, faRocket, faShieldAlt, faGraduationCap, faEnvelope
+  faLightbulb, faRocket, faShieldAlt, faGraduationCap, faEnvelope, faPhone
 } from '@fortawesome/free-solid-svg-icons';
-import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 
 // Componente de animação de fundo modernizado
 const AnimatedBackground = () => (
@@ -716,7 +715,7 @@ const LoginPage = () => {
                       className="flex items-center justify-center space-x-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-all duration-200 shadow-sm hover:shadow-md group"
                     >
                       <FontAwesomeIcon 
-                        icon={faWhatsapp} 
+                        icon={faPhone} 
                         className="text-green-100 group-hover:text-white transition-colors" 
                       />
                       <span className="text-sm font-medium">WhatsApp</span>
