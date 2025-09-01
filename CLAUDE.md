@@ -101,6 +101,14 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 - **Communication**: Case discussions and parent-therapist chats with Socket.IO real-time messaging
 - **Notifications**: Real-time notification system with status management and badge indicators
 - **PDF Reports**: Consolidated patient reports with jsPDF generation including progress charts and session details
+- **Evolution Report System**: Complete therapeutic evolution reporting system with:
+  - Multi-disciplinary professional support (psychology, speech therapy, occupational therapy, etc.)
+  - One-time professional data configuration (registration, qualifications, signature)
+  - Persistent patient data reuse
+  - Flexible period selector (30/60/90 days or custom)
+  - Automatic analysis with real-data insights
+  - Editable preview before PDF generation
+  - Professional PDF formatting with consistent layout
 - **Program Assignment**: Therapist-patient program assignments with normalized status management (active/archived/paused)
 - **User Management**: Admin interface for managing clinics, users, and patient assignments with role-based access
 - **Progress Visualization**: Interactive charts grouped by intervention areas with Chart.js annotations
@@ -160,15 +168,19 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
   - `parentController.js` - Parent-specific operations and dashboards
   - `patientController.js` - Patient management and data access
   - `programController.js` - Program operations and library management
+  - `reportController.js` - **NEW**: Evolution report system with automatic analysis
+  - `contactController.js` - **NEW**: Contact and colleague management
 - `src/models/` - Database query functions with enhanced error handling
   - `assignmentModel.js` - Assignment operations with status constraints
   - `caseDiscussionModel.js` - Case discussion data management
   - `clinicModel.js` - Clinic information management
   - `notificationStatusModel.js` - Notification status tracking
   - `parentChatModel.js` - Parent-therapist chat data
-  - `patientModel.js` - Patient data operations
+  - `patientModel.js` - Patient data operations with complementary fields
   - `programModel.js` - Program library and hierarchy management
-  - `userModel.js` - User authentication and profile management
+  - `reportModel.js` - **NEW**: Evolution report with automatic analysis and insights
+  - `contactModel.js` - **NEW**: Contact management system
+  - `userModel.js` - User authentication and profile management with professional data
 - `src/routes/` - API endpoint definitions with middleware integration
 - `src/middleware/authMiddleware.js` - JWT authentication and role verification
 - `src/utils/` - Utility functions and helpers
@@ -190,6 +202,7 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
   - `notifications/` - Notification system (NotificationBadge, NotificationPanel, PatientNotificationBadge, ProgressAlert)
   - `patient/` - Patient components (PatientDetails, PatientForm, PatientList, ConsolidatedReportModal)
   - `program/` - Program components (AssignedProgramsList, ProgramCard, ProgramLibrary, SessionChart, SessionProgress, PromptLevelSelector)
+  - `reports/` - **NEW**: Evolution report components (ReportEvolutionModal, ReportPreview, ReportEvolutionContainer)
   - `shared/` - Shared components (Button, Modal, DateRangeSelector)
 - `src/pages/` - Main page components with enhanced functionality
   - `AdminPage.js` - Admin dashboard with user and clinic management
@@ -208,10 +221,11 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
   - `adminApi.js`, `authApi.js`, `caseDiscussionApi.js`, `contactApi.js`
   - `notificationApi.js`, `parentApi.js`, `parentChatApi.js`
   - `patientApi.js`, `programApi.js` - Enhanced with prompt level support
+  - `reportApi.js` - **NEW**: Evolution report API with period options and automatic analysis
 - `src/hooks/` - Custom React hooks
   - `useApi.js` - Custom API hook with loading states
   - `usePatientNotifications.js` - Patient-specific notification management
-- `src/utils/pdfGenerator.js` - Advanced PDF report generation with charts
+- `src/utils/pdfGenerator.js` - Advanced PDF report generation with charts and evolution reports
 - `src/config.js` - Frontend configuration and API endpoints
 
 ### Database & Analysis

@@ -26,6 +26,13 @@ A aplicação é dividida em dois módulos principais:
 - Pontuação automática de progresso baseada em níveis de prompting e taxa de sucesso
 - Anotações detalhadas e documentação de sessões
 - Visualização de gráficos interativos de progresso organizados por área de intervenção
+- **Sistema Completo de Relatórios de Evolução Terapêutica**:
+  - Relatórios profissionais personalizáveis para todas as disciplinas
+  - Configuração única de dados profissionais (CRP, qualificações, assinatura)
+  - Seletor de períodos flexível (30/60/90 dias ou personalizado)
+  - Análise automática com insights baseados em dados reais
+  - Preview editável antes da geração do PDF
+  - Geração de PDFs profissionais com formatação consistente
 - Geração automatizada de relatórios consolidados em PDF com gráficos e dados de sessão
 - Comunicação em tempo real com pais através de chat integrado
 - Sistema colaborativo de discussões de caso com outros profissionais
@@ -141,34 +148,43 @@ src/
 │   ├── assignmentController.js
 │   ├── authController.js
 │   ├── caseDiscussionController.js
+│   ├── contactController.js    # NOVO: Gerenciamento de contatos
 │   ├── notificationController.js
 │   ├── parentChatController.js
 │   ├── parentController.js
 │   ├── patientController.js
-│   └── programController.js
+│   ├── programController.js
+│   └── reportController.js     # NOVO: Relatórios de evolução terapêutica
 ├── middleware/
 │   └── authMiddleware.js   # Middleware de autenticação
 ├── models/                 # Modelos de dados
 │   ├── assignmentModel.js
 │   ├── caseDiscussionModel.js
 │   ├── clinicModel.js
+│   ├── contactModel.js         # NOVO: Modelo de contatos
 │   ├── db.js              # Conexão com PostgreSQL
 │   ├── notificationStatusModel.js
 │   ├── parentChatModel.js
 │   ├── patientModel.js
 │   ├── programModel.js
+│   ├── reportModel.js          # NOVO: Modelo de relatórios com análise automática
 │   └── userModel.js
 ├── routes/                 # Definição de rotas da API
 │   ├── adminRoutes.js
 │   ├── assignmentRoutes.js
 │   ├── authRoutes.js
 │   ├── caseDiscussionRoutes.js
+│   ├── contactRoutes.js        # NOVO: Rotas de contatos
 │   ├── notificationRoutes.js
 │   ├── parentChatRoutes.js
 │   ├── parentRoutes.js
 │   ├── patientRoutes.js
-│   └── programRoutes.js
+│   ├── programRoutes.js
+│   ├── promptLevelRoutes.js    # NOVO: Rotas para níveis de prompting
+│   └── reportRoutes.js         # NOVO: Rotas de relatórios
 ├── utils/
+│   ├── promptLevels.js     # NOVO: Definições e cálculos de níveis ABA
+│   ├── progressAlerts.js   # NOVO: Sistema de alertas de progresso
 │   └── statusNormalizer.js # Utilitário de normalização de status
 └── server.js              # Servidor principal com Socket.IO
 ```
@@ -180,29 +196,36 @@ src/
 │   ├── adminApi.js
 │   ├── authApi.js
 │   ├── caseDiscussionApi.js
+│   ├── contactApi.js          # NOVO: API de contatos
 │   ├── notificationApi.js
 │   ├── parentApi.js
 │   ├── parentChatApi.js
 │   ├── patientApi.js
-│   └── programApi.js
+│   ├── programApi.js
+│   └── reportApi.js           # NOVO: API de relatórios de evolução
 ├── components/            # Componentes React organizados por funcionalidade
 │   ├── admin/            # Componentes de administração
 │   ├── chat/             # Componentes de chat e discussões
+│   ├── contacts/         # NOVO: Componentes de contatos
 │   ├── layout/           # Componentes de layout (Navbar, Sidebar)
 │   ├── notifications/    # Sistema de notificações
 │   ├── patient/          # Componentes de pacientes
 │   ├── program/          # Componentes de programas e sessões
+│   ├── reports/          # NOVO: Componentes de relatórios de evolução
 │   └── shared/           # Componentes compartilhados
 ├── context/              # Context API para gerenciamento de estado
 │   ├── AuthContext.js    # Estado de autenticação
 │   ├── PatientContext.js # Estado de pacientes
 │   └── ProgramContext.js # Estado de programas
 ├── hooks/
-│   └── useApi.js         # Hook customizado para API
+│   ├── useApi.js         # Hook customizado para API
+│   └── usePatientNotifications.js # NOVO: Hook de notificações por paciente
 ├── pages/                # Componentes de páginas principais
 │   ├── AdminPage.js
 │   ├── AdminProgramsPage.js
 │   ├── ClientsPage.js
+│   ├── ColleaguesPage.js      # NOVO: Página de colegas e networking
+│   ├── ContactsPage.js        # NOVO: Página de contatos
 │   ├── DashboardPage.js
 │   ├── HomePage.js
 │   ├── LoginPage.js
@@ -218,6 +241,19 @@ src/
 ```
 
 ## Funcionalidades Detalhadas
+
+### Sistema de Relatórios de Evolução Terapêutica (NOVO)
+- **Multidisciplinar**: Adequado para psicólogos, fonoaudiólogos, terapeutas ocupacionais, musicoterapeutas, etc.
+- **Configuração Única**: Dados profissionais (registro, qualificações, assinatura) salvos uma única vez
+- **Persistência de Dados**: Informações do paciente reutilizadas automaticamente
+- **Seletor de Períodos**: Análise flexível (30/60/90 dias ou período personalizado)
+- **Análise Automática**: Insights baseados em dados reais das sessões com estatísticas detalhadas
+- **Preview Editável**: Revisão completa antes da geração do PDF
+- **PDFs Profissionais**: Formatação consistente e profissional para todas as páginas
+- **Componentes Principais**:
+  - `ReportEvolutionModal`: Configuração inicial e seletor de período
+  - `ReportPreview`: Preview com seções editáveis
+  - `ReportEvolutionContainer`: Orquestração do fluxo completo
 
 ### Sistema de Comunicação em Tempo Real
 - **Chat Terapeuta-Pai**: Comunicação direta via Socket.IO
@@ -294,3 +330,30 @@ src/
 - **Badges Inteligentes**: Indicadores de contagem em tempo real
 - **Alertas de Progresso**: Notificações automáticas baseadas em marcos de desenvolvimento
 - **Notificações por Paciente**: Sistema granular de notificações específicas
+
+## Funcionalidades Implementadas Recentemente (2024)
+
+### ✅ Sistema Completo de Relatórios de Evolução Terapêutica
+- **Problema Resolvido**: Necessidade de relatórios profissionais para diferentes disciplinas
+- **Solução**: Sistema completo multidisciplinar com análise automática e geração de PDFs
+- **Impacto**: Profissionais podem gerar relatórios detalhados em minutos ao invés de horas
+
+### ✅ Correções de Persistência de Dados
+- **Problema Resolvido**: Dados de usuário e paciente não persistiam no sistema de relatórios
+- **Solução**: Atualização dos models para retornar campos complementares (professional_id, qualifications, guardian_name, etc.)
+- **Impacto**: Dados preenchidos uma vez são reutilizados automaticamente
+
+### ✅ Formatação Profissional de PDFs
+- **Problema Resolvido**: Inconsistências de formatação entre páginas dos relatórios
+- **Solução**: Sistema de preservação de contexto de formatação e espaçamentos padronizados
+- **Impacto**: PDFs com aparência profissional e consistente
+
+### ✅ Aceitação de Termos para Administradores
+- **Problema Resolvido**: Termos de uso não persistiam, obrigando re-aceitação a cada login
+- **Solução**: Correção do userModel.js para retornar campos terms_accepted_at
+- **Impacto**: Administradores aceitam termos apenas uma vez
+
+### ✅ Sistema de Cores Padronizado
+- **Problema Resolvido**: Botão de relatório consolidado sem cor definida
+- **Solução**: Adição da cor purple ao sistema de cores dos ActionCards
+- **Impacto**: Interface mais harmoniosa e profissional
