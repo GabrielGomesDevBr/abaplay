@@ -4,7 +4,8 @@ const { normalizeProgramsStatus } = require('../utils/statusNormalizer');
 // Função auxiliar para buscar todos os dados de um paciente
 const getFullPatientData = async (patientId) => {
     const patientQuery = `
-        SELECT id, clinic_id, name, dob, diagnosis, general_notes, created_at, updated_at
+        SELECT id, clinic_id, name, dob, diagnosis, general_notes, created_at, updated_at,
+               guardian_name, guardian_relationship, patient_occupation, main_complaint, treatment_objectives
         FROM patients WHERE id = $1
     `;
     const patientResult = await pool.query(patientQuery, [patientId]);

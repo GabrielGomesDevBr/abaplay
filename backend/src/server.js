@@ -16,6 +16,7 @@ const programRoutes = require('./routes/programRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const promptLevelRoutes = require('./routes/promptLevelRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 // Importa o middleware de autenticação
 const { verifyToken } = require('./middleware/authMiddleware');
@@ -88,6 +89,8 @@ app.use('/api/assignments', verifyToken, assignmentRoutes);
 app.use('/api/contacts', verifyToken, contactRoutes);
 // --- Nova rota para gerenciar níveis de prompting ---
 app.use('/api/prompt-levels', verifyToken, promptLevelRoutes);
+// --- Nova rota para relatórios de evolução ---
+app.use('/api/reports', verifyToken, reportRoutes);
 
 
 // Rota de autenticação (não precisa de token)

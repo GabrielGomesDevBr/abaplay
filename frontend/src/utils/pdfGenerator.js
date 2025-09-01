@@ -654,3 +654,400 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
         alert('Erro ao gerar o Relatório Consolidado. Tente novamente.');
     }
 };
+
+/**
+ * Gera PDF do Relatório de Evolução Terapêutica
+ * @param {object} data - Dados completos do relatório
+ */
+export const generateEvolutionReportPDF = async (data) => {
+    const {
+        reportData,
+        analysisData,
+        patientData,
+        professionalData,
+        customizations = {}
+    } = data;
+
+    if (!reportData || !analysisData) {
+        alert("Dados insuficientes para gerar o relatório.");
+        return;
+    }
+
+    try {
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const margin = 15;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const contentWidth = pageWidth - margin * 2;
+        let y = margin + 10;
+        let pageCount = 1;
+
+        const addFooter = (currentPage) => {
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            const footerText = `Página ${currentPage}`;
+            doc.text(footerText, pageWidth / 2, doc.internal.pageSize.getHeight() - margin / 2, { align: 'center' });
+            doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, margin, doc.internal.pageSize.getHeight() - margin / 2);
+            doc.text('Relatório Profissional Detalhado', pageWidth - margin, doc.internal.pageSize.getHeight() - margin / 2, { align: 'right' });
+            doc.setTextColor(0);
+        };
+
+        const checkAndAddPage = (currentY, requiredHeight = 20, preserveFormatting = true) => {
+            if (currentY > doc.internal.pageSize.getHeight() - margin - requiredHeight - 10) {
+                // Capturar configurações atuais de fonte
+                const currentFontSize = doc.internal.getFontSize();
+                const currentFont = doc.internal.getFont();
+                const currentTextColor = doc.internal.getTextColor();
+                
+                addFooter(pageCount);
+                doc.addPage();
+                pageCount++;
+                
+                // Restaurar configurações de fonte se solicitado
+                if (preserveFormatting) {
+                    doc.setFontSize(currentFontSize);
+                    doc.setFont(currentFont.fontName, currentFont.fontStyle);
+                    doc.setTextColor(currentTextColor);
+                }
+                
+                return margin + 10;
+            }
+            return currentY;
+        };
+
+        const addTextBlock = (text, x, startY, maxWidth, lineHeight = 5) => {
+            if (!text) return startY;
+            const lines = doc.splitTextToSize(text, maxWidth);
+            let currentY = startY;
+            
+            for (let i = 0; i < lines.length; i++) {
+                currentY = checkAndAddPage(currentY, lineHeight + 5, true);
+                doc.text(lines[i], x, currentY);
+                currentY += lineHeight;
+            }
+            
+            return currentY;
+        };
+
+        // CABEÇALHO OFICIAL
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RELATÓRIO DE EVOLUÇÃO TERAPÊUTICA', pageWidth / 2, y, { align: 'center' });
+        y += 6;
+        doc.setFontSize(14);
+        doc.text('ANÁLISE COMPORTAMENTAL', pageWidth / 2, y, { align: 'center' });
+        y += 10;
+
+        // Informações da clínica e profissional
+        if (reportData.clinic_name || professionalData.professional_name) {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            if (reportData.clinic_name) {
+                doc.text(`Clínica: ${reportData.clinic_name}`, pageWidth / 2, y, { align: 'center' });
+                y += 5;
+            }
+            if (professionalData.professional_name) {
+                doc.text(`Profissional: ${professionalData.professional_name}`, pageWidth / 2, y, { align: 'center' });
+                y += 5;
+                if (professionalData.professional_id) {
+                    doc.text(`${professionalData.professional_id}`, pageWidth / 2, y, { align: 'center' });
+                    y += 6;
+                }
+            }
+        }
+
+        y += 5;
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 10;
+
+        // 1. IDENTIFICAÇÃO DO USUÁRIO
+        y = checkAndAddPage(y, 25);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('1. IDENTIFICAÇÃO DO USUÁRIO', margin, y);
+        y += 8;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Nome: ${reportData.name}`, margin, y);
+        y += 5;
+        doc.text(`Data de Nascimento: ${formatDate(reportData.dob)}`, margin, y);
+        doc.text(`Idade: ${reportData.dob ? Math.floor((new Date() - new Date(reportData.dob)) / (365.25 * 24 * 60 * 60 * 1000)) : 'N/A'} anos`, pageWidth - margin - 40, y);
+        y += 5;
+        doc.text(`Diagnóstico: ${reportData.diagnosis || 'Não informado'}`, margin, y);
+        y += 5;
+        if (patientData.guardian_name) {
+            doc.text(`Responsável: ${patientData.guardian_name} (${patientData.guardian_relationship})`, margin, y);
+            y += 5;
+        }
+        if (patientData.patient_occupation) {
+            doc.text(`Ocupação: ${patientData.patient_occupation}`, margin, y);
+            y += 5;
+        }
+        y += 5;
+
+        // 2. DESCRIÇÃO DA DEMANDA
+        y = checkAndAddPage(y, 20);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('2. DESCRIÇÃO DA DEMANDA', margin, y);
+        y += 8;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setFont('helvetica', 'bold');
+        doc.text('Queixa Principal:', margin, y);
+        y += 5;
+        doc.setFont('helvetica', 'normal');
+        const mainComplaint = customizations.demand?.main_complaint || patientData.main_complaint || 'Não informado';
+        y = addTextBlock(mainComplaint, margin, y, contentWidth);
+        y += 5;
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Objetivos do Tratamento:', margin, y);
+        y += 5;
+        doc.setFont('helvetica', 'normal');
+        const objectives = customizations.demand?.treatment_objectives || patientData.treatment_objectives || 'A serem definidos com base na avaliação inicial';
+        y = addTextBlock(objectives, margin, y, contentWidth);
+        y += 8;
+
+        // 3. OBJETIVOS ESPECÍFICOS DOS PROGRAMAS
+        y = checkAndAddPage(y, 20);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('3. OBJETIVOS ESPECÍFICOS DOS PROGRAMAS', margin, y);
+        y += 8;
+
+        if (reportData.active_programs && reportData.active_programs.length > 0) {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            
+            // Agrupa por disciplina
+            const programsByDiscipline = reportData.active_programs.reduce((acc, program) => {
+                if (!acc[program.discipline_name]) {
+                    acc[program.discipline_name] = [];
+                }
+                acc[program.discipline_name].push(program);
+                return acc;
+            }, {});
+
+            Object.keys(programsByDiscipline).sort().forEach(discipline => {
+                y = checkAndAddPage(y, 15);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`${discipline}:`, margin, y);
+                y += 5;
+                
+                programsByDiscipline[discipline].forEach(program => {
+                    y = checkAndAddPage(y, 10);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(`• ${program.program_name}`, margin + 5, y);
+                    y += 4;
+                    if (program.objective) {
+                        doc.setFont('helvetica', 'italic');
+                        y = addTextBlock(`Objetivo: ${program.objective}`, margin + 10, y, contentWidth - 10, 4);
+                        y += 2;
+                    }
+                });
+                y += 3;
+            });
+        } else {
+            doc.setFont('helvetica', 'italic');
+            doc.text('Nenhum programa ativo no período analisado.', margin, y);
+            y += 5;
+        }
+        y += 5;
+
+        // 4. REGISTRO DA EVOLUÇÃO DAS SESSÕES
+        y = checkAndAddPage(y, 20);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('4. REGISTRO DA EVOLUÇÃO DAS SESSÕES', margin, y);
+        y += 8;
+
+        // Período analisado
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        if (analysisData.period) {
+            doc.text(`Período analisado: ${formatDate(analysisData.period.start_date)} a ${formatDate(analysisData.period.end_date)}`, margin, y);
+            y += 5;
+        }
+
+        // Estatísticas resumidas
+        if (analysisData.statistics) {
+            const stats = analysisData.statistics;
+            doc.setFont('helvetica', 'normal');
+            doc.text(`• Total de sessões realizadas: ${stats.total_sessions}`, margin + 3, y);
+            y += 5;
+            doc.text(`• Programas trabalhados: ${stats.programs_worked}`, margin + 3, y);
+            y += 5;
+            doc.text(`• Média geral de acertos: ${stats.avg_score.toFixed(1)}%`, margin + 3, y);
+            y += 5;
+            doc.text(`• Nível de independência: ${stats.independence_percentage.toFixed(1)}%`, margin + 3, y);
+            y += 5;
+            
+            // Tendência
+            let trendText = '• Tendência: ';
+            switch (stats.improvement_trend) {
+                case 'significant_improvement':
+                    trendText += 'Melhoria significativa observada';
+                    break;
+                case 'moderate_improvement':
+                    trendText += 'Melhoria gradual observada';
+                    break;
+                case 'stable':
+                    trendText += 'Desempenho estável mantido';
+                    break;
+                case 'moderate_decline':
+                    trendText += 'Declínio moderado observado';
+                    break;
+                case 'significant_decline':
+                    trendText += 'Declínio significativo observado';
+                    break;
+                default:
+                    trendText += 'Dados insuficientes para análise de tendência';
+            }
+            doc.text(trendText, margin + 3, y);
+            y += 7;
+        }
+
+        // Observações qualitativas
+        if (analysisData.frequent_observations && analysisData.frequent_observations.length > 0) {
+            y = checkAndAddPage(y, 15);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Observações Registradas nas Sessões:', margin, y);
+            y += 5;
+            doc.setFont('helvetica', 'normal');
+            
+            analysisData.frequent_observations.slice(0, 8).forEach(obs => {
+                y = checkAndAddPage(y, 8);
+                doc.text(`• "${obs.note}" (observado em ${obs.frequency} sessão${obs.frequency > 1 ? 'ões' : ''})`, margin + 3, y);
+                y += 5;
+            });
+            y += 3;
+        }
+
+        // Performance por área
+        if (analysisData.area_performance && analysisData.area_performance.length > 0) {
+            y = checkAndAddPage(y, 15);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Desempenho por Área de Intervenção:', margin, y);
+            y += 5;
+            doc.setFont('helvetica', 'normal');
+            
+            analysisData.area_performance.forEach(area => {
+                y = checkAndAddPage(y, 8);
+                doc.text(`• ${area.area_name}: ${area.avg_score.toFixed(1)}% (${area.session_count} sessões)`, margin + 3, y);
+                y += 5;
+            });
+            y += 6;
+        }
+
+        // 5. ANÁLISE E INTERPRETAÇÃO
+        y = checkAndAddPage(y, 20);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('5. ANÁLISE E INTERPRETAÇÃO', margin, y);
+        y += 8;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        if (customizations.analysis?.clinical_interpretation) {
+            y = addTextBlock(customizations.analysis.clinical_interpretation, margin, y, contentWidth);
+        } else {
+            // Análise automática baseada nos insights
+            if (analysisData.insights && analysisData.insights.length > 0) {
+                doc.text('Com base nos dados coletados e na análise comportamental, observa-se:', margin, y);
+                y += 6;
+                
+                analysisData.insights.forEach(insight => {
+                    y = checkAndAddPage(y, 8);
+                    doc.text(`• ${insight.text}`, margin + 3, y);
+                    y += 6;
+                });
+            } else {
+                doc.text('Análise em desenvolvimento com base nos dados coletados.', margin, y);
+                y += 5;
+            }
+        }
+        y += 8;
+
+        // 6. CONCLUSÃO E ENCAMINHAMENTOS
+        y = checkAndAddPage(y, 20);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('6. CONCLUSÃO E ENCAMINHAMENTOS', margin, y);
+        y += 8;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        // Síntese
+        doc.setFont('helvetica', 'bold');
+        doc.text('Síntese do Período:', margin, y);
+        y += 5;
+        doc.setFont('helvetica', 'normal');
+        
+        if (customizations.conclusions?.summary) {
+            y = addTextBlock(customizations.conclusions.summary, margin, y, contentWidth);
+        } else {
+            // Síntese automática
+            const summary = `Durante o período analisado, foram realizadas ${analysisData.statistics?.total_sessions || 0} sessões terapêuticas abrangendo ${analysisData.statistics?.programs_worked || 0} programa(s) de intervenção. O desempenho médio apresentado foi de ${analysisData.statistics?.avg_score?.toFixed(1) || 0}% de acertos, com ${analysisData.statistics?.independence_percentage?.toFixed(1) || 0}% das respostas em nível independente.`;
+            y = addTextBlock(summary, margin, y, contentWidth);
+        }
+        y += 6;
+
+        // Recomendações
+        doc.setFont('helvetica', 'bold');
+        doc.text('Recomendações:', margin, y);
+        y += 5;
+        doc.setFont('helvetica', 'normal');
+        
+        if (customizations.conclusions?.recommendations) {
+            y = addTextBlock(customizations.conclusions.recommendations, margin, y, contentWidth);
+        } else {
+            // Recomendações baseadas na tendência
+            let recommendations = 'Recomenda-se continuidade do programa de intervenção com ';
+            if (analysisData.statistics?.improvement_trend === 'significant_improvement' || 
+                analysisData.statistics?.improvement_trend === 'moderate_improvement') {
+                recommendations += 'manutenção das estratégias atuais e consideração de aumento da complexidade dos objetivos trabalhados.';
+            } else if (analysisData.statistics?.improvement_trend === 'stable') {
+                recommendations += 'revisão das estratégias para promover maior avanço no desenvolvimento das habilidades.';
+            } else {
+                recommendations += 'revisão criteriosa dos procedimentos e estratégias utilizadas, bem como investigação de possíveis variáveis interferentes.';
+            }
+            y = addTextBlock(recommendations, margin, y, contentWidth);
+        }
+        y += 10;
+
+        // Assinatura profissional
+        y = checkAndAddPage(y, 25);
+        doc.setLineWidth(0.3);
+        doc.line(pageWidth - margin - 60, y, pageWidth - margin, y);
+        y += 5;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(professionalData.professional_name || 'Profissional Responsável', pageWidth - margin - 30, y, { align: 'center' });
+        y += 3;
+        doc.text(professionalData.professional_id || 'Registro Profissional', pageWidth - margin - 30, y, { align: 'center' });
+        if (professionalData.qualifications) {
+            y += 3;
+            const qualifications = doc.splitTextToSize(professionalData.qualifications, 60);
+            qualifications.forEach(line => {
+                doc.text(line, pageWidth - margin - 30, y, { align: 'center' });
+                y += 3;
+            });
+        }
+
+        // Footer da última página
+        addFooter(pageCount);
+
+        // Salvar PDF
+        const filename = `Relatorio_Evolucao_Terapeutica_${reportData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
+        doc.save(filename);
+
+    } catch (error) {
+        console.error('Erro ao gerar Relatório de Evolução Terapêutica:', error);
+        alert('Erro ao gerar o Relatório de Evolução Terapêutica. Tente novamente.');
+    }
+};

@@ -17,7 +17,8 @@ const UserModel = {
       SELECT 
         id, clinic_id, username, password_hash, 
         full_name, role, is_admin, associated_patient_id,
-        terms_accepted_at, terms_version, terms_ip_address
+        terms_accepted_at, terms_version, terms_ip_address,
+        professional_id, qualifications, professional_signature
       FROM users 
       WHERE username = $1
     `;
@@ -35,7 +36,8 @@ const UserModel = {
       SELECT 
         id, clinic_id, username, password_hash, 
         full_name, role, is_admin, associated_patient_id,
-        terms_accepted_at, terms_version, terms_ip_address
+        terms_accepted_at, terms_version, terms_ip_address,
+        professional_id, qualifications, professional_signature
       FROM users 
       WHERE id = $1
     `;
