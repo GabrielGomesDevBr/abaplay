@@ -66,7 +66,15 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
   };
 
-  const value = { token, user, isAuthenticated, isLoading, login, logout };
+  // Função para atualizar dados do usuário (para dados profissionais)
+  const updateUser = (updatedUserData) => {
+    if (user) {
+      const newUser = { ...user, ...updatedUserData };
+      setUser(newUser);
+    }
+  };
+
+  const value = { token, user, isAuthenticated, isLoading, login, logout, updateUser };
 
   return (
     <AuthContext.Provider value={value}>

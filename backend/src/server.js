@@ -17,9 +17,11 @@ const assignmentRoutes = require('./routes/assignmentRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const promptLevelRoutes = require('./routes/promptLevelRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const superAdminRoutes = require('./routes/superAdminRoutes');
 
 // Importa o middleware de autenticação
 const { verifyToken } = require('./middleware/authMiddleware');
+const { verifyClinicStatus } = require('./middleware/superAdminMiddleware');
 
 const app = express();
 const server = http.createServer(app);
@@ -74,23 +76,25 @@ app.use((req, res, next) => {
 });
 
 // Aplica o middleware de autenticação a todas as rotas /api/* que precisam dele
-// Isso garante que req.user estará disponível nos controllers
-app.use('/api/admin', verifyToken, adminRoutes);
-app.use('/api/patients', verifyToken, patientRoutes);
-app.use('/api/parent', verifyToken, parentRoutes);
-app.use('/api/discussions', verifyToken, caseDiscussionRoutes);
-app.use('/api/parent-chat', verifyToken, parentChatRoutes);
-app.use('/api/notifications', verifyToken, notificationRoutes);
+// Também aplica verificação de status da clínica (suspensão)
+app.use('/api/admin', verifyToken, verifyClinicStatus, adminRoutes);
+app.use('/api/patients', verifyToken, verifyClinicStatus, patientRoutes);
+app.use('/api/parent', verifyToken, verifyClinicStatus, parentRoutes);
+app.use('/api/discussions', verifyToken, verifyClinicStatus, caseDiscussionRoutes);
+app.use('/api/parent-chat', verifyToken, verifyClinicStatus, parentChatRoutes);
+app.use('/api/notifications', verifyToken, verifyClinicStatus, notificationRoutes);
 // --- A rota de programas agora também é protegida ---
-app.use('/api/programs', verifyToken, programRoutes);
+app.use('/api/programs', verifyToken, verifyClinicStatus, programRoutes);
 // --- Adicionada a nova rota de atribuições, devidamente protegida ---
-app.use('/api/assignments', verifyToken, assignmentRoutes);
+app.use('/api/assignments', verifyToken, verifyClinicStatus, assignmentRoutes);
 // --- Nova rota de contatos para sistema de chat iniciado ---
-app.use('/api/contacts', verifyToken, contactRoutes);
+app.use('/api/contacts', verifyToken, verifyClinicStatus, contactRoutes);
 // --- Nova rota para gerenciar níveis de prompting ---
-app.use('/api/prompt-levels', verifyToken, promptLevelRoutes);
+app.use('/api/prompt-levels', verifyToken, verifyClinicStatus, promptLevelRoutes);
 // --- Nova rota para relatórios de evolução ---
-app.use('/api/reports', verifyToken, reportRoutes);
+app.use('/api/reports', verifyToken, verifyClinicStatus, reportRoutes);
+// --- Nova rota para super admin (sem verificação de clínica) ---
+app.use('/api/super-admin', superAdminRoutes);
 
 
 // Rota de autenticação (não precisa de token)

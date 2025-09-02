@@ -24,7 +24,7 @@
     "tailwindcss": "^3.4.7"
   },
   "scripts": {
-    "start": "HOST=0.0.0.0 react-scripts start",
+    "start": "HOST=0.0.0.0 PORT=3001 react-scripts start",
     "build": "npm install --include=dev && react-scripts build",
     "build-safe": "react-scripts build",
     "test": "react-scripts test",

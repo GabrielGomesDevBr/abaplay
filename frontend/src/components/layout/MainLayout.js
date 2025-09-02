@@ -9,7 +9,6 @@ import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 const MainLayout = () => {
     const location = useLocation();
     const { user, isAuthenticated, isLoading } = useAuth();
-    
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     // <<< LÓGICA DE VISIBILIDADE ATUALIZADA >>>
@@ -24,6 +23,11 @@ const MainLayout = () => {
     useEffect(() => {
         setIsSidebarOpen(false);
     }, [location]);
+
+    // Redirect super admin to their specific page
+    if (user?.role === 'super_admin') {
+        return <Navigate to="/super-admin" replace />;
+    }
 
     if (isLoading) {
         return (

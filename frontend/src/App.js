@@ -18,6 +18,7 @@ import AdminPage from './pages/AdminPage';
 // --- NOVA IMPORTAÇÃO ---
 import ProgramSessionPage from './pages/ProgramSessionPage';
 import ColleaguesPage from './pages/ColleaguesPage';
+import SuperAdminPage from './pages/SuperAdminPage';
 
 
 // Componente de Guarda para Rotas de Admin
@@ -29,19 +30,42 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
+// Componente de Guarda para Rotas de Super Admin
+const SuperAdminRoute = ({ children }) => {
+  const { user } = useAuth();
+  if (!user || user.role !== 'super_admin') {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
 
 function App() {
   return (
     <AuthProvider>
-      <PatientProvider>
-        <ProgramProvider>
-          <Router>
-            <div className="bg-gray-100 min-h-screen">
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                
-                {/* O MainLayout agora envolve todas as páginas autenticadas */}
-                <Route path="/" element={<MainLayout />}>
+      <Router>
+        <div className="bg-gray-100 min-h-screen">
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            
+            {/* Rota Super Admin (sem layout principal e sem contexts desnecessários) */}
+            <Route 
+              path="/super-admin" 
+              element={
+                <SuperAdminRoute>
+                  <SuperAdminPage />
+                </SuperAdminRoute>
+              } 
+            />
+            
+            {/* O MainLayout agora envolve todas as páginas autenticadas com contexts */}
+            <Route path="/" element={
+              <PatientProvider>
+                <ProgramProvider>
+                  <MainLayout />
+                </ProgramProvider>
+              </PatientProvider>
+            }>
                   <Route index element={<HomePage />} />
 
                   {/* Rotas específicas para cada função */}
@@ -75,8 +99,6 @@ function App() {
               </Routes>
             </div>
           </Router>
-        </ProgramProvider>
-      </PatientProvider>
     </AuthProvider>
   );
 }

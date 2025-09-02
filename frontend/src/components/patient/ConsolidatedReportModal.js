@@ -1,12 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faFilePdf, faSpinner, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import { faTimes, faSpinner, faChartLine, faMagic, faUserMd, faEdit, faEye } from '@fortawesome/free-solid-svg-icons';
 import { usePatients } from '../../context/PatientContext';
 import { useAuth } from '../../context/AuthContext';
 // A importação do usePrograms não é mais necessária.
-import { generateConsolidatedReportPDF } from '../../utils/pdfGenerator';
+// A importação generateConsolidatedReportPDF foi movida para o componente de preview
 import DateRangeSelector from '../shared/DateRangeSelector';
 import { getLegendLevels } from '../../utils/promptLevelColors';
+import SuggestionPreviewModal from '../shared/SuggestionPreviewModal';
+import ProfessionalDataModal from '../shared/ProfessionalDataModal';
+import RichTextEditor from '../shared/RichTextEditor';
+import ReportMetrics from '../shared/ReportMetrics';
+import ConsolidatedReportPreview from '../shared/ConsolidatedReportPreview';
+import reportPreFillService from '../../services/reportPreFillService';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -47,7 +53,6 @@ const formatDate = (dateString, format = 'long') => {
 
 // <<< NOVO COMPONENTE PARA O GRÁFICO DE PRÉ-VISUALIZAÇÃO >>>
 const ReportChart = ({ program, sessionData }) => {
-    const { user } = useAuth();
     const programSessionData = (sessionData || [])
       .filter(session => session.program_id === program.program_id);
       // Dados já vêm ordenados do backend
@@ -202,14 +207,28 @@ const ReportChart = ({ program, sessionData }) => {
 
 const ConsolidatedReportModal = ({ isOpen, onClose }) => {
   const { selectedPatient } = usePatients();
+  const { user, updateUser } = useAuth();
   // A chamada a usePrograms() foi removida.
 
   const [reportText, setReportText] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
   
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  
+  // Estados para funcionalidade de pré-preenchimento
+  const [showSuggestionModal, setShowSuggestionModal] = useState(false);
+  const [suggestedText, setSuggestedText] = useState('');
+  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
+  const [suggestionError, setSuggestionError] = useState('');
+  
+  // Estados para dados profissionais
+  const [showProfessionalModal, setShowProfessionalModal] = useState(false);
+  const [professionalData, setProfessionalData] = useState(null);
+  const [needsProfessionalData, setNeedsProfessionalData] = useState(false);
+  
+  // Estados para pré-visualização
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -217,8 +236,26 @@ const ConsolidatedReportModal = ({ isOpen, onClose }) => {
       setStartDate('');
       setEndDate('');
       setError('');
+      setSuggestedText('');
+      setSuggestionError('');
+      setShowSuggestionModal(false);
+      setShowPreview(false);
+      
+      // Verificar se precisa configurar dados profissionais
+      if (user) {
+        const needsData = !user.professional_id || !user.qualifications;
+        setNeedsProfessionalData(needsData);
+        
+        if (!needsData) {
+          setProfessionalData({
+            professional_id: user.professional_id,
+            qualifications: user.qualifications,
+            professional_signature: user.professional_signature || ''
+          });
+        }
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, user]);
 
   const filteredSessionData = useMemo(() => {
     if (!selectedPatient?.sessionData) return [];
@@ -239,25 +276,88 @@ const ConsolidatedReportModal = ({ isOpen, onClose }) => {
   }, [selectedPatient]);
 
 
-  const handleGenerate = () => {
-    if (!selectedPatient) return;
-    setIsGenerating(true);
-    setError('');
-    try {
-      const patientForReport = { ...selectedPatient, sessionData: filteredSessionData };
-      // A função generate... não precisa mais de getProgramById
-      generateConsolidatedReportPDF(patientForReport, reportText);
-      setTimeout(() => onClose(), 1000); 
-    } catch (err) {
-      setError(err.message || 'Ocorreu um erro ao gerar o relatório.');
-    } finally {
-      setIsGenerating(false);
-    }
+  const handlePreview = () => {
+    if (!selectedPatient || !reportText.trim() || needsProfessionalData) return;
+    setShowPreview(true);
+  };
+
+  const handleClosePreview = () => {
+    setShowPreview(false);
+  };
+
+  const handleUpdateReportText = (newText) => {
+    setReportText(newText);
   };
   
   const clearFilter = () => {
     setStartDate('');
     setEndDate('');
+  };
+
+  // Função para gerar sugestão de texto
+  const handleGenerateSuggestion = async () => {
+    if (!selectedPatient) return;
+    
+    setIsGeneratingSuggestion(true);
+    setSuggestionError('');
+    
+    try {
+      const periodOptions = {
+        startDate: startDate || null,
+        endDate: endDate || null
+      };
+      
+      const suggestion = await reportPreFillService.generateConventionalReportSuggestion(
+        selectedPatient.id,
+        filteredSessionData,
+        periodOptions
+      );
+      
+      setSuggestedText(suggestion);
+      setShowSuggestionModal(true);
+      
+    } catch (err) {
+      console.error('Erro ao gerar sugestão:', err);
+      setSuggestionError(err.message || 'Erro ao gerar sugestão de texto.');
+    } finally {
+      setIsGeneratingSuggestion(false);
+    }
+  };
+
+  // Função para usar sugestão (substituir texto atual)
+  const handleUseSuggestion = (suggestion) => {
+    setReportText(suggestion);
+  };
+
+  // Função para adicionar sugestão ao texto existente
+  const handleAppendSuggestion = (combinedText) => {
+    setReportText(combinedText);
+  };
+
+  // Função para fechar modal de sugestão
+  const handleCloseSuggestionModal = () => {
+    setShowSuggestionModal(false);
+    setSuggestedText('');
+    setSuggestionError('');
+  };
+  
+  // Função para abrir modal de dados profissionais
+  const handleOpenProfessionalModal = () => {
+    setShowProfessionalModal(true);
+  };
+  
+  // Função para salvar dados profissionais
+  const handleSaveProfessionalData = (data) => {
+    setProfessionalData(data);
+    setNeedsProfessionalData(false);
+    setShowProfessionalModal(false);
+    
+    // Atualizar dados do usuário no contexto para persistir entre sessões
+    updateUser({
+      professional_id: data.professional_id,
+      qualifications: data.qualifications,
+      professional_signature: data.professional_signature
+    });
   };
 
   if (!isOpen || !selectedPatient) {
@@ -276,31 +376,114 @@ const ConsolidatedReportModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        <div className="p-6 space-y-6 overflow-y-auto">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Período do Relatório</label>
-            <DateRangeSelector
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
-              onClear={clearFilter}
-              showInfo={false}
-            />
-            <p className="text-xs text-gray-500 mt-2">Padrão: último mês. Limpe os filtros para incluir todos os dados.</p>
-          </div>
-        
-          <div>
-            <label htmlFor="report-text" className="block text-sm font-medium text-gray-700 mb-1">Análise e Observações do Terapeuta</label>
-            <p className="text-xs text-gray-500 mb-2">Este texto será incluído no início do relatório em PDF.</p>
-            <textarea
-              id="report-text" rows="6"
-              placeholder="Escreva aqui a sua análise qualitativa..."
-              value={reportText}
-              onChange={(e) => setReportText(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-vertical"
-            ></textarea>
-          </div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-6">
+            {/* Seção de dados profissionais */}
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-indigo-800 flex items-center">
+                  <FontAwesomeIcon icon={faUserMd} className="mr-2" />
+                  Dados Profissionais
+                </h3>
+                <button
+                  onClick={handleOpenProfessionalModal}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center transition-colors"
+                >
+                  <FontAwesomeIcon icon={faEdit} className="mr-1" />
+                  {needsProfessionalData ? 'Configurar' : 'Editar'}
+                </button>
+              </div>
+              
+              {needsProfessionalData ? (
+                <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded p-2">
+                  ⚠️ É necessário configurar seus dados profissionais antes de gerar o relatório.
+                </div>
+              ) : professionalData ? (
+                <div className="text-sm text-indigo-700 space-y-1">
+                  <p><strong>Nome:</strong> {user?.full_name || user?.name}</p>
+                  <p><strong>Registro:</strong> {professionalData.professional_id}</p>
+                  <p><strong>Qualificações:</strong> {professionalData.qualifications}</p>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">
+                  Carregando dados profissionais...
+                </div>
+              )}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Período do Relatório</label>
+              <DateRangeSelector
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                onClear={clearFilter}
+                showInfo={false}
+              />
+              <p className="text-xs text-gray-500 mt-2">Padrão: último mês. Limpe os filtros para incluir todos os dados.</p>
+            </div>
+            
+            {/* Layout responsivo para editor e métricas */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Editor de texto (3/4 no desktop, full no mobile) */}
+              <div className="lg:col-span-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                  <label className="block text-sm font-medium text-gray-700">Análise e Observações do Terapeuta</label>
+                  <button
+                    onClick={handleGenerateSuggestion}
+                    disabled={isGeneratingSuggestion || !selectedPatient || needsProfessionalData}
+                    className="flex items-center px-3 py-1.5 text-xs bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-medium rounded-md transition duration-150 ease-in-out shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FontAwesomeIcon 
+                      icon={isGeneratingSuggestion ? faSpinner : faMagic} 
+                      className={`mr-1.5 ${isGeneratingSuggestion ? 'fa-spin' : ''}`} 
+                    />
+                    {isGeneratingSuggestion ? 'Gerando...' : 'Sugerir Texto'}
+                  </button>
+                </div>
+                
+                <div className="mb-3 space-y-2">
+                  <p className="text-xs text-gray-500">
+                    Este texto será incluído no início do relatório em PDF. Use o botão "Sugerir Texto" para gerar automaticamente uma análise baseada nos dados do paciente.
+                    <span className="hidden sm:inline"> Melhor experiência em desktop para formatação avançada.</span>
+                  </p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-md p-2">
+                    <p className="text-xs text-amber-800">
+                      <strong>⚠️ Responsabilidade Profissional:</strong> A sugestão automática é baseada apenas em métricas quantitativas. 
+                      É <strong>imprescindível</strong> que o terapeuta revise, adapte e complemente o texto com sua análise clínica qualitativa, 
+                      considerando aspectos comportamentais, contextuais e individuais do paciente que não são capturados pelos dados numéricos.
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Mostrar erro de sugestão se houver */}
+                {suggestionError && (
+                  <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-md">
+                    <p className="text-xs text-red-600">{suggestionError}</p>
+                  </div>
+                )}
+                
+                <RichTextEditor
+                  value={reportText}
+                  onChange={setReportText}
+                  placeholder="Escreva aqui a sua análise qualitativa ou use o botão 'Sugerir Texto' para gerar automaticamente..."
+                  rows={8}
+                  disabled={needsProfessionalData}
+                />
+              </div>
+              
+              {/* Métricas (1/4 no desktop, full no mobile) */}
+              <div className="lg:col-span-1">
+                <ReportMetrics
+                  sessionData={filteredSessionData}
+                  startDate={startDate}
+                  endDate={endDate}
+                  assignedPrograms={assignedPrograms}
+                  className="sticky top-4"
+                />
+              </div>
+            </div>
 
           {/* <<< NOVA SECÇÃO DE PRÉ-VISUALIZAÇÃO DOS GRÁFICOS >>> */}
           <div className="border-t pt-6">
@@ -350,19 +533,68 @@ const ConsolidatedReportModal = ({ isOpen, onClose }) => {
             </div>
           </div>
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          </div>
         </div>
 
-        <div className="p-4 bg-gray-50 border-t border-gray-200 text-right mt-auto">
+        <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3 mt-auto">
           <button
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-6 rounded-md text-sm transition duration-150 ease-in-out shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-60"
+            onClick={onClose}
+            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            <FontAwesomeIcon icon={isGenerating ? faSpinner : faFilePdf} className={`mr-2 ${isGenerating && 'fa-spin'}`} />
-            {isGenerating ? 'Gerando...' : 'Gerar PDF'}
+            Cancelar
+          </button>
+          <button
+            onClick={handlePreview}
+            disabled={needsProfessionalData || !reportText.trim()}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-6 rounded-md text-sm transition duration-150 ease-in-out shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-60 flex items-center space-x-2"
+          >
+            <FontAwesomeIcon icon={faEye} />
+            <span>
+              {needsProfessionalData 
+                ? 'Configure Dados Profissionais' 
+                : !reportText.trim() 
+                  ? 'Adicione Texto para Visualizar'
+                  : 'Visualizar PDF'
+              }
+            </span>
           </button>
         </div>
       </div>
+      
+      {/* Modal de Sugestão */}
+      <SuggestionPreviewModal
+        isOpen={showSuggestionModal}
+        onClose={handleCloseSuggestionModal}
+        suggestedText={suggestedText}
+        currentText={reportText}
+        onUseSuggestion={handleUseSuggestion}
+        onAppendSuggestion={handleAppendSuggestion}
+        isGenerating={isGeneratingSuggestion}
+      />
+      
+      {/* Modal de Dados Profissionais */}
+      <ProfessionalDataModal
+        isOpen={showProfessionalModal}
+        onClose={() => setShowProfessionalModal(false)}
+        onSave={handleSaveProfessionalData}
+        currentUser={user}
+        title="Configurar Dados Profissionais para Relatório"
+      />
+      
+      {/* Modal de Pré-visualização */}
+      <ConsolidatedReportPreview
+        isOpen={showPreview}
+        onClose={handleClosePreview}
+        patientData={selectedPatient}
+        reportText={reportText}
+        professionalData={professionalData ? {
+          ...professionalData,
+          professional_name: user?.full_name || user?.name || 'Profissional'
+        } : null}
+        sessionData={filteredSessionData}
+        assignedPrograms={assignedPrograms}
+        onUpdateReportText={handleUpdateReportText}
+      />
     </div>
   );
 };

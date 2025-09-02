@@ -47,7 +47,10 @@ export const PatientProvider = ({ children }) => {
     setError('');
     try {
       let patientData = [];
-      if (user.is_admin) {
+      if (user.role === 'super_admin') {
+        // Super admin não precisa carregar pacientes no contexto
+        patientData = [];
+      } else if (user.is_admin) {
         patientData = await fetchAllAdminPatients(token);
       } else if (user.role === 'terapeuta') {
         patientData = await fetchAllPatients(token);

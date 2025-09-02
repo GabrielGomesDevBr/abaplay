@@ -230,7 +230,7 @@ export const generateWeeklyRecordSheetPDF = async (patient) => {
     }
 };
 
-export const generateConsolidatedReportPDF = async (patient, reportText) => {
+export const generateConsolidatedReportPDF = async (patient, reportText, professionalData = null) => {
      if (!patient) {
         alert("Nenhum cliente selecionado.");
         return;
@@ -286,17 +286,112 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
             doc.setTextColor(0);
         };
 
-        // Controle melhorado de quebra de página
-        const checkAndAddPage = (currentY, requiredHeight = 20, forceNewPage = false) => {
+        // Controle melhorado de quebra de página (consistente com relatório de evolução)
+        const checkAndAddPage = (currentY, requiredHeight = 20, forceNewPage = false, preserveFormatting = true) => {
             if (forceNewPage || currentY > doc.internal.pageSize.getHeight() - margin - requiredHeight) {
+                // Capturar configurações atuais de fonte ANTES de quebrar a página
+                const currentFontSize = doc.internal.getFontSize();
+                const currentFont = doc.internal.getFont();
+                const currentTextColor = doc.internal.getTextColor();
+                
                 addFooter(pageCount);
                 doc.addPage();
                 pageCount++;
+                
+                // Restaurar configurações de fonte se solicitado
+                if (preserveFormatting) {
+                    doc.setFontSize(currentFontSize);
+                    doc.setFont(currentFont.fontName, currentFont.fontStyle);
+                    doc.setTextColor(currentTextColor);
+                }
+                
                 return margin + 10;
             }
             return currentY;
         };
         
+        // Função para processar markdown e aplicar formatação consistente com relatório de evolução
+        const processMarkdownText = (text, x, startY, maxWidth, lineHeight = 5) => {
+            if (!text) return startY;
+            
+            let currentY = startY;
+            const lines = text.split('\n');
+            
+            for (const line of lines) {
+                if (line.trim() === '') {
+                    currentY += lineHeight * 0.7;
+                    continue;
+                }
+                
+                // Processar listas com bullets (consistente com relatório de evolução)
+                if (line.trim().startsWith('• ')) {
+                    const listText = line.trim().substring(2);
+                    currentY = checkAndAddPage(currentY, lineHeight + 5, false, true);
+                    
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('•', x, currentY);
+                    
+                    const bulletLines = doc.splitTextToSize(listText, maxWidth - 10);
+                    for (let i = 0; i < bulletLines.length; i++) {
+                        if (i > 0) {
+                            currentY += lineHeight;
+                            currentY = checkAndAddPage(currentY, lineHeight + 5, false, true);
+                        }
+                        doc.text(bulletLines[i], x + 5, currentY);
+                    }
+                    currentY += lineHeight;
+                    continue;
+                }
+                
+                // Processar listas numeradas
+                const numberedMatch = line.match(/^(\d+)\.\s(.+)/);
+                if (numberedMatch) {
+                    const [, number, listText] = numberedMatch;
+                    currentY = checkAndAddPage(currentY, lineHeight + 5, false, true);
+                    
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(`${number}.`, x, currentY);
+                    
+                    const numberedLines = doc.splitTextToSize(listText, maxWidth - 15);
+                    for (let i = 0; i < numberedLines.length; i++) {
+                        if (i > 0) {
+                            currentY += lineHeight;
+                            currentY = checkAndAddPage(currentY, lineHeight + 5, false, true);
+                        }
+                        doc.text(numberedLines[i], x + 10, currentY);
+                    }
+                    currentY += lineHeight;
+                    continue;
+                }
+                
+                // Processar texto com formatação inline (negrito/itálico)
+                const processedLine = processInlineFormattingLine(line, x, currentY, maxWidth, lineHeight);
+                currentY = processedLine.newY;
+            }
+            
+            return currentY;
+        };
+        
+        // Função auxiliar para processar formatação inline em uma linha
+        const processInlineFormattingLine = (text, x, startY, maxWidth, lineHeight) => {
+            // Substituir formatação markdown por texto simples por enquanto
+            // (implementação completa seria mais complexa para jsPDF)
+            let processedText = text
+                .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove negrito (mantém texto)
+                .replace(/\*(.*?)\*/g, '$1');     // Remove itálico (mantém texto)
+            
+            const lines = doc.splitTextToSize(processedText, maxWidth);
+            let currentY = startY;
+            
+            for (let i = 0; i < lines.length; i++) {
+                currentY = checkAndAddPage(currentY, lineHeight + 5);
+                doc.text(lines[i], x, currentY);
+                currentY += lineHeight;
+            }
+            
+            return { newY: currentY };
+        };
+
         // Função para quebrar texto em múltiplas linhas respeitando limites
         const addTextWithPageBreaks = (text, x, startY, maxWidth, lineHeight = 5) => {
             const lines = doc.splitTextToSize(text, maxWidth);
@@ -311,14 +406,62 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
             return currentY;
         };
         
-        doc.setFontSize(16);
+        // CABEÇALHO OFICIAL (consistente com relatório de evolução)
+        doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
-        doc.text(`Relatório Consolidado - ${patient.name}`, pageWidth / 2, y, { align: 'center' });
+        doc.text('RELATÓRIO CONSOLIDADO', pageWidth / 2, y, { align: 'center' });
+        y += 6;
+        doc.setFontSize(14);
+        doc.text('ANÁLISE COMPORTAMENTAL', pageWidth / 2, y, { align: 'center' });
+        y += 10;
+
+        // Informações da clínica e profissional (como no relatório de evolução)
+        if (professionalData) {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            if (patient.clinic_name) {
+                doc.text(`Clínica: ${patient.clinic_name}`, pageWidth / 2, y, { align: 'center' });
+                y += 5;
+            }
+            if (professionalData.professional_name) {
+                doc.text(`Profissional: ${professionalData.professional_name}`, pageWidth / 2, y, { align: 'center' });
+                y += 5;
+                if (professionalData.professional_id) {
+                    doc.text(`${professionalData.professional_id}`, pageWidth / 2, y, { align: 'center' });
+                    y += 6;
+                }
+            }
+        }
+
+        y += 5;
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, pageWidth - margin, y);
         y += 8;
+
+        // IDENTIFICAÇÃO DO PACIENTE
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('1. IDENTIFICAÇÃO DO USUÁRIO', margin, y);
+        y += 8;
+
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text(`ID: ${patient.id}`, margin, y);
-        doc.text(`Data do Relatório: ${formatDate(new Date().toISOString())}`, pageWidth - margin, y, { align: 'right' });
+        doc.text(`Nome: ${patient.name}`, margin, y);
+        y += 5;
+        
+        if (patient.dob) {
+            const birthDate = new Date(patient.dob);
+            const age = Math.floor((new Date() - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
+            doc.text(`Data de Nascimento: ${formatDate(patient.dob)} (${age} anos)`, margin, y);
+            y += 5;
+        }
+        
+        if (patient.diagnosis) {
+            doc.text(`Diagnóstico: ${patient.diagnosis}`, margin, y);
+            y += 5;
+        }
+
+        doc.text(`Data do Relatório: ${formatDate(new Date().toISOString())}`, margin, y);
         y += 6;
 
         if (patient.sessionData && patient.sessionData.length > 0) {
@@ -337,15 +480,17 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
         doc.line(margin, y, pageWidth - margin, y);
         y += 8;
         
-        y = checkAndAddPage(y);
+        // 2. ANÁLISE E INTERPRETAÇÃO (consistente com relatório de evolução)
+        y = checkAndAddPage(y, 20);
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text('Análise e Observações do Terapeuta', margin, y);
-        y += 6;
+        doc.text('2. ANÁLISE E INTERPRETAÇÃO', margin, y);
+        y += 8;
+        
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        // Usa a nova função para controlar quebras de página no texto
-        y = addTextWithPageBreaks(reportText || "Nenhuma observação fornecida.", margin, y, contentWidth, 5);
+        // Usa a nova função para controlar quebras de página no texto com formatação
+        y = processMarkdownText(reportText || "Nenhuma observação fornecida.", margin, y, contentWidth, 5);
         y += 10;
 
         // Força nova página para os gráficos se há texto suficiente
@@ -356,9 +501,10 @@ export const generateConsolidatedReportPDF = async (patient, reportText) => {
             y = checkAndAddPage(y, 15);
         }
         
+        // 3. REGISTRO DA EVOLUÇÃO DAS SESSÕES (consistente com relatório de evolução)
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text('Progresso dos Programas Ativos', margin, y);
+        doc.text('3. REGISTRO DA EVOLUÇÃO DAS SESSÕES', margin, y);
         y += 8;
 
         // Converte os dados organizados por área em array para chart promises

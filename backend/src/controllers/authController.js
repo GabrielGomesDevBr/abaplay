@@ -78,7 +78,7 @@ authController.loginUser = async (req, res) => {
             terms_accepted_at: user.terms_accepted_at // Para verificar se precisa aceitar termos
         };
 
-        // Se for admin, busca informações da clínica incluindo o limite de pacientes
+        // Se for admin normal, busca informações da clínica
         if (user.is_admin && user.clinic_id) {
             try {
                 const clinic = await ClinicModel.findById(user.clinic_id);
@@ -91,6 +91,11 @@ authController.loginUser = async (req, res) => {
                 // Continua sem as informações da clínica se houver erro
                 payload.max_patients = 0;
             }
+        }
+
+        // Se for super admin, não precisa de informações de clínica
+        if (user.role === 'super_admin') {
+            payload.is_super_admin = true;
         }
 
         const token = jwt.sign(

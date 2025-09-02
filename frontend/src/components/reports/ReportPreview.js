@@ -342,6 +342,21 @@ const ReportPreview = ({
                 
                 {analysisData?.insights && (
                   <div>
+                    {/* Aviso de responsabilidade profissional */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
+                      <div className="flex items-start space-x-2">
+                        <span className="text-amber-600 mt-0.5 flex-shrink-0">⚠️</span>
+                        <div className="text-xs text-amber-800">
+                          <p className="font-medium mb-1">Responsabilidade Profissional:</p>
+                          <p>
+                            Os insights abaixo são <strong>sugestões automáticas baseadas apenas em dados quantitativos</strong>. 
+                            É <strong>imprescindível</strong> que você analise, adapte e complemente com sua expertise clínica, 
+                            considerando aspectos comportamentais e contextuais específicos do caso.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Insights Sugeridos (clique para adicionar):
                     </label>
@@ -409,7 +424,21 @@ const ReportPreview = ({
                 
                 {analysisData?.insights && !customizations.analysis?.clinical_interpretation && (
                   <div>
-                    <h4 className="font-medium text-gray-700 mb-3">Insights Automáticos Disponíveis:</h4>
+                    {/* Aviso de responsabilidade na visualização */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
+                      <div className="flex items-start space-x-2">
+                        <span className="text-amber-600 mt-0.5 flex-shrink-0">⚠️</span>
+                        <div className="text-xs text-amber-800">
+                          <p className="font-medium mb-1">Insights Automáticos Disponíveis:</p>
+                          <p>
+                            Estes insights são baseados <strong>apenas em métricas quantitativas</strong>. 
+                            Clique em "Editar" para adicionar sua interpretação clínica profissional.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <h4 className="font-medium text-gray-700 mb-3">Sugestões Baseadas em Dados:</h4>
                     <div className="space-y-2">
                       {analysisData.insights.map((insight, index) => {
                         const { icon, color } = getInsightIcon(insight.type);

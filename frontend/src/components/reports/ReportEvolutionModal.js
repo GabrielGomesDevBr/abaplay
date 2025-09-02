@@ -210,10 +210,19 @@ const ReportEvolutionModal = ({
                 <h3 className="text-lg font-semibold text-gray-800">
                   Configuração Profissional
                 </h3>
-                <p className="text-gray-600 text-sm">
+                <p className="text-gray-600 text-sm mb-3">
                   Para gerar relatórios profissionais completos, precisamos dos seus dados profissionais. 
                   Estes dados serão reutilizados automaticamente.
                 </p>
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-center">
+                  <div className="text-xs text-amber-800">
+                    <p className="font-medium mb-1">⚠️ Sobre os Relatórios de Evolução</p>
+                    <p>
+                      Este sistema gera <strong>análises automáticas baseadas em dados quantitativos</strong> como suporte ao seu trabalho. 
+                      É <strong>imprescindível</strong> que você revise, adapte e complemente com sua expertise clínica profissional.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4">

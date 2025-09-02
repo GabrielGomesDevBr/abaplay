@@ -25,6 +25,10 @@ const HomePage = () => {
 
   // Lógica de redirecionamento com base na função do utilizador.
   if (user) {
+    if (user.role === 'super_admin') {
+      // Se for super admin, redireciona para o painel super admin.
+      return <Navigate to="/super-admin" replace />;
+    }
     if (user.is_admin) {
       // Se for admin, redireciona para o painel de administração.
       return <Navigate to="/admin" replace />;

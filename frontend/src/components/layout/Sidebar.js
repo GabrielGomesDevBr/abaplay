@@ -64,6 +64,11 @@ const Sidebar = () => {
     return sortPatientsByPriority(filtered);
   }, [patients, searchTerm, sortPatientsByPriority]);
 
+  // Super admin não deve usar o Sidebar
+  if (user?.role === 'super_admin') {
+    return null;
+  }
+
   if (isLoading) {
     return (
         <div className="h-full bg-gradient-to-b from-indigo-50 to-purple-50 border-r border-indigo-200 flex justify-center items-center">
