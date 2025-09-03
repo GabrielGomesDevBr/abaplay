@@ -165,6 +165,21 @@ export const updatePatientLimit = async (clinicId, maxPatients) => {
   }
 };
 
+/**
+ * Resetar senha do administrador da clínica (seta como NULL).
+ * @param {number} clinicId - ID da clínica.
+ * @returns {Promise} Resultado da operação.
+ */
+export const resetClinicAdminPassword = async (clinicId) => {
+  try {
+    const response = await apiClient.put(`/clinics/${clinicId}/reset-admin-password`);
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao resetar senha:', error);
+    throw error;
+  }
+};
+
 // =====================================
 // APIs FINANCEIRAS
 // =====================================
@@ -325,6 +340,7 @@ const superAdminApi = {
   suspendClinic,
   reactivateClinic,
   updatePatientLimit,
+  resetClinicAdminPassword,
   getAllBillings,
   createBilling,
   recordPayment,

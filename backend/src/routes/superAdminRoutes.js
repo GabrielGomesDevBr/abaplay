@@ -97,6 +97,18 @@ router.put(
   superAdminController.updatePatientLimit
 );
 
+/**
+ * PUT /api/super-admin/clinics/:id/reset-admin-password
+ * Resetar senha do administrador de uma clínica (seta como NULL).
+ */
+router.put(
+  '/clinics/:id/reset-admin-password',
+  [
+    param('id', 'ID da clínica inválido.').isInt()
+  ],
+  superAdminController.resetClinicAdminPassword
+);
+
 // =====================================
 // ROTAS FINANCEIRAS
 // =====================================

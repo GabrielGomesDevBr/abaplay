@@ -147,39 +147,6 @@ superAdminController.reactivateClinic = async (req, res) => {
   }
 };
 
-/**
- * Atualiza limite de pacientes de uma clínica.
- */
-superAdminController.updatePatientLimit = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  try {
-    const { clinicId } = req.params;
-    const { maxPatients } = req.body;
-
-    const clinic = await SuperAdminModel.updatePatientLimit(clinicId, maxPatients);
-
-    if (!clinic) {
-      return res.status(404).json({
-        errors: [{ msg: 'Clínica não encontrada.' }]
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Limite de pacientes atualizado com sucesso.',
-      data: clinic
-    });
-  } catch (error) {
-    console.error('Erro ao atualizar limite de pacientes:', error);
-    res.status(500).json({
-      errors: [{ msg: 'Erro interno do servidor.' }]
-    });
-  }
-};
 
 /**
  * Busca log de atividades do sistema.
@@ -561,6 +528,61 @@ superAdminController.migrateBillingsToSlotModel = async (req, res) => {
     console.error('Erro ao migrar cobranças:', error);
     res.status(500).json({
       errors: [{ msg: 'Erro interno do servidor.' }]
+    });
+  }
+};
+
+/**
+ * Atualiza limite de pacientes de uma clínica.
+ */
+superAdminController.updatePatientLimit = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const clinicId = parseInt(req.params.id);
+    const { maxPatients } = req.body;
+
+    const result = await SuperAdminModel.updatePatientLimit(clinicId, maxPatients);
+
+    res.json({
+      success: true,
+      message: 'Limite de pacientes atualizado com sucesso',
+      data: result
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar limite de pacientes:', error);
+    res.status(500).json({
+      errors: [{ msg: 'Erro interno do servidor.' }]
+    });
+  }
+};
+
+/**
+ * Resetar senha do administrador da clínica (seta como NULL para forçar novo cadastro).
+ */
+superAdminController.resetClinicAdminPassword = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const clinicId = parseInt(req.params.id);
+
+    const result = await SuperAdminModel.resetClinicAdminPassword(clinicId);
+
+    res.json({
+      success: true,
+      message: 'Senha resetada! O administrador deverá cadastrar nova senha no próximo login.',
+      data: result
+    });
+  } catch (error) {
+    console.error('Erro ao resetar senha do administrador:', error);
+    res.status(500).json({
+      errors: [{ msg: error.message || 'Erro interno do servidor.' }]
     });
   }
 };

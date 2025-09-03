@@ -100,15 +100,34 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 - **Prompt Level System**: ABA-compliant prompt levels (Independent, Verbal Cue, Gestural Cue, Partial Physical Help, Total Physical Help, No Response) with visual indicators and progress scoring
 - **Communication**: Case discussions and parent-therapist chats with Socket.IO real-time messaging
 - **Notifications**: Real-time notification system with status management and badge indicators
-- **PDF Reports**: Consolidated patient reports with jsPDF generation including progress charts and session details
+
+### Comprehensive Report System
+- **Consolidated Reports** with intelligent pre-filling:
+  - Generic nature suitable for schools, parents, doctors, and other professionals
+  - Optional intelligent text suggestions based on session data and automatic analysis
+  - Rich text editor with markdown support (bold, italic, lists, undo/redo, preview)
+  - Professional data integration and persistence between sessions
+  - Pre-visualization system allowing edits before PDF generation
+  - Automatic inclusion of progress charts organized by intervention areas
+  - Maintains therapist independence and full content control
+
 - **Evolution Report System**: Complete therapeutic evolution reporting system with:
   - Multi-disciplinary professional support (psychology, speech therapy, occupational therapy, etc.)
   - One-time professional data configuration (registration, qualifications, signature)
-  - Persistent patient data reuse
+  - Persistent patient data reuse across all report types
   - Flexible period selector (30/60/90 days or custom)
-  - Automatic analysis with real-data insights
-  - Editable preview before PDF generation
-  - Professional PDF formatting with consistent layout
+  - Automatic analysis with real-data insights and behavioral interpretations
+  - Editable preview with customizable sections (identification, demand, evolution, analysis, conclusions)
+  - Professional PDF formatting with consistent layout and clinical language
+  - Integration with existing patient and session management systems
+
+- **Professional Responsibility System**: Comprehensive legal and ethical protection with:
+  - Multiple layers of warnings about automatic analysis limitations
+  - Clear disclaimers emphasizing professional interpretation responsibility
+  - Guidance on appropriate use of AI-generated suggestions
+  - Protection against inappropriate use of quantitative-only analysis
+  - Educational messaging promoting good professional practices
+
 - **Program Assignment**: Therapist-patient program assignments with normalized status management (active/archived/paused)
 - **User Management**: Admin interface for managing clinics, users, and patient assignments with role-based access
 - **Progress Visualization**: Interactive charts grouped by intervention areas with Chart.js annotations
@@ -191,7 +210,7 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 ### Frontend Structure
 - `src/App.js` - React app routing with role-based access and authentication guards
 - `src/context/` - React contexts for state management
-  - `AuthContext.js` - Authentication state and user session management
+  - `AuthContext.js` - Authentication state, user session management, and professional data persistence
   - `PatientContext.js` - Patient data, selection persistence, and program management
   - `ProgramContext.js` - Program library management and hierarchical data
 - `src/components/` - Reusable UI components organized by feature
@@ -200,10 +219,21 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
   - `contacts/` - Contact management components (ContactList)
   - `layout/` - Layout components (MainLayout, Navbar, Sidebar)
   - `notifications/` - Notification system (NotificationBadge, NotificationPanel, PatientNotificationBadge, ProgressAlert)
-  - `patient/` - Patient components (PatientDetails, PatientForm, PatientList, ConsolidatedReportModal)
+  - `patient/` - Patient components with enhanced reporting
+    - `PatientDetails.js`, `PatientForm.js`, `PatientList.js`
+    - `ConsolidatedReportModal.js` - **ENHANCED**: Consolidated reports with intelligent pre-filling and rich text editor
   - `program/` - Program components (AssignedProgramsList, ProgramCard, ProgramLibrary, SessionChart, SessionProgress, PromptLevelSelector)
-  - `reports/` - **NEW**: Evolution report components (ReportEvolutionModal, ReportPreview, ReportEvolutionContainer)
-  - `shared/` - Shared components (Button, Modal, DateRangeSelector)
+  - `reports/` - Complete evolution report system
+    - `ReportEvolutionModal.js` - Professional data configuration and period selection
+    - `ReportPreview.js` - **ENHANCED**: Editable preview with professional responsibility warnings
+    - `ReportEvolutionContainer.js` - Main container for evolution report workflow
+  - `shared/` - Enhanced shared components
+    - `Button.js`, `Modal.js`, `DateRangeSelector.js`
+    - `RichTextEditor.js` - **NEW**: Rich text editor with markdown support and formatting toolbar
+    - `ProfessionalDataModal.js` - **NEW**: Reusable professional data configuration modal
+    - `ConsolidatedReportPreview.js` - **NEW**: Preview system for consolidated reports
+    - `SuggestionPreviewModal.js` - **NEW**: Preview and editing for AI-generated suggestions
+    - `ReportMetrics.js` - **NEW**: Visual metrics display for report periods
 - `src/pages/` - Main page components with enhanced functionality
   - `AdminPage.js` - Admin dashboard with user and clinic management
   - `AdminProgramsPage.js` - Admin program library management
@@ -221,11 +251,13 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
   - `adminApi.js`, `authApi.js`, `caseDiscussionApi.js`, `contactApi.js`
   - `notificationApi.js`, `parentApi.js`, `parentChatApi.js`
   - `patientApi.js`, `programApi.js` - Enhanced with prompt level support
-  - `reportApi.js` - **NEW**: Evolution report API with period options and automatic analysis
+  - `reportApi.js` - **ENHANCED**: Complete report API with evolution reports and automatic analysis
+- `src/services/` - **NEW**: Business logic services
+  - `reportPreFillService.js` - Intelligent text generation service with professional responsibility disclaimers
 - `src/hooks/` - Custom React hooks
   - `useApi.js` - Custom API hook with loading states
   - `usePatientNotifications.js` - Patient-specific notification management
-- `src/utils/pdfGenerator.js` - Advanced PDF report generation with charts and evolution reports
+- `src/utils/pdfGenerator.js` - **ENHANCED**: Advanced PDF generation with markdown processing and font consistency
 - `src/config.js` - Frontend configuration and API endpoints
 
 ### Database & Analysis
@@ -233,6 +265,37 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 - `NORMALIZE_STATUS.sql` - Status standardization queries
 
 ## Recent Improvements & Technical Features
+
+### Comprehensive Report System (Latest Implementation)
+- **Intelligent Pre-filling System**: 
+  - AI-powered text suggestions based on session data and automatic analysis
+  - Reuses existing `getAutomaticAnalysis` API for consistent data processing
+  - Professional disclaimer system with multiple warning layers
+  - Maintains therapist independence while providing smart assistance
+
+- **Rich Text Editor Integration**:
+  - Custom markdown-supported editor with formatting toolbar
+  - Bold, italic, lists, undo/redo, and preview functionality
+  - Keyboard shortcuts for efficient text formatting
+  - Live character count and formatting preview
+
+- **Advanced Preview System**:
+  - Pre-visualization for both consolidated and evolution reports
+  - Editable preview allowing text modifications before PDF generation
+  - Real-time data integration showing programs, sessions, and metrics
+  - Professional data validation and persistence
+
+- **Professional Responsibility Framework**:
+  - Multi-layered warning system about AI limitations
+  - Clear disclaimers in generated text and user interfaces
+  - Educational messaging promoting proper professional use
+  - Legal protection against inappropriate use of automated suggestions
+
+### PDF Generation & Formatting Enhancements
+- **Font Consistency**: Resolved font size changes across page breaks
+- **Markdown Processing**: Integrated markdown-to-PDF conversion with proper formatting
+- **Professional Layout**: Consistent styling between consolidated and evolution reports
+- **Chart Integration**: Automatic inclusion of progress charts organized by intervention areas
 
 ### Prompt Level System Integration
 - **ABA-compliant prompt levels**: 6-level system from Independent (5) to No Response (0)
@@ -249,14 +312,60 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 ### Enhanced User Experience
 - **Modernized Login UI**: Updated LoginPage with improved animations and visual design
 - **Progress visualization**: Advanced Chart.js integration with annotations and area grouping
-- **PDF generation**: Comprehensive reports including session data and progress charts
+- **Unified Professional Data**: Cross-report professional data sharing and persistence
 - **Real-time notifications**: Socket.IO integration for instant updates and communication
 
 ### Technical Architecture Improvements
-- **Context-based state management**: Enhanced PatientContext with selection persistence
-- **API error handling**: Comprehensive error handling across all API endpoints
-- **Component organization**: Improved component structure with feature-based organization
-- **Hook abstractions**: Custom hooks for API calls and notification management
+- **Service Layer**: Added `reportPreFillService.js` for intelligent text generation business logic
+- **Context Enhancement**: Enhanced AuthContext with professional data updates and persistence
+- **Component Reusability**: Shared components for professional data, rich text editing, and previews
+- **API Integration**: Seamless integration between consolidated and evolution report systems
+- **Error Handling**: Robust error handling with user-friendly messages and fallbacks
+
+## Advanced Report System Technical Details
+
+### Intelligent Pre-filling Architecture
+```javascript
+// Service layer for text generation
+reportPreFillService.generateConventionalReportSuggestion(patientId, sessionData, periodOptions)
+├── Reuses getAutomaticAnalysis API
+├── Generates structured clinical text
+├── Includes professional responsibility disclaimers
+└── Maintains clinical language standards
+```
+
+### Component Hierarchy for Reports
+```
+ConsolidatedReportModal (Main Interface)
+├── RichTextEditor (Markdown support + toolbar)
+├── ReportMetrics (Period statistics)
+├── SuggestionPreviewModal (AI suggestions with warnings)
+├── ProfessionalDataModal (Reusable across systems)
+└── ConsolidatedReportPreview (Pre-visualization)
+
+ReportEvolutionContainer (Evolution Reports)
+├── ReportEvolutionModal (Configuration)
+└── ReportPreview (Enhanced with responsibility warnings)
+```
+
+### Professional Responsibility System
+- **4-Layer Warning System**: Main modal → Suggestion modal → Generated text → Final preview
+- **Ethical Safeguards**: Multiple disclaimer points preventing inappropriate use
+- **Educational Integration**: Guidance on proper AI assistance usage
+- **Legal Protection**: Clear boundaries between AI support and professional judgment
+
+### Data Flow for Intelligent Features
+1. **Session Data Collection**: `filteredSessionData` from date range selection
+2. **Program Integration**: `assignedPrograms` provides complete program names and disciplines
+3. **Analysis Generation**: Reuses existing `getAutomaticAnalysis` backend service
+4. **Text Processing**: `reportPreFillService` converts analysis to readable clinical text
+5. **Professional Review**: Multiple preview and editing opportunities before final PDF
+
+### Cross-System Integration
+- **Unified Professional Data**: Shared between consolidated and evolution reports
+- **Consistent PDF Generation**: Same markdown processing and formatting
+- **Persistent Context**: AuthContext enhanced with professional data updates
+- **Reusable Components**: Modal, editor, and preview components shared across systems
 
 ## Security Considerations
 
@@ -268,3 +377,5 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 - Input validation with express-validator across all endpoints
 - Database constraints for data integrity and consistency
 - Role-based access control with middleware verification
+- **Professional AI Ethics**: Comprehensive disclaimer system preventing misuse of automated suggestions
+- **Data Privacy**: Session data processing remains local with no external AI service dependencies

@@ -353,6 +353,28 @@ const SuperAdminModel = {
   },
 
   /**
+   * Resetar senha do administrador de uma clínica (seta como NULL para forçar novo cadastro).
+   * @param {number} clinicId - ID da clínica.
+   * @returns {Promise<object>} Usuário atualizado.
+   */
+  async resetClinicAdminPassword(clinicId) {
+    const query = `
+      UPDATE users 
+      SET password_hash = NULL, updated_at = CURRENT_TIMESTAMP
+      WHERE clinic_id = $1 AND is_admin = true
+      RETURNING id, username, full_name, role, is_admin, updated_at
+    `;
+
+    const { rows } = await pool.query(query, [clinicId]);
+    
+    if (rows.length === 0) {
+      throw new Error('Administrador da clínica não encontrado');
+    }
+    
+    return rows[0];
+  },
+
+  /**
    * Elimina uma clínica com efeito cascata.
    * @param {number} clinicId - ID da clínica.
    * @returns {Promise<object>} Resultado da eliminação.

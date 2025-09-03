@@ -36,6 +36,7 @@ import {
   suspendClinic,
   reactivateClinic,
   updatePatientLimit,
+  resetClinicAdminPassword,
   recordPayment,
   createBilling,
   deleteClinic,
@@ -326,6 +327,16 @@ const SuperAdminPage = () => {
     }
   };
 
+  const handleResetClinicAdminPassword = async (clinicId) => {
+    try {
+      await resetClinicAdminPassword(clinicId);
+      alert('Senha resetada! O administrador deverá cadastrar nova senha no próximo login.');
+    } catch (error) {
+      console.error('Erro ao resetar senha:', error);
+      throw new Error('Erro ao resetar senha do administrador da clínica');
+    }
+  };
+
   const handleRecordPayment = async (paymentData) => {
     try {
       await recordPayment(selectedBilling.id, paymentData);
@@ -535,6 +546,7 @@ const SuperAdminPage = () => {
         }}
         clinic={selectedClinic}
         onSubmit={(maxPatients) => handleUpdatePatientLimit(selectedClinic.id, maxPatients)}
+        onResetPassword={handleResetClinicAdminPassword}
       />
 
       <SuspendClinicModal
