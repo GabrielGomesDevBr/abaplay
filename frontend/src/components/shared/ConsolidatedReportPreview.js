@@ -165,10 +165,14 @@ const ConsolidatedReportPreview = ({
               <h3 className="text-lg font-semibold text-gray-800">Identificação do Usuário</h3>
             </div>
             
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
               <div>
                 <span className="font-medium text-gray-600">Nome:</span>
                 <p className="text-gray-800">{patientData?.name}</p>
+              </div>
+              <div>
+                <span className="font-medium text-gray-600">Clínica:</span>
+                <p className="text-gray-800">{patientData?.clinic_name || 'Não informado'}</p>
               </div>
               <div>
                 <span className="font-medium text-gray-600">Data de Nascimento:</span>
