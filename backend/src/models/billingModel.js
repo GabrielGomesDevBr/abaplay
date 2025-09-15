@@ -17,7 +17,7 @@ const BillingModel = {
       clinic_id,
       due_date,
       amount,
-      plan_type = 'basic',
+      plan_type = 'per_patient',
       notes = null
     } = billingData;
 
@@ -245,7 +245,7 @@ const BillingModel = {
           UPDATE clinic_billing 
           SET 
             amount = $1,
-            plan_type = 'premium',
+            plan_type = 'per_patient',
             notes = COALESCE(notes, '') || ' | Migrado para modelo por slots: ' || $2 || ' slots × R$ 34,90',
             updated_at = CURRENT_TIMESTAMP
           WHERE id = $3

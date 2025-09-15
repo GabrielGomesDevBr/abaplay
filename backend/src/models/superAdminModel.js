@@ -47,24 +47,14 @@ const SuperAdminModel = {
       ]);
       const admin = userResult.rows[0];
 
-      // 3. Criar primeira cobrança (R$ 34,90 por paciente, mínimo R$ 34,90 para 1 paciente)
-      const pricePerPatient = 34.90;
-      const initialAmount = pricePerPatient; // Assume 1 paciente inicial
-      const billingQuery = `
-        INSERT INTO clinic_billing (clinic_id, due_date, amount, plan_type, notes)
-        VALUES ($1, CURRENT_DATE + INTERVAL '30 days', $2, 'per_patient', $3)
-        RETURNING id, due_date, amount, plan_type, notes
-      `;
-      const billingNotes = `Cobrança inicial - 1 paciente × R$ ${pricePerPatient.toFixed(2)}`;
-      const billingResult = await client.query(billingQuery, [clinic.id, initialAmount, billingNotes]);
-      const billing = billingResult.rows[0];
+      // 3. Não criar cobrança inicial - será criada conforme demanda real de pacientes
+      // O modelo de negócio é baseado na quantidade de pacientes por clínica
 
       await client.query('COMMIT');
 
       return {
         clinic,
-        admin,
-        billing
+        admin
       };
 
     } catch (error) {

@@ -289,7 +289,7 @@ superAdminController.createBilling = async (req, res) => {
       clinic_id,
       due_date,
       amount: calculatedAmount,
-      plan_type: 'premium',
+      plan_type: 'per_patient',
       notes: notes || `Cobrança automática - ${contractedSlots} slots × R$ ${pricePerSlot.toFixed(2)} = R$ ${calculatedAmount.toFixed(2)}`
     };
 
