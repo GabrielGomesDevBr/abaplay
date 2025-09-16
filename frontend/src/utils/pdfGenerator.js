@@ -918,12 +918,15 @@ export const generateEvolutionReportPDF = async (data) => {
         doc.text(`Nome: ${reportData.name}`, margin, y);
         y += 5;
         doc.text(`Data de Nascimento: ${formatDate(reportData.dob)}`, margin, y);
-        doc.text(`Idade: ${reportData.dob ? Math.floor((new Date() - new Date(reportData.dob)) / (365.25 * 24 * 60 * 60 * 1000)) : 'N/A'} anos`, pageWidth - margin - 40, y);
         y += 5;
-        doc.text(`Diagnóstico: ${reportData.diagnosis || 'Não informado'}`, margin, y);
+        doc.text(`Idade: ${reportData.dob ? Math.floor((new Date() - new Date(reportData.dob)) / (365.25 * 24 * 60 * 60 * 1000)) : 'N/A'} anos`, margin, y);
+        y += 5;
+        const diagnosis = `Diagnóstico: ${reportData.diagnosis || 'Não informado'}`;
+        y = addTextBlock(diagnosis, margin, y, contentWidth);
         y += 5;
         if (patientData.guardian_name) {
-            doc.text(`Responsável: ${patientData.guardian_name} (${patientData.guardian_relationship})`, margin, y);
+            const guardian = `Responsável: ${patientData.guardian_name} (${patientData.guardian_relationship})`;
+            y = addTextBlock(guardian, margin, y, contentWidth);
             y += 5;
         }
         if (patientData.patient_occupation) {
@@ -1065,9 +1068,10 @@ export const generateEvolutionReportPDF = async (data) => {
             doc.setFont('helvetica', 'normal');
             
             analysisData.frequent_observations.slice(0, 8).forEach(obs => {
-                y = checkAndAddPage(y, 8);
-                doc.text(`• "${obs.note}" (observado em ${obs.frequency} sessão${obs.frequency > 1 ? 'ões' : ''})`, margin + 3, y);
-                y += 5;
+                y = checkAndAddPage(y, 15); // Aumentar espaço reservado para textos longos
+                const observationText = `• "${obs.note}" (observado em ${obs.frequency} sessão${obs.frequency > 1 ? 'ões' : ''})`;
+                y = addTextBlock(observationText, margin + 3, y, contentWidth - 3);
+                y += 3; // Espaçamento entre observações
             });
             y += 3;
         }
@@ -1103,16 +1107,18 @@ export const generateEvolutionReportPDF = async (data) => {
         } else {
             // Análise automática baseada nos insights
             if (analysisData.insights && analysisData.insights.length > 0) {
-                doc.text('Com base nos dados coletados e na análise comportamental, observa-se:', margin, y);
+                y = addTextBlock('Com base nos dados coletados e na análise comportamental, observa-se:', margin, y, contentWidth);
                 y += 6;
-                
+
                 analysisData.insights.forEach(insight => {
-                    y = checkAndAddPage(y, 8);
-                    doc.text(`• ${insight.text}`, margin + 3, y);
-                    y += 6;
+                    y = checkAndAddPage(y, 15); // Aumentar espaço reservado para textos longos
+                    // Usar addTextBlock para quebrar linhas adequadamente
+                    const insightText = `• ${insight.text}`;
+                    y = addTextBlock(insightText, margin + 3, y, contentWidth - 3);
+                    y += 3; // Espaçamento entre insights
                 });
             } else {
-                doc.text('Análise em desenvolvimento com base nos dados coletados.', margin, y);
+                y = addTextBlock('Análise em desenvolvimento com base nos dados coletados.', margin, y, contentWidth);
                 y += 5;
             }
         }
