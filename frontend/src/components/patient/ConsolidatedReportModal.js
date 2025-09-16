@@ -377,9 +377,12 @@ const ConsolidatedReportModal = ({ isOpen, onClose }) => {
       // Re-selecionar paciente após atualização para manter sincronização
       if (refreshAndReselectPatient && selectedPatient) {
         try {
+          console.log('🔄 Re-selecionando paciente após salvar dados profissionais...');
           await refreshAndReselectPatient(selectedPatient.id);
+          console.log('✅ Paciente re-selecionado com sucesso no consolidado');
         } catch (err) {
-          console.warn('Aviso: Não foi possível re-selecionar paciente:', err);
+          console.warn('⚠️ Aviso: Não foi possível re-selecionar paciente:', err);
+          // Não é crítico, mas usuário pode ter que re-selecionar manualmente
         }
       }
     }

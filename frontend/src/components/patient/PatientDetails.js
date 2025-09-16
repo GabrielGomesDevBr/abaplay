@@ -8,7 +8,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import ParentTherapistChat from '../chat/ParentTherapistChat';
 import CaseDiscussionChat from '../chat/CaseDiscussionChat';
-import ReportEvolutionContainer from '../reports/ReportEvolutionContainer';
+import ReportEvolutionModal from '../reports/ReportEvolutionModal';
 
 const formatDate = (dateString) => {
   if (!dateString) return 'Não informado';
@@ -257,7 +257,7 @@ const PatientDetails = () => {
       </div>
       
       {/* Modal do Relatório de Evolução Terapêutica */}
-      <ReportEvolutionContainer
+      <ReportEvolutionModal
         patient={selectedPatient}
         isOpen={isEvolutionReportVisible}
         onClose={handleCloseEvolutionReport}

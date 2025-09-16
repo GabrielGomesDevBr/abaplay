@@ -36,6 +36,7 @@ const ReportPreview = ({
     setTempCustomizations(customizations);
   }, [customizations]);
 
+
   if (!isOpen) return null;
 
   const handleEditSection = (sectionKey) => {

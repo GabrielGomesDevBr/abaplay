@@ -49,7 +49,7 @@ const processPeriodOptions = (periodOptions) => {
 };
 
 const ReportEvolutionContainer = ({ patient, isOpen, onClose }) => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { refreshAndReselectPatient } = usePatients();
   const [currentStep, setCurrentStep] = useState('config'); // config, preview
   const [isLoading, setIsLoading] = useState(false);
@@ -63,6 +63,9 @@ const ReportEvolutionContainer = ({ patient, isOpen, onClose }) => {
 
   // Estado local para preservar dados do paciente durante o fluxo
   const [localPatient, setLocalPatient] = useState(null);
+
+  // Estado de erro para não fechar modal
+  const [error, setError] = useState('');
 
   // Effect para preservar dados do paciente
   useEffect(() => {
@@ -82,11 +85,13 @@ const ReportEvolutionContainer = ({ patient, isOpen, onClose }) => {
       setCustomizations({});
       setLocalPatient(null);
       setIsLoading(false);
+      setError(''); // Limpar erros quando modal fecha
     }
   }, [isOpen]);
 
   const handleConfigurationComplete = async (configData) => {
     setIsLoading(true);
+    setError(''); // Limpar erros anteriores
 
     try {
       const { professionalData, patientData, needsProfessionalData, periodOptions } = configData;
@@ -96,15 +101,27 @@ const ReportEvolutionContainer = ({ patient, isOpen, onClose }) => {
         throw new Error('Nenhum paciente selecionado');
       }
 
+      console.log('🔄 Iniciando processamento do relatório de evolução para:', currentPatient.name);
+
       // 1. Atualizar dados profissionais se necessário
       if (needsProfessionalData && professionalData) {
+        console.log('💼 Salvando dados profissionais:', professionalData);
         await updateProfessionalData(professionalData);
+
+        // Atualizar contexto do usuário com dados salvos
+        updateUser({
+          professional_id: professionalData.professional_id,
+          qualifications: professionalData.qualifications,
+          professional_signature: professionalData.professional_signature
+        });
+
         setProfessionalConfigData({
           professional_name: user?.name || user?.full_name,
           professional_id: professionalData.professional_id,
           qualifications: professionalData.qualifications,
           professional_signature: professionalData.professional_signature
         });
+        console.log('✅ Dados profissionais salvos com sucesso e contexto atualizado');
       } else {
         setProfessionalConfigData({
           professional_name: user?.name || user?.full_name,
@@ -112,34 +129,50 @@ const ReportEvolutionContainer = ({ patient, isOpen, onClose }) => {
           qualifications: user?.qualifications,
           professional_signature: user?.professional_signature
         });
+        console.log('📋 Usando dados profissionais existentes');
       }
 
       // 2. Atualizar dados complementares do paciente
+      console.log('👤 Salvando dados complementares do paciente:', patientData);
       await updatePatientData(currentPatient.id, patientData);
       setPatientConfigData(patientData);
+      console.log('✅ Dados do paciente salvos com sucesso');
 
       // 2.1. Re-selecionar paciente após atualizar dados para manter sincronização
       if (refreshAndReselectPatient) {
-        await refreshAndReselectPatient(currentPatient.id);
+        console.log('🔄 Re-selecionando paciente para manter sincronização...');
+        try {
+          await refreshAndReselectPatient(currentPatient.id);
+          console.log('✅ Paciente re-selecionado com sucesso');
+        } catch (reselectError) {
+          console.warn('⚠️ Erro ao re-selecionar paciente (não crítico):', reselectError);
+        }
       }
 
       // 3. Buscar dados completos do relatório
+      console.log('📊 Buscando dados completos do relatório...');
       const completeReportData = await getEvolutionReportData(currentPatient.id);
       setReportData(completeReportData);
+      console.log('✅ Dados do relatório carregados:', Object.keys(completeReportData));
 
       // 4. Processar opções de período
       const processedPeriodOptions = processPeriodOptions(periodOptions);
+      console.log('📅 Período processado:', processedPeriodOptions);
 
       // 5. Gerar análise automática com opções de período
+      console.log('🤖 Gerando análise automática...');
       const analysis = await getAutomaticAnalysis(currentPatient.id, processedPeriodOptions);
       setAnalysisData(analysis);
+      console.log('✅ Análise gerada com sucesso');
 
       // 6. Avançar para o preview
+      console.log('🎯 Avançando para preview...');
       setCurrentStep('preview');
 
     } catch (error) {
-      console.error('Erro ao processar configuração:', error);
-      alert(`Erro ao processar dados: ${error.message}. Tente novamente.`);
+      console.error('❌ Erro ao processar configuração:', error);
+      setError(`Erro ao processar dados: ${error.message || 'Erro desconhecido'}. Verifique os dados e tente novamente.`);
+      // NÃO fechar modal - mantê-lo aberto para retry
     } finally {
       setIsLoading(false);
     }
@@ -171,6 +204,7 @@ const ReportEvolutionContainer = ({ patient, isOpen, onClose }) => {
           patient={localPatient || patient}
           currentUser={user}
           isLoading={isLoading}
+          error={error}
         />
       )}
       

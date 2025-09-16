@@ -4,15 +4,61 @@ import {
   faUser, faUserMd, faGraduationCap, faNotesMedical,
   faIdCard, faUsers, faSpinner, faTimes, faCheck, faCalendarAlt, faEdit
 } from '@fortawesome/free-solid-svg-icons';
+import { useAuth } from '../../context/AuthContext';
+import { usePatients } from '../../context/PatientContext';
+import {
+  getEvolutionReportData,
+  updateProfessionalData,
+  updatePatientData,
+  getAutomaticAnalysis
+} from '../../api/reportApi';
+import ReportPreview from './ReportPreview';
 
-const ReportEvolutionModal = ({ 
-  isOpen, 
-  onClose, 
-  onContinue, 
-  patient, 
-  currentUser,
-  initialData = null 
+// Função auxiliar para processar opções de período
+const processPeriodOptions = (periodOptions) => {
+  const now = new Date();
+  let startDate, endDate;
+
+  switch (periodOptions.period_type) {
+    case 'last_30_days':
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - 30);
+      endDate = now;
+      break;
+    case 'last_60_days':
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - 60);
+      endDate = now;
+      break;
+    case 'last_90_days':
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - 90);
+      endDate = now;
+      break;
+    case 'custom':
+      startDate = periodOptions.start_date ? new Date(periodOptions.start_date) : null;
+      endDate = periodOptions.end_date ? new Date(periodOptions.end_date) : null;
+      break;
+    default:
+      // Default para últimos 30 dias
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - 30);
+      endDate = now;
+  }
+
+  return {
+    startDate: startDate ? startDate.toISOString().split('T')[0] : null,
+    endDate: endDate ? endDate.toISOString().split('T')[0] : null
+  };
+};
+
+const ReportEvolutionModal = ({
+  isOpen,
+  onClose,
+  patient
 }) => {
+  const { user, updateUser } = useAuth();
+  const { refreshAndReselectPatient } = usePatients();
   // Estados para dados profissionais
   const [professionalData, setProfessionalData] = useState({
     professional_id: '',
@@ -30,10 +76,19 @@ const ReportEvolutionModal = ({
   });
 
   // Estados de controle
-  const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1); // 1: Profissional, 2: Paciente
-  const [needsProfessionalData, setNeedsProfessionalData] = useState(true);
+  const [needsProfessionalData, setNeedsProfessionalData] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Estados para preview (seguindo padrão do consolidado)
+  const [showPreview, setShowPreview] = useState(false);
+  const [reportData, setReportData] = useState(null);
+  const [analysisData, setAnalysisData] = useState(null);
+  const [patientConfigData, setPatientConfigData] = useState(null);
+  const [professionalConfigData, setProfessionalConfigData] = useState(null);
+  const [customizations, setCustomizations] = useState({});
 
   // Estados para período de análise
   const [periodOptions, setPeriodOptions] = useState({
@@ -44,29 +99,49 @@ const ReportEvolutionModal = ({
   });
 
   useEffect(() => {
-    if (isOpen && currentUser) {
-      // Validação mais rigorosa dos dados profissionais
-      const hasValidProfessionalId = currentUser.professional_id && currentUser.professional_id.trim().length > 0;
-      const hasValidQualifications = currentUser.qualifications && currentUser.qualifications.trim().length > 0;
+    if (isOpen) {
+      // Limpar todos os estados quando abre (seguindo padrão do consolidado)
+      setError('');
+      setErrors({});
+      setIsLoading(false);
+      setShowPreview(false);
+      setReportData(null);
+      setAnalysisData(null);
+      setPatientConfigData(null);
+      setProfessionalConfigData(null);
+      setCustomizations({});
+      setPeriodOptions({
+        period_type: 'last_30_days',
+        start_date: '',
+        end_date: '',
+        program_filter: 'all'
+      });
 
-      setNeedsProfessionalData(!hasValidProfessionalId || !hasValidQualifications);
+      // Validação mais rigorosa dos dados profissionais (seguindo padrão do consolidado)
+      if (user) {
+        const hasValidProfessionalId = user.professional_id && user.professional_id.trim().length > 0;
+        const hasValidQualifications = user.qualifications && user.qualifications.trim().length > 0;
+        const needsData = !hasValidProfessionalId || !hasValidQualifications;
 
-      // Se já tem dados profissionais válidos, pula para o step 2
-      if (hasValidProfessionalId && hasValidQualifications) {
-        setProfessionalData({
-          professional_id: currentUser.professional_id.trim(),
-          qualifications: currentUser.qualifications.trim(),
-          professional_signature: currentUser.professional_signature?.trim() || ''
-        });
-        setStep(2);
-      } else {
-        // Se não tem dados válidos, força step 1
-        setStep(1);
-        setProfessionalData({
-          professional_id: currentUser.professional_id?.trim() || '',
-          qualifications: currentUser.qualifications?.trim() || '',
-          professional_signature: currentUser.professional_signature?.trim() || ''
-        });
+        setNeedsProfessionalData(needsData);
+
+        // Se já tem dados profissionais válidos, pula para o step 2
+        if (!needsData) {
+          setProfessionalData({
+            professional_id: user.professional_id.trim(),
+            qualifications: user.qualifications.trim(),
+            professional_signature: user.professional_signature?.trim() || ''
+          });
+          setStep(2);
+        } else {
+          // Se não tem dados válidos, força step 1 e limpa dados profissionais
+          setStep(1);
+          setProfessionalData({
+            professional_id: user.professional_id?.trim() || '',
+            qualifications: user.qualifications?.trim() || '',
+            professional_signature: user.professional_signature?.trim() || ''
+          });
+        }
       }
 
       // Carregar dados existentes do paciente se houver
@@ -79,18 +154,8 @@ const ReportEvolutionModal = ({
           treatment_objectives: patient.treatment_objectives || ''
         });
       }
-
-      // Se há dados iniciais (edição), carregar
-      if (initialData) {
-        if (initialData.professionalData) {
-          setProfessionalData(initialData.professionalData);
-        }
-        if (initialData.patientData) {
-          setPatientData(initialData.patientData);
-        }
-      }
     }
-  }, [isOpen, currentUser, patient, initialData]);
+  }, [isOpen, user, patient]);
 
   const validateProfessionalData = () => {
     const newErrors = {};
@@ -133,21 +198,102 @@ const ReportEvolutionModal = ({
       }
     } else {
       if (validatePatientData()) {
-        setLoading(true);
-        try {
-          await onContinue({
-            professionalData,
-            patientData,
-            needsProfessionalData,
-            periodOptions
-          });
-        } catch (error) {
-          console.error('Erro ao processar dados:', error);
-        } finally {
-          setLoading(false);
-        }
+        await handleGenerateReport();
       }
     }
+  };
+
+  // Função principal para gerar relatório (seguindo padrão do consolidado)
+  const handleGenerateReport = async () => {
+    // Prevenir múltiplas execuções simultâneas
+    if (isLoading) {
+      console.log('⚠️ Processamento já em andamento, ignorando nova chamada');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    console.log('🚀 [INÍCIO] handleGenerateReport chamada');
+
+    try {
+      console.log('🔄 Iniciando processamento do relatório de evolução para:', patient.name);
+
+      // 1. Salvar dados profissionais se necessário (igual ao consolidado)
+      if (needsProfessionalData && professionalData) {
+        console.log('💼 Salvando dados profissionais:', professionalData);
+        await updateProfessionalData(professionalData);
+
+        // Atualizar contexto do usuário com dados salvos
+        updateUser({
+          professional_id: professionalData.professional_id,
+          qualifications: professionalData.qualifications,
+          professional_signature: professionalData.professional_signature
+        });
+
+        // Re-selecionar paciente após salvar dados profissionais (igual ao consolidado)
+        if (refreshAndReselectPatient) {
+          console.log('🔄 Re-selecionando paciente após salvar dados profissionais...');
+          try {
+            await refreshAndReselectPatient(patient.id);
+            console.log('✅ Paciente re-selecionado com sucesso após dados profissionais');
+          } catch (reselectError) {
+            console.warn('⚠️ Erro ao re-selecionar paciente (não crítico):', reselectError);
+          }
+        }
+      }
+
+      // Definir dados profissionais para o relatório
+      setProfessionalConfigData({
+        professional_name: user?.name || user?.full_name,
+        professional_id: user?.professional_id || professionalData?.professional_id,
+        qualifications: user?.qualifications || professionalData?.qualifications,
+        professional_signature: user?.professional_signature || professionalData?.professional_signature
+      });
+
+      // 2. Salvar dados complementares do paciente (sempre necessário)
+      console.log('👤 Salvando dados complementares do paciente:', patientData);
+      await updatePatientData(patient.id, patientData);
+      setPatientConfigData(patientData);
+      console.log('✅ Dados do paciente salvos com sucesso');
+
+      // 3. Buscar dados completos do relatório
+      console.log('📊 Buscando dados do relatório...');
+      const completeReportData = await getEvolutionReportData(patient.id);
+      setReportData(completeReportData);
+      console.log('✅ Dados do relatório carregados');
+
+      // 4. Processar opções de período
+      const processedPeriodOptions = processPeriodOptions(periodOptions);
+      console.log('📅 Período processado');
+
+      // 5. Gerar análise automática
+      console.log('🤖 Gerando análise automática...');
+      const analysis = await getAutomaticAnalysis(patient.id, processedPeriodOptions);
+      setAnalysisData(analysis);
+      console.log('✅ Análise gerada com sucesso');
+
+      // 6. Abrir preview
+      console.log('🎯 Abrindo preview...');
+      setShowPreview(true);
+
+    } catch (error) {
+      console.error('❌ Erro ao processar configuração:', error);
+      setError(`Erro ao processar dados: ${error.message || 'Erro desconhecido'}. Verifique os dados e tente novamente.`);
+      // NÃO fechar modal - mantê-lo aberto para retry
+    } finally {
+      setIsLoading(false);
+      console.log('🏁 [FIM] handleGenerateReport finalizada');
+    }
+  };
+
+  // Funções para controle do preview (seguindo padrão do consolidado)
+  const handleClosePreview = () => {
+    setShowPreview(false);
+  };
+
+  const handleUpdateCustomizations = (newCustomizations) => {
+    setCustomizations(newCustomizations);
   };
 
   const handlePrevStep = () => {
@@ -156,9 +302,17 @@ const ReportEvolutionModal = ({
     }
   };
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    // Fechar preview se estiver aberto
+    setShowPreview(false);
+    // Chamar função de fechamento do pai
+    onClose();
+  };
+
+  if (!isOpen || !patient) return null;
 
   return (
+    <>
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         
@@ -174,7 +328,7 @@ const ReportEvolutionModal = ({
               </p>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="text-white hover:text-indigo-200 transition-colors"
             >
               <FontAwesomeIcon icon={faTimes} className="text-xl" />
@@ -209,6 +363,17 @@ const ReportEvolutionModal = ({
 
         {/* Content */}
         <div className="p-6">
+          {/* Exibir erro se houver */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center">
+                <FontAwesomeIcon icon={faTimes} className="text-red-500 mr-2" />
+                <span className="text-red-700 text-sm font-medium">Erro ao processar relatório</span>
+              </div>
+              <p className="text-red-600 text-sm mt-2">{error}</p>
+            </div>
+          )}
+
           {step === 1 && needsProfessionalData && (
             <div className="space-y-6">
               <div className="text-center mb-6">
@@ -317,7 +482,7 @@ const ReportEvolutionModal = ({
                     </button>
                   </div>
                   <div className="text-sm text-green-700 space-y-1">
-                    <p><strong>Nome:</strong> {currentUser?.full_name || currentUser?.name}</p>
+                    <p><strong>Nome:</strong> {user?.full_name || user?.name}</p>
                     <p><strong>Registro:</strong> {professionalData.professional_id}</p>
                     <p><strong>Qualificações:</strong> {professionalData.qualifications}</p>
                   </div>
@@ -545,7 +710,7 @@ const ReportEvolutionModal = ({
           
           <div className="flex space-x-3">
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancelar
@@ -553,10 +718,10 @@ const ReportEvolutionModal = ({
             
             <button
               onClick={handleNextStep}
-              disabled={loading}
+              disabled={isLoading}
               className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 flex items-center space-x-2"
             >
-              {loading ? (
+              {isLoading ? (
                 <>
                   <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
                   <span>Processando...</span>
@@ -569,6 +734,21 @@ const ReportEvolutionModal = ({
         </div>
       </div>
     </div>
+
+    {/* Preview Modal (seguindo padrão do consolidado) */}
+    {showPreview && (
+      <ReportPreview
+        isOpen={showPreview}
+        onClose={handleClosePreview}
+        reportData={reportData}
+        analysisData={analysisData}
+        patientData={patientConfigData}
+        professionalData={professionalConfigData}
+        customizations={customizations}
+        onUpdateCustomizations={handleUpdateCustomizations}
+      />
+    )}
+    </>
   );
 };
 

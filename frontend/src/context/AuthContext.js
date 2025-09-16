@@ -21,16 +21,31 @@ export const AuthProvider = ({ children }) => {
         if (decoded.exp * 1000 < Date.now()) {
           // Token expirado
           localStorage.removeItem('token');
+          localStorage.removeItem('professionalData');
         } else {
-          // Token válido
+          // Token válido - carregar dados profissionais persistidos
+          const storedProfessionalData = localStorage.getItem('professionalData');
+          let userWithProfessionalData = decoded;
+
+          if (storedProfessionalData) {
+            try {
+              const professionalData = JSON.parse(storedProfessionalData);
+              userWithProfessionalData = { ...decoded, ...professionalData };
+            } catch (error) {
+              console.warn('Erro ao carregar dados profissionais persistidos:', error);
+              localStorage.removeItem('professionalData');
+            }
+          }
+
           setToken(storedToken);
-          setUser(decoded);
+          setUser(userWithProfessionalData);
           setIsAuthenticated(true);
           return; // Sai da função se o token for válido
         }
       } catch (error) {
         console.error("Falha ao descodificar token, a limpar...", error);
         localStorage.removeItem('token');
+        localStorage.removeItem('professionalData');
       }
     }
     // Se não houver token ou se for inválido, garante que o estado está limpo
@@ -61,6 +76,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('professionalData');
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);
@@ -72,21 +88,21 @@ export const AuthProvider = ({ children }) => {
       const newUser = { ...user, ...updatedUserData };
       setUser(newUser);
 
-      // Persistir dados profissionais no token/localStorage se necessário
+      // Persistir dados profissionais no localStorage se necessário
       if (token && (updatedUserData.professional_id || updatedUserData.qualifications || updatedUserData.professional_signature)) {
         try {
-          const decoded = jwtDecode(token);
-          const updatedDecoded = { ...decoded, ...updatedUserData };
-
-          // Note: Em uma implementação real, você precisaria gerar um novo token
-          // no backend. Por enquanto, vamos apenas atualizar o user state
-          console.log('Dados profissionais atualizados:', {
+          // Salvar apenas dados profissionais no localStorage separadamente
+          const professionalData = {
             professional_id: updatedUserData.professional_id,
             qualifications: updatedUserData.qualifications,
             professional_signature: updatedUserData.professional_signature
-          });
+          };
+
+          localStorage.setItem('professionalData', JSON.stringify(professionalData));
+
+          console.log('Dados profissionais atualizados e persistidos:', professionalData);
         } catch (error) {
-          console.warn('Não foi possível atualizar dados no token:', error);
+          console.warn('Não foi possível persistir dados profissionais:', error);
         }
       }
     }

@@ -21,7 +21,6 @@ export const PatientProvider = ({ children }) => {
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingPatient, setIsLoadingPatient] = useState(false);
   const [error, setError] = useState('');
   const { user, isAuthenticated, token } = useAuth();
 
@@ -98,9 +97,11 @@ export const PatientProvider = ({ children }) => {
     return () => {
       // Limpa todos os timers de debounce
       const timers = debounceTimersRef.current;
-      Object.values(timers).forEach(timer => {
-        if (timer) clearTimeout(timer);
-      });
+      if (timers) {
+        Object.values(timers).forEach(timer => {
+          if (timer) clearTimeout(timer);
+        });
+      }
     };
   }, []);
 
@@ -239,7 +240,6 @@ export const PatientProvider = ({ children }) => {
   const value = {
     patients, selectedPatient,
     isLoading,
-    isLoadingPatient,
     error,
     selectPatient,
     isPatientFormOpen, patientToEdit,

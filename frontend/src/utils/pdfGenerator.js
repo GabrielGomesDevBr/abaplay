@@ -408,6 +408,7 @@ export const generateConsolidatedReportPDF = async (patient, reportText, profess
         };
 
         // Função para quebrar texto em múltiplas linhas respeitando limites
+        // eslint-disable-next-line no-unused-vars
         const addTextWithPageBreaks = (text, x, startY, maxWidth, lineHeight = 5) => {
             const lines = doc.splitTextToSize(text, maxWidth);
             let currentY = startY;
@@ -771,12 +772,13 @@ export const generateConsolidatedReportPDF = async (patient, reportText, profess
                         for (let j = 0; j < legendItems.length; j += itemsPerRow) {
                             let xPos = margin;
                             const rowItems = legendItems.slice(j, j + itemsPerRow);
-                            
+                            const currentY = y; // Capturar valor atual de y
+
                             rowItems.forEach((item) => {
                                 doc.setFillColor(item.color[0], item.color[1], item.color[2]);
-                                doc.circle(xPos + 1, y - 0.5, 1, 'F');
+                                doc.circle(xPos + 1, currentY - 0.5, 1, 'F');
                                 doc.setTextColor(0);
-                                doc.text(item.text, xPos + 4, y);
+                                doc.text(item.text, xPos + 4, currentY);
                                 xPos += 60;
                             });
                             y += 4;
