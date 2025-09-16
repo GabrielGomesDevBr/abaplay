@@ -83,7 +83,7 @@ export const getPatientProgramsGrade = async (patientId) => {
     const response = await apiClient.get(`/programs/patient/${patientId}/grade`);
     return response.data;
   } catch (error) {
-    console.error(`Erro ao getPatientProgramsGrade para o paciente ${patientId}:`, {
+    // Erro ao getPatientProgramsGrade
     throw error;
   }
 };
@@ -103,7 +103,7 @@ export const getAssignmentsForPatient = async (patientId) => {
     const response = await apiClient.get(`/assignments/patient/${patientId}`);
     return response.data;
   } catch (error) {
-    console.error('Erro ao getAssignmentsForPatient:', {
+    // Erro ao getAssignmentsForPatient
     throw error;
   }
 };
@@ -120,8 +120,7 @@ export const assignProgram = async (patientId, programId) => {
         const response = await apiClient.post('/assignments', { patientId, programId });
         return response.data;
     } catch (error) {
-        console.error('Erro ao assignProgram:', {
-            });
+        // Erro ao assignProgram
         throw error;
     }
 };
@@ -137,7 +136,7 @@ export const getAssignmentDetails = async (assignmentId) => {
     const response = await apiClient.get(`/assignments/${assignmentId}`);
     return response.data;
   } catch (error) {
-    console.error(`Erro ao getAssignmentDetails para o ID ${assignmentId}:`, {
+    // Erro ao getAssignmentDetails
     throw error;
   }
 };
@@ -153,7 +152,7 @@ export const getAssignmentDetailsWithHistory = async (assignmentId) => {
     const response = await apiClient.get(`/assignments/${assignmentId}/history`);
     return response.data;
   } catch (error) {
-    console.error(`Erro ao getAssignmentDetailsWithHistory para o ID ${assignmentId}:`, {
+    // Erro ao getAssignmentDetailsWithHistory
     throw error;
   }
 };
@@ -183,7 +182,7 @@ export const recordProgress = async (progressData) => {
     const response = await apiClient.post('/assignments/progress', progressData);
     return response.data;
   } catch (error) {
-    console.error('Erro ao recordProgress:', {
+    // Erro ao recordProgress
     throw error;
   }
 };
@@ -199,7 +198,7 @@ export const getAssignmentEvolution = async (assignmentId) => {
     const response = await apiClient.get(`/assignments/${assignmentId}/progress`);
     return response.data;
   } catch (error) {
-    console.error(`Erro ao getAssignmentEvolution para a atribuição ${assignmentId}:`, {
+    // Erro ao getAssignmentEvolution
     throw error;
   }
 };
@@ -216,7 +215,7 @@ export const updateAssignmentStatus = async (assignmentId, status) => {
     const response = await apiClient.patch(`/assignments/${assignmentId}/status`, { status });
     return response.data;
   } catch (error) {
-    console.error(`Erro ao updateAssignmentStatus para a atribuição ${assignmentId}:`, {
+    // Erro ao updateAssignmentStatus
     throw error;
   }
 };
