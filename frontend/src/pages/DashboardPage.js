@@ -686,7 +686,7 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
                             
                             // Debug do papel do usuário (apenas no primeiro tooltip)
                             if (items[0].dataIndex === 0) {
-                                console.log('Dashboard User role:', user?.role);
+                                // Verificando role do usuário
                             }
                             
                             // Horário do registro para terapeutas e admins (suporta 'therapist'/'terapeuta' e 'admin'/'administrador')

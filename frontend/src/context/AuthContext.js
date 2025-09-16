@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
           return; // Sai da função se o token for válido
         }
       } catch (error) {
-        console.error("Falha ao descodificar token, a limpar...", error);
+        // Token inválido, limpando dados
         localStorage.removeItem('token');
         localStorage.removeItem('professionalData');
       }
@@ -69,8 +69,8 @@ export const AuthProvider = ({ children }) => {
         setUser(decoded);
         setIsAuthenticated(true);
     } catch (error) {
-        console.error("Erro ao processar novo token de login:", error);
-        logout(); // Garante que o estado é limpo em caso de erro
+        // Erro ao processar token, limpando estado
+        logout();
     }
   };
 
@@ -100,9 +100,9 @@ export const AuthProvider = ({ children }) => {
 
           localStorage.setItem('professionalData', JSON.stringify(professionalData));
 
-          console.log('Dados profissionais atualizados e persistidos:', professionalData);
+          // Dados profissionais persistidos com sucesso
         } catch (error) {
-          console.warn('Não foi possível persistir dados profissionais:', error);
+          // Erro ao persistir dados profissionais
         }
       }
     }

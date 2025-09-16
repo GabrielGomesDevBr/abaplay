@@ -39,7 +39,7 @@ const usePatientNotifications = (patientIds = []) => {
             }
           };
         } catch (error) {
-          console.error(`Erro ao buscar notificações do paciente ${patientId}:`, error);
+          // Erro ao buscar notificações do paciente
           return {
             patientId,
             notifications: { parentChat: 0, caseDiscussion: 0, total: 0 }
@@ -57,7 +57,7 @@ const usePatientNotifications = (patientIds = []) => {
       setPatientNotifications(notificationMap);
     } catch (error) {
       setError(error.message);
-      console.error('Erro geral ao buscar notificações:', error);
+      // Erro geral ao buscar notificações
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ const usePatientNotifications = (patientIds = []) => {
 
       return notifications;
     } catch (error) {
-      console.error(`Erro ao buscar notificações do paciente ${patientId}:`, error);
+      // Erro ao buscar notificações do paciente
       return { parentChat: 0, caseDiscussion: 0, total: 0 };
     }
   }, []);
@@ -133,7 +133,7 @@ const usePatientNotifications = (patientIds = []) => {
       window.dispatchEvent(new CustomEvent('notificationUpdate'));
 
     } catch (error) {
-      console.error('Erro ao marcar como lida:', error);
+      // Erro ao marcar como lida
     }
   }, []);
 
@@ -212,7 +212,7 @@ const usePatientNotifications = (patientIds = []) => {
             }
           };
         } catch (error) {
-          console.error(`Erro ao buscar notificações do paciente ${patientId}:`, error);
+          // Erro ao buscar notificações do paciente
           return {
             patientId,
             notifications: { parentChat: 0, caseDiscussion: 0, total: 0 }
@@ -230,7 +230,7 @@ const usePatientNotifications = (patientIds = []) => {
       setPatientNotifications(notificationMap);
     } catch (error) {
       setError(error.message);
-      console.error('Erro geral ao buscar notificações:', error);
+      // Erro geral ao buscar notificações
     } finally {
       setLoading(false);
     }

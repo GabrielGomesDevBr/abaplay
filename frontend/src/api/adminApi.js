@@ -26,7 +26,7 @@ export const fetchAllUsers = async (token) => {
     const response = await axios.get(`${API_URL}/admin/users`, getAuthHeaders(token));
     return response.data.users || [];
   } catch (error) {
-    console.error("Erro ao buscar utilizadores:", error.response?.data || error.message);
+    // Erro ao buscar utilizadores
     throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível carregar a lista de utilizadores.');
   }
 };
@@ -36,7 +36,7 @@ export const createUser = async (userData, token) => {
     const response = await axios.post(`${API_URL}/admin/users`, userData, getAuthHeaders(token));
     return response.data;
   } catch (error) {
-    console.error("Erro ao criar utilizador:", error.response?.data || error.message);
+    // Erro ao criar utilizador
     throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível criar o utilizador.');
   }
 };
@@ -46,7 +46,7 @@ export const updateUser = async (userId, userData, token) => {
         const response = await axios.put(`${API_URL}/admin/users/${userId}`, userData, getAuthHeaders(token));
         return response.data;
     } catch (error) {
-        console.error(`Erro ao atualizar utilizador ${userId}:`, error.response?.data || error.message);
+        // Erro ao atualizar utilizador
         throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível atualizar o utilizador.');
     }
 };
@@ -56,7 +56,7 @@ export const deleteUser = async (userId, token) => {
         const response = await axios.delete(`${API_URL}/admin/users/${userId}`, getAuthHeaders(token));
         return response.data;
     } catch (error) {
-        console.error(`Erro ao apagar utilizador ${userId}:`, error.response?.data || error.message);
+        // Erro ao apagar utilizador
         throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível apagar o utilizador.');
     }
 };
@@ -69,7 +69,7 @@ export const fetchAllAdminPatients = async (token) => {
         const response = await axios.get(`${API_URL}/admin/patients`, getAuthHeaders(token));
         return response.data.patients || [];
     } catch (error) {
-        console.error("Erro ao buscar pacientes:", error.response?.data || error.message);
+        // Erro ao buscar pacientes
         throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível carregar a lista de pacientes.');
     }
 };
@@ -79,7 +79,7 @@ export const createPatient = async (patientData, token) => {
         const response = await axios.post(`${API_URL}/admin/patients`, patientData, getAuthHeaders(token));
         return response.data;
     } catch (error) {
-        console.error("Erro ao criar paciente:", error.response?.data || error.message);
+        // Erro ao criar paciente
         throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível criar o paciente.');
     }
 };
@@ -96,7 +96,7 @@ export const deletePatient = async (patientId, token) => {
         const response = await axios.delete(`${API_URL}/admin/patients/${patientId}`, getAuthHeaders(token));
         return response.data; // Retorna { message }
     } catch (error) {
-        console.error(`Erro ao apagar paciente ${patientId}:`, error.response?.data || error.message);
+        // Erro ao apagar paciente
         throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível apagar o paciente.');
     }
 };
@@ -109,7 +109,7 @@ export const getPatientAssignments = async (patientId, token) => {
         const response = await axios.get(`${API_URL}/admin/assignments/${patientId}`, getAuthHeaders(token));
         return response.data.therapists || [];
     } catch (error) {
-        console.error(`Erro ao buscar atribuições para o paciente ${patientId}:`, error.response?.data || error.message);
+        // Erro ao buscar atribuições
         throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível carregar as atribuições.');
     }
 };
@@ -119,7 +119,7 @@ export const updatePatientAssignments = async (patientId, therapistIds, token) =
         const response = await axios.put(`${API_URL}/admin/assignments/${patientId}`, { therapistIds }, getAuthHeaders(token));
         return response.data;
     } catch (error) {
-        console.error(`Erro ao atualizar atribuições para o paciente ${patientId}:`, error.response?.data || error.message);
+        // Erro ao atualizar atribuições
         throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível atualizar as atribuições.');
     }
 };

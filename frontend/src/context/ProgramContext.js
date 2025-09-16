@@ -26,7 +26,7 @@ export const ProgramProvider = ({ children }) => {
       setDisciplines(fetchedData || {});
     } catch (err) {
       setError('Não foi possível carregar os programas.');
-      console.error("Erro em ProgramContext ao buscar dados:", err);
+      // Erro ao buscar programas
     } finally {
       setIsLoading(false);
     }
@@ -89,7 +89,7 @@ export const ProgramProvider = ({ children }) => {
         setSelectedProgram(programData);
     } catch (err) {
         setError('Não foi possível carregar os detalhes do programa.');
-        console.error(`Erro em ProgramContext ao buscar programa ${programId}:`, err);
+        // Erro ao buscar detalhes do programa
         setSelectedProgram(null);
     } finally {
         setIsLoading(false);

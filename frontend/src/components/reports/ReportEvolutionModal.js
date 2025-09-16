@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUser, faUserMd, faGraduationCap, faNotesMedical,
@@ -207,21 +207,19 @@ const ReportEvolutionModal = ({
   const handleGenerateReport = async () => {
     // Prevenir múltiplas execuções simultâneas
     if (isLoading) {
-      console.log('⚠️ Processamento já em andamento, ignorando nova chamada');
+      // Processamento já em andamento
       return;
     }
 
     setIsLoading(true);
     setError('');
 
-    console.log('🚀 [INÍCIO] handleGenerateReport chamada');
-
     try {
-      console.log('🔄 Iniciando processamento do relatório de evolução para:', patient.name);
+      // Iniciando processamento do relatório
 
       // 1. Salvar dados profissionais se necessário (igual ao consolidado)
       if (needsProfessionalData && professionalData) {
-        console.log('💼 Salvando dados profissionais:', professionalData);
+        // Salvando dados profissionais
         await updateProfessionalData(professionalData);
 
         // Atualizar contexto do usuário com dados salvos
@@ -233,12 +231,12 @@ const ReportEvolutionModal = ({
 
         // Re-selecionar paciente após salvar dados profissionais (igual ao consolidado)
         if (refreshAndReselectPatient) {
-          console.log('🔄 Re-selecionando paciente após salvar dados profissionais...');
+          // Re-selecionando paciente
           try {
             await refreshAndReselectPatient(patient.id);
-            console.log('✅ Paciente re-selecionado com sucesso após dados profissionais');
+            // Paciente re-selecionado com sucesso
           } catch (reselectError) {
-            console.warn('⚠️ Erro ao re-selecionar paciente (não crítico):', reselectError);
+            // Erro ao re-selecionar paciente (não crítico)
           }
         }
       }
@@ -252,29 +250,29 @@ const ReportEvolutionModal = ({
       });
 
       // 2. Salvar dados complementares do paciente (sempre necessário)
-      console.log('👤 Salvando dados complementares do paciente:', patientData);
+      // Salvando dados complementares
       await updatePatientData(patient.id, patientData);
       setPatientConfigData(patientData);
-      console.log('✅ Dados do paciente salvos com sucesso');
+      // Dados salvos com sucesso
 
       // 3. Buscar dados completos do relatório
-      console.log('📊 Buscando dados do relatório...');
+      // Buscando dados do relatório
       const completeReportData = await getEvolutionReportData(patient.id);
       setReportData(completeReportData);
-      console.log('✅ Dados do relatório carregados');
+      // Dados carregados
 
       // 4. Processar opções de período
       const processedPeriodOptions = processPeriodOptions(periodOptions);
-      console.log('📅 Período processado');
+      // Período processado
 
       // 5. Gerar análise automática
-      console.log('🤖 Gerando análise automática...');
+      // Gerando análise automática
       const analysis = await getAutomaticAnalysis(patient.id, processedPeriodOptions);
       setAnalysisData(analysis);
-      console.log('✅ Análise gerada com sucesso');
+      // Análise gerada com sucesso
 
       // 6. Abrir preview
-      console.log('🎯 Abrindo preview...');
+      // Abrindo preview
       setShowPreview(true);
 
     } catch (error) {
@@ -283,7 +281,7 @@ const ReportEvolutionModal = ({
       // NÃO fechar modal - mantê-lo aberto para retry
     } finally {
       setIsLoading(false);
-      console.log('🏁 [FIM] handleGenerateReport finalizada');
+      // Processamento finalizado
     }
   };
 

@@ -77,7 +77,7 @@ const SessionProgress = ({ program, assignment }) => {
             const level = await getPromptLevelForProgram(selectedPatient.id, programId);
             setPromptLevel(level);
           } catch (error) {
-            console.warn('Erro ao carregar prompt level:', error);
+            // Erro ao carregar prompt level
             setPromptLevel(5); // Fallback para independente
           }
         }
@@ -100,7 +100,7 @@ const SessionProgress = ({ program, assignment }) => {
         ? JSON.parse(program.procedure)
         : program.procedure;
     } catch (e) {
-      console.error("Falha ao analisar o 'procedure' do programa:", e);
+      // Falha ao analisar o 'procedure' do programa
       return [];
     }
   }, [program]);
@@ -115,7 +115,7 @@ const SessionProgress = ({ program, assignment }) => {
       setEvolutionData(validHistory);
     } catch (err) {
       setError('Não foi possível carregar o histórico de progresso.');
-      console.error(err);
+      // Erro ao carregar histórico
     } finally {
       setIsLoadingHistory(false);
     }
@@ -322,14 +322,7 @@ const SessionProgress = ({ program, assignment }) => {
                     const dataIndex = context.dataIndex;
                     const session = evolutionData[dataIndex];
                     
-                    // Debug: verificar estrutura dos dados (apenas o primeiro)
-                    if (dataIndex === 0) {
-                        console.log('SessionProgress data (FUNCIONA) - attempts:', session?.attempts);
-                        console.log('SessionProgress data (FUNCIONA) - successes:', session?.successes);
-                        console.log('SessionProgress data (FUNCIONA) - created_at:', session?.created_at);
-                        console.log('SessionProgress data (FUNCIONA) - therapist_name:', session?.therapist_name);
-                        console.log('SessionProgress data (FUNCIONA) - FULL OBJECT:', JSON.stringify(session, null, 2));
-                    }
+                    // Verifica estrutura dos dados
                     
                     const attempts = session?.attempts || 0;
                     const successes = session?.successes || 0;
@@ -348,12 +341,7 @@ const SessionProgress = ({ program, assignment }) => {
                         result.push(`👨‍⚕️ Terapeuta ID: ${session.therapist_id}`);
                     }
                     
-                    // Debug adicional do terapeuta
-                    if (dataIndex === 0) {
-                        console.log('DEBUG Terapeuta - therapist_name:', session?.therapist_name);
-                        console.log('DEBUG Terapeuta - therapist_id:', session?.therapist_id);
-                        console.log('DEBUG Terapeuta - therapist_email:', session?.therapist_email);
-                    }
+                    // Informações do terapeuta
                     
                     return result;
                 },
@@ -372,10 +360,7 @@ const SessionProgress = ({ program, assignment }) => {
                         result.push(`${sessionNotes}`);
                     }
                     
-                    // Debug do papel do usuário (apenas no primeiro tooltip)
-                    if (dataIndex === 0) {
-                        console.log('SessionProgress User role:', user?.role);
-                    }
+                    // Papel do usuário
                     
                     // Horário do registro para terapeutas e admins (suporta 'therapist'/'terapeuta' e 'admin'/'administrador')
                     if (user && (user.role === 'therapist' || user.role === 'terapeuta' || user.role === 'admin' || user.role === 'administrador')) {

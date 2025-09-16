@@ -112,7 +112,6 @@ export const PatientProvider = ({ children }) => {
         await action();
         await refreshData(patientId);
     } catch (error) {
-        console.error("Erro ao executar ação e recarregar:", error);
         throw error;
     }
   };
@@ -123,7 +122,6 @@ export const PatientProvider = ({ children }) => {
       if (!selectedPatient) return;
       const assignment = selectedPatient.assigned_programs?.find(p => p.program_id === programId);
       if (!assignment) {
-        console.error("Erro: Não foi possível encontrar a referência do programa para remoção.");
         return;
       }
       const assignmentIdToRemove = assignment.assignment_id;
@@ -167,7 +165,7 @@ export const PatientProvider = ({ children }) => {
         return dbLevel;
       }
     } catch (error) {
-      console.warn('Erro ao buscar prompt level do banco:', error);
+      // Erro ao buscar prompt level do banco
     }
     
     // 4. Fallback: padrão 5 (Independente)
@@ -194,7 +192,7 @@ export const PatientProvider = ({ children }) => {
         try {
           const { updatePromptLevel } = await import('../api/promptLevelApi');
           await updatePromptLevel(assignmentId, level);
-          console.log(`[PROMPT-LEVEL] Salvo no banco: Assignment ${assignmentId} → Nível ${level}`);
+          // Prompt level salvo no banco
           
           // Remove do pending updates após sucesso
           setPromptLevelPendingUpdates(prev => {
@@ -203,7 +201,7 @@ export const PatientProvider = ({ children }) => {
             return newPending;
           });
         } catch (error) {
-          console.error('Erro ao salvar prompt level no banco:', error);
+          // Erro ao salvar prompt level no banco
           
           // Em caso de erro, reverte o optimistic update
           setPromptLevelPendingUpdates(prev => {
@@ -219,11 +217,11 @@ export const PatientProvider = ({ children }) => {
             const realLevel = response.currentPromptLevel || 5;
             setPromptLevelsCache(prev => ({ ...prev, [key]: realLevel }));
           } catch (fetchError) {
-            console.warn('Erro ao buscar valor real do banco:', fetchError);
+            // Erro ao buscar valor real do banco
           }
         }
       } else {
-        console.warn('Não foi possível salvar: assignmentId não fornecido');
+        // Não foi possível salvar: assignmentId não fornecido
         // Remove do pending updates
         setPromptLevelPendingUpdates(prev => {
           const newPending = { ...prev };

@@ -11,7 +11,7 @@ const ProgressAlert = ({ onClose, onProgramCompleted }) => {
   const [error, setError] = useState(null);
 
   const handleClose = () => {
-    console.log('[PROGRESS-ALERT] Fechando modal...');
+    // Fechando modal
     setIsVisible(false);
     setTimeout(() => {
       if (onClose) {
@@ -39,11 +39,10 @@ const ProgressAlert = ({ onClose, onProgramCompleted }) => {
     try {
       setLoading(true);
       setError(null);
-      console.log('[PROGRESS-ALERT] Iniciando busca de alertas de progresso...');
-      
+      // Iniciando busca de alertas de progresso
+
       const token = localStorage.getItem('token');
       if (!token) {
-        console.error('[PROGRESS-ALERT] Token não encontrado');
         setError('Token de autenticação não encontrado');
         return;
       }
@@ -53,11 +52,11 @@ const ProgressAlert = ({ onClose, onProgramCompleted }) => {
           'Authorization': `Bearer ${token}`
         }
       });
-      
-      console.log('[PROGRESS-ALERT] Resposta recebida:', response.data);
+
+      // Resposta recebida
       setAlertPrograms(response.data || []);
     } catch (error) {
-      console.error('[PROGRESS-ALERT] Erro ao carregar alertas:', error.response?.data || error.message);
+      // Erro ao carregar alertas
       setError(error.response?.data?.errors?.[0]?.msg || error.message || 'Erro desconhecido');
       setAlertPrograms([]);
     } finally {
@@ -85,9 +84,9 @@ const ProgressAlert = ({ onClose, onProgramCompleted }) => {
         onProgramCompleted();
       }
       
-      console.log(`Programa "${program.program_name}" marcado como dominado`);
+      // Programa marcado como dominado
     } catch (error) {
-      console.error('Erro ao marcar programa como dominado:', error);
+      // Erro ao marcar programa como dominado
     }
   };
 

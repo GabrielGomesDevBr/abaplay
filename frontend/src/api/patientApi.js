@@ -43,28 +43,28 @@ export const createPatient = async (patientData, token) => {
 };
 export const updatePatient = async (patientId, patientData, token) => {
   try {
-    console.log(`[API-LOG] updatePatient: Atualizando paciente ${patientId}`);
+    // Atualizando paciente
     const response = await axios.put(`${API_URL}/admin/patients/${patientId}`, patientData, getAuthHeaders(token));
     console.log('[API-LOG] updatePatient: Sucesso');
     return response.data;
   } catch (error) {
-    console.error(`[API-LOG] updatePatient: Erro para paciente ${patientId} -`, error.response?.data || error.message);
+    console.error('Erro ao atualizar paciente');
     throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível atualizar o paciente.');
   }
 };
 export const deletePatient = async (patientId, token) => {
   try {
-    console.log(`[API-LOG] deletePatient: Deletando paciente ${patientId}`);
+    // Deletando paciente
     await axios.delete(`${API_URL}/admin/patients/${patientId}`, getAuthHeaders(token));
     console.log('[API-LOG] deletePatient: Sucesso');
   } catch (error) {
-    console.error(`[API-LOG] deletePatient: Erro para paciente ${patientId} -`, error.response?.data || error.message);
+    console.error('Erro ao deletar paciente');
     throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível deletar o paciente.');
   }
 };
 export const updatePatientNotes = async (patientId, notes, token) => {
   try {
-    console.log(`[API-LOG] updatePatientNotes: Atualizando notas do paciente ${patientId}`);
+    // Atualizando notas
     const response = await axios.patch(
       `${API_URL}/patients/${patientId}/notes`,
       { general_notes: notes },

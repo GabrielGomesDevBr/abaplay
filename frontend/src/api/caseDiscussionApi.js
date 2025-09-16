@@ -5,7 +5,7 @@ const CASE_DISCUSSION_API_URL = `${API_URL}/discussions`;
 
 export const getCaseDiscussionMessages = async (patientId) => {
   try {
-    console.log(`[CASE-DISCUSSION-LOG] getCaseDiscussionMessages: Buscando mensagens para paciente ${patientId}`);
+    // Buscando mensagens da discussão de caso
     const token = localStorage.getItem('token');
     const response = await axios.get(`${CASE_DISCUSSION_API_URL}/patient/${patientId}`, {
       headers: {
@@ -13,19 +13,17 @@ export const getCaseDiscussionMessages = async (patientId) => {
         'Content-Type': 'application/json',
       }
     });
-    console.log(`[CASE-DISCUSSION-LOG] getCaseDiscussionMessages: ${response.data.length} mensagens carregadas`);
     return response.data;
   } catch (error) {
-    console.error('[CASE-DISCUSSION-LOG] getCaseDiscussionMessages: Erro -', error.response?.data || error.message);
     throw error;
   }
 };
 
 export const postCaseDiscussionMessage = async (patientId, content) => {
   try {
-    console.log(`[CASE-DISCUSSION-LOG] postCaseDiscussionMessage: Enviando mensagem para paciente ${patientId}`);
+    // Enviando mensagem da discussão de caso
     const token = localStorage.getItem('token');
-    const response = await axios.post(`${CASE_DISCUSSION_API_URL}/patient/${patientId}`, 
+    const response = await axios.post(`${CASE_DISCUSSION_API_URL}/patient/${patientId}`,
       { content },
       {
         headers: {
@@ -34,10 +32,8 @@ export const postCaseDiscussionMessage = async (patientId, content) => {
         }
       }
     );
-    console.log('[CASE-DISCUSSION-LOG] postCaseDiscussionMessage: Mensagem enviada com sucesso');
     return response.data;
   } catch (error) {
-    console.error('[CASE-DISCUSSION-LOG] postCaseDiscussionMessage: Erro -', error.response?.data || error.message);
     throw error;
   }
 };
@@ -47,7 +43,7 @@ export const updateCaseDiscussionMessage = async (messageId, message) => {
     const response = await axios.put(`${CASE_DISCUSSION_API_URL}/${messageId}`, { message });
     return response.data;
   } catch (error) {
-    console.error('Erro ao atualizar mensagem da discussão de caso:', error);
+    // Erro ao atualizar mensagem da discussão de caso
     throw error;
   }
 };
@@ -57,7 +53,7 @@ export const deleteCaseDiscussionMessage = async (messageId) => {
     const response = await axios.delete(`${CASE_DISCUSSION_API_URL}/${messageId}`);
     return response.data;
   } catch (error) {
-    console.error('Erro ao deletar mensagem da discussão de caso:', error);
+    // Erro ao deletar mensagem da discussão de caso
     throw error;
   }
 };
