@@ -309,7 +309,22 @@ export const generateConsolidatedReportPDF = async (patient, reportText, profess
             }
             return currentY;
         };
-        
+
+        // Função addTextBlock para quebra automática de linha (consistente com relatório de evolução)
+        const addTextBlock = (text, x, startY, maxWidth, lineHeight = 5) => {
+            if (!text) return startY;
+            const lines = doc.splitTextToSize(text, maxWidth);
+            let currentY = startY;
+
+            for (let i = 0; i < lines.length; i++) {
+                currentY = checkAndAddPage(currentY, lineHeight + 5, false, true);
+                doc.text(lines[i], x, currentY);
+                currentY += lineHeight;
+            }
+
+            return currentY;
+        };
+
         // Função para processar markdown e aplicar formatação consistente com relatório de evolução
         const processMarkdownText = (text, x, startY, maxWidth, lineHeight = 5) => {
             if (!text) return startY;
@@ -420,15 +435,27 @@ export const generateConsolidatedReportPDF = async (patient, reportText, profess
             doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
             if (patient.clinic_name) {
-                doc.text(`Clínica: ${patient.clinic_name}`, pageWidth / 2, y, { align: 'center' });
-                y += 5;
+                const clinicText = `Clínica: ${patient.clinic_name}`;
+                const clinicLines = doc.splitTextToSize(clinicText, contentWidth);
+                for (const line of clinicLines) {
+                    doc.text(line, pageWidth / 2, y, { align: 'center' });
+                    y += 5;
+                }
             }
             if (professionalData.professional_name) {
-                doc.text(`Profissional: ${professionalData.professional_name}`, pageWidth / 2, y, { align: 'center' });
-                y += 5;
+                const profText = `Profissional: ${professionalData.professional_name}`;
+                const profLines = doc.splitTextToSize(profText, contentWidth);
+                for (const line of profLines) {
+                    doc.text(line, pageWidth / 2, y, { align: 'center' });
+                    y += 5;
+                }
                 if (professionalData.professional_id) {
-                    doc.text(`${professionalData.professional_id}`, pageWidth / 2, y, { align: 'center' });
-                    y += 6;
+                    const idLines = doc.splitTextToSize(professionalData.professional_id, contentWidth);
+                    for (const line of idLines) {
+                        doc.text(line, pageWidth / 2, y, { align: 'center' });
+                        y += 5;
+                    }
+                    y += 1;
                 }
             }
         }
@@ -446,18 +473,23 @@ export const generateConsolidatedReportPDF = async (patient, reportText, profess
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Nome: ${patient.name}`, margin, y);
+
+        // Nome do paciente com quebra automática
+        const patientName = `Nome: ${patient.name}`;
+        y = addTextBlock(patientName, margin, y, contentWidth);
         y += 5;
-        
+
         if (patient.dob) {
             const birthDate = new Date(patient.dob);
             const age = Math.floor((new Date() - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
-            doc.text(`Data de Nascimento: ${formatDate(patient.dob)} (${age} anos)`, margin, y);
+            const birthInfo = `Data de Nascimento: ${formatDate(patient.dob)} (${age} anos)`;
+            y = addTextBlock(birthInfo, margin, y, contentWidth);
             y += 5;
         }
-        
+
         if (patient.diagnosis) {
-            doc.text(`Diagnóstico: ${patient.diagnosis}`, margin, y);
+            const diagnosisText = `Diagnóstico: ${patient.diagnosis}`;
+            y = addTextBlock(diagnosisText, margin, y, contentWidth);
             y += 5;
         }
 
@@ -470,8 +502,9 @@ export const generateConsolidatedReportPDF = async (patient, reportText, profess
             if (firstSession && lastSession) {
                 doc.setFontSize(9);
                 doc.setFont('helvetica', 'italic');
-                doc.text(`Período dos dados: de ${formatDate(firstSession.session_date)} a ${formatDate(lastSession.session_date)}`, margin, y);
-                y += 5;
+                const periodText = `Período dos dados: de ${formatDate(firstSession.session_date)} a ${formatDate(lastSession.session_date)}`;
+                y = addTextBlock(periodText, margin, y, contentWidth, 4);
+                y += 2;
             }
         }
         
