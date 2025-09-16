@@ -237,8 +237,8 @@ export const PatientProvider = ({ children }) => {
   }, []);
 
   const value = {
-    patients, selectedPatient, 
-    isLoading, 
+    patients, selectedPatient,
+    isLoading,
     isLoadingPatient,
     error,
     selectPatient,
@@ -250,6 +250,7 @@ export const PatientProvider = ({ children }) => {
     closeReportModal: useCallback(() => setIsReportModalOpen(false), []),
     assignProgram, removeProgram, toggleProgramStatus, addSession, saveNotes,
     refreshPatientData: refreshData,
+    refreshAndReselectPatient: useCallback((patientId) => refreshData(patientId), [refreshData]),
     getPromptLevelForProgram, setPromptLevelForProgram
   };
 

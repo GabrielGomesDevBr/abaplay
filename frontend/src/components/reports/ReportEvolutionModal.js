@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faUser, faUserMd, faGraduationCap, faNotesMedical, 
-  faIdCard, faUsers, faSpinner, faTimes, faCheck, faCalendarAlt 
+import {
+  faUser, faUserMd, faGraduationCap, faNotesMedical,
+  faIdCard, faUsers, faSpinner, faTimes, faCheck, faCalendarAlt, faEdit
 } from '@fortawesome/free-solid-svg-icons';
 
 const ReportEvolutionModal = ({ 
@@ -45,20 +45,28 @@ const ReportEvolutionModal = ({
 
   useEffect(() => {
     if (isOpen && currentUser) {
-      // Verificar se o usuário já tem dados profissionais configurados
-      setNeedsProfessionalData(
-        !currentUser.professional_id || 
-        !currentUser.qualifications
-      );
-      
-      // Se já tem dados profissionais, pula para o step 2
-      if (currentUser.professional_id && currentUser.qualifications) {
+      // Validação mais rigorosa dos dados profissionais
+      const hasValidProfessionalId = currentUser.professional_id && currentUser.professional_id.trim().length > 0;
+      const hasValidQualifications = currentUser.qualifications && currentUser.qualifications.trim().length > 0;
+
+      setNeedsProfessionalData(!hasValidProfessionalId || !hasValidQualifications);
+
+      // Se já tem dados profissionais válidos, pula para o step 2
+      if (hasValidProfessionalId && hasValidQualifications) {
         setProfessionalData({
-          professional_id: currentUser.professional_id,
-          qualifications: currentUser.qualifications,
-          professional_signature: currentUser.professional_signature || ''
+          professional_id: currentUser.professional_id.trim(),
+          qualifications: currentUser.qualifications.trim(),
+          professional_signature: currentUser.professional_signature?.trim() || ''
         });
         setStep(2);
+      } else {
+        // Se não tem dados válidos, força step 1
+        setStep(1);
+        setProfessionalData({
+          professional_id: currentUser.professional_id?.trim() || '',
+          qualifications: currentUser.qualifications?.trim() || '',
+          professional_signature: currentUser.professional_signature?.trim() || ''
+        });
       }
 
       // Carregar dados existentes do paciente se houver
@@ -288,6 +296,34 @@ const ReportEvolutionModal = ({
 
           {step === 2 && (
             <div className="space-y-6">
+              {/* Seção de dados profissionais configurados */}
+              {!needsProfessionalData && professionalData && (
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-green-800 flex items-center">
+                      <FontAwesomeIcon icon={faUserMd} className="mr-2" />
+                      Dados Profissionais Configurados
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNeedsProfessionalData(true);
+                        setStep(1);
+                      }}
+                      className="text-xs text-green-600 hover:text-green-800 flex items-center transition-colors bg-green-100 hover:bg-green-200 px-2 py-1 rounded"
+                    >
+                      <FontAwesomeIcon icon={faEdit} className="mr-1" />
+                      Editar
+                    </button>
+                  </div>
+                  <div className="text-sm text-green-700 space-y-1">
+                    <p><strong>Nome:</strong> {currentUser?.full_name || currentUser?.name}</p>
+                    <p><strong>Registro:</strong> {professionalData.professional_id}</p>
+                    <p><strong>Qualificações:</strong> {professionalData.qualifications}</p>
+                  </div>
+                </div>
+              )}
+
               <div className="text-center mb-6">
                 <div className="bg-gradient-to-br from-blue-100 to-cyan-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
                   <FontAwesomeIcon icon={faUser} className="text-2xl text-blue-600" />

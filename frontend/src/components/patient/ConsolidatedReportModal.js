@@ -206,7 +206,7 @@ const ReportChart = ({ program, sessionData }) => {
 
 
 const ConsolidatedReportModal = ({ isOpen, onClose }) => {
-  const { selectedPatient } = usePatients();
+  const { selectedPatient, refreshAndReselectPatient } = usePatients();
   const { user, updateUser } = useAuth();
   // A chamada a usePrograms() foi removida.
 
@@ -241,17 +241,23 @@ const ConsolidatedReportModal = ({ isOpen, onClose }) => {
       setShowSuggestionModal(false);
       setShowPreview(false);
       
-      // Verificar se precisa configurar dados profissionais
+      // Validação mais rigorosa dos dados profissionais
       if (user) {
-        const needsData = !user.professional_id || !user.qualifications;
+        const hasValidProfessionalId = user.professional_id && user.professional_id.trim().length > 0;
+        const hasValidQualifications = user.qualifications && user.qualifications.trim().length > 0;
+        const needsData = !hasValidProfessionalId || !hasValidQualifications;
+
         setNeedsProfessionalData(needsData);
-        
+
         if (!needsData) {
           setProfessionalData({
-            professional_id: user.professional_id,
-            qualifications: user.qualifications,
-            professional_signature: user.professional_signature || ''
+            professional_id: user.professional_id.trim(),
+            qualifications: user.qualifications.trim(),
+            professional_signature: user.professional_signature?.trim() || ''
           });
+        } else {
+          // Limpar dados profissionais se inválidos
+          setProfessionalData(null);
         }
       }
     }
@@ -347,17 +353,36 @@ const ConsolidatedReportModal = ({ isOpen, onClose }) => {
   };
   
   // Função para salvar dados profissionais
-  const handleSaveProfessionalData = (data) => {
-    setProfessionalData(data);
-    setNeedsProfessionalData(false);
-    setShowProfessionalModal(false);
-    
-    // Atualizar dados do usuário no contexto para persistir entre sessões
-    updateUser({
-      professional_id: data.professional_id,
-      qualifications: data.qualifications,
-      professional_signature: data.professional_signature
-    });
+  const handleSaveProfessionalData = async (data, error = null) => {
+    if (error) {
+      // Em caso de erro, manter a necessidade de dados profissionais
+      console.error('Erro ao salvar dados profissionais:', error);
+      setNeedsProfessionalData(true);
+      // Modal permanece aberto para nova tentativa
+      return;
+    }
+
+    if (data) {
+      setProfessionalData(data);
+      setNeedsProfessionalData(false);
+      setShowProfessionalModal(false);
+
+      // Atualizar dados do usuário no contexto para persistir entre sessões
+      updateUser({
+        professional_id: data.professional_id,
+        qualifications: data.qualifications,
+        professional_signature: data.professional_signature
+      });
+
+      // Re-selecionar paciente após atualização para manter sincronização
+      if (refreshAndReselectPatient && selectedPatient) {
+        try {
+          await refreshAndReselectPatient(selectedPatient.id);
+        } catch (err) {
+          console.warn('Aviso: Não foi possível re-selecionar paciente:', err);
+        }
+      }
+    }
   };
 
   if (!isOpen || !selectedPatient) {

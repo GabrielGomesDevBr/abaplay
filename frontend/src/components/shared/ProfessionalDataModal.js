@@ -55,22 +55,36 @@ const ProfessionalDataModal = ({
 
   const handleSave = async () => {
     if (!validateData()) return;
-    
+
     setLoading(true);
-    
+
     try {
       // Salvar dados via API
       const response = await updateProfessionalData(professionalData);
-      
+
       // Callback para o componente pai com dados atualizados do servidor
       onSave(response.user || professionalData);
-      
+
       onClose();
     } catch (error) {
       console.error('Erro ao salvar dados profissionais:', error);
+
+      // Definir erro mais específico baseado na resposta
+      let errorMessage = 'Erro ao salvar dados. Tente novamente.';
+      if (error.message) {
+        errorMessage = error.message;
+      }
+
       setErrors({
-        general: 'Erro ao salvar dados. Tente novamente.'
+        general: errorMessage
       });
+
+      // Forçar re-configuração chamando callback de erro se fornecido
+      if (onSave && typeof onSave === 'function') {
+        // Chamar callback indicando erro para que o componente pai
+        // possa resetar needsProfessionalData se necessário
+        onSave(null, error);
+      }
     } finally {
       setLoading(false);
     }

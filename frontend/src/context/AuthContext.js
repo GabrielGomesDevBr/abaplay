@@ -68,9 +68,27 @@ export const AuthProvider = ({ children }) => {
 
   // Função para atualizar dados do usuário (para dados profissionais)
   const updateUser = (updatedUserData) => {
-    if (user) {
+    if (user && updatedUserData) {
       const newUser = { ...user, ...updatedUserData };
       setUser(newUser);
+
+      // Persistir dados profissionais no token/localStorage se necessário
+      if (token && (updatedUserData.professional_id || updatedUserData.qualifications || updatedUserData.professional_signature)) {
+        try {
+          const decoded = jwtDecode(token);
+          const updatedDecoded = { ...decoded, ...updatedUserData };
+
+          // Note: Em uma implementação real, você precisaria gerar um novo token
+          // no backend. Por enquanto, vamos apenas atualizar o user state
+          console.log('Dados profissionais atualizados:', {
+            professional_id: updatedUserData.professional_id,
+            qualifications: updatedUserData.qualifications,
+            professional_signature: updatedUserData.professional_signature
+          });
+        } catch (error) {
+          console.warn('Não foi possível atualizar dados no token:', error);
+        }
+      }
     }
   };
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { usePatients } from '../../context/PatientContext';
 import ReportEvolutionModal from './ReportEvolutionModal';
 import ReportPreview from './ReportPreview';
 import {
@@ -49,9 +50,10 @@ const processPeriodOptions = (periodOptions) => {
 
 const ReportEvolutionContainer = ({ patient, isOpen, onClose }) => {
   const { user } = useAuth();
+  const { refreshAndReselectPatient } = usePatients();
   const [currentStep, setCurrentStep] = useState('config'); // config, preview
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Estados de dados
   const [reportData, setReportData] = useState(null);
   const [analysisData, setAnalysisData] = useState(null);
@@ -59,12 +61,41 @@ const ReportEvolutionContainer = ({ patient, isOpen, onClose }) => {
   const [professionalConfigData, setProfessionalConfigData] = useState(null);
   const [customizations, setCustomizations] = useState({});
 
+  // Estado local para preservar dados do paciente durante o fluxo
+  const [localPatient, setLocalPatient] = useState(null);
+
+  // Effect para preservar dados do paciente
+  useEffect(() => {
+    if (patient && isOpen) {
+      setLocalPatient(patient);
+    }
+  }, [patient, isOpen]);
+
+  // Effect para limpar estado quando modal fecha
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentStep('config');
+      setReportData(null);
+      setAnalysisData(null);
+      setPatientConfigData(null);
+      setProfessionalConfigData(null);
+      setCustomizations({});
+      setLocalPatient(null);
+      setIsLoading(false);
+    }
+  }, [isOpen]);
+
   const handleConfigurationComplete = async (configData) => {
     setIsLoading(true);
-    
+
     try {
       const { professionalData, patientData, needsProfessionalData, periodOptions } = configData;
-      
+      const currentPatient = localPatient || patient;
+
+      if (!currentPatient) {
+        throw new Error('Nenhum paciente selecionado');
+      }
+
       // 1. Atualizar dados profissionais se necessário
       if (needsProfessionalData && professionalData) {
         await updateProfessionalData(professionalData);
@@ -82,28 +113,33 @@ const ReportEvolutionContainer = ({ patient, isOpen, onClose }) => {
           professional_signature: user?.professional_signature
         });
       }
-      
+
       // 2. Atualizar dados complementares do paciente
-      await updatePatientData(patient.id, patientData);
+      await updatePatientData(currentPatient.id, patientData);
       setPatientConfigData(patientData);
-      
+
+      // 2.1. Re-selecionar paciente após atualizar dados para manter sincronização
+      if (refreshAndReselectPatient) {
+        await refreshAndReselectPatient(currentPatient.id);
+      }
+
       // 3. Buscar dados completos do relatório
-      const completeReportData = await getEvolutionReportData(patient.id);
+      const completeReportData = await getEvolutionReportData(currentPatient.id);
       setReportData(completeReportData);
-      
+
       // 4. Processar opções de período
       const processedPeriodOptions = processPeriodOptions(periodOptions);
-      
+
       // 5. Gerar análise automática com opções de período
-      const analysis = await getAutomaticAnalysis(patient.id, processedPeriodOptions);
+      const analysis = await getAutomaticAnalysis(currentPatient.id, processedPeriodOptions);
       setAnalysisData(analysis);
-      
+
       // 6. Avançar para o preview
       setCurrentStep('preview');
-      
+
     } catch (error) {
       console.error('Erro ao processar configuração:', error);
-      alert('Erro ao processar dados. Tente novamente.');
+      alert(`Erro ao processar dados: ${error.message}. Tente novamente.`);
     } finally {
       setIsLoading(false);
     }
@@ -114,6 +150,8 @@ const ReportEvolutionContainer = ({ patient, isOpen, onClose }) => {
     setCurrentStep('config');
     setReportData(null);
     setAnalysisData(null);
+    // Limpar dados locais do paciente
+    setLocalPatient(null);
     onClose();
   };
 
@@ -130,7 +168,7 @@ const ReportEvolutionContainer = ({ patient, isOpen, onClose }) => {
           isOpen={true}
           onClose={onClose}
           onContinue={handleConfigurationComplete}
-          patient={patient}
+          patient={localPatient || patient}
           currentUser={user}
           isLoading={isLoading}
         />
