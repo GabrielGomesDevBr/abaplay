@@ -5,6 +5,7 @@ const { validationResult } = require('express-validator');
 const UserModel = require('../models/userModel.js');
 const PatientModel = require('../models/patientModel.js');
 const AssignmentModel = require('../models/assignmentModel.js');
+const ClinicModel = require('../models/clinicModel.js');
 
 const formatValidationErrors = (errors) => {
     return { errors: errors.array().map(err => ({ msg: err.msg, param: err.param || err.path })) };
@@ -162,6 +163,27 @@ const AdminController = {
     try {
         const { name, dob, diagnosis, general_notes } = req.body;
         const { clinic_id, userId } = req.user;
+
+        // Verificar limite de pacientes da clínica
+        const clinic = await ClinicModel.findById(clinic_id);
+        if (!clinic) {
+            return res.status(404).json({
+                errors: [{ msg: 'Clínica não encontrada.' }]
+            });
+        }
+
+        // Contar pacientes atuais da clínica
+        const currentPatientsCount = await PatientModel.countByClinicId(clinic_id);
+
+        // Verificar se excede o limite
+        if (currentPatientsCount >= clinic.max_patients) {
+            return res.status(400).json({
+                errors: [{
+                    msg: `Limite de pacientes atingido. Sua clínica suporta no máximo ${clinic.max_patients} pacientes. Atualmente tem ${currentPatientsCount}. Entre em contato para aumentar seu plano.`
+                }]
+            });
+        }
+
         const patientData = { name, dob, diagnosis, general_notes };
         const newPatient = await PatientModel.create(patientData, clinic_id);
         res.status(201).json({

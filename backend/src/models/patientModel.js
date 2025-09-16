@@ -154,6 +154,11 @@ const PatientModel = {
           throw error;
       }
   },
+  async countByClinicId(clinicId) {
+    const query = `SELECT COUNT(*) as count FROM patients WHERE clinic_id = $1`;
+    const { rows } = await pool.query(query, [clinicId]);
+    return parseInt(rows[0].count) || 0;
+  },
   async createSession(patientId, sessionData) {
     console.error("CHAMADA A UMA FUNÇÃO DESATUALIZADA: PatientModel.createSession.");
     throw new Error("Não é possível registrar a sessão. A funcionalidade foi atualizada para registrar progresso por etapa do programa.");

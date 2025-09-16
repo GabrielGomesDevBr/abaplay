@@ -263,47 +263,26 @@ const Assignment = {
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
-            
-            if (therapistIds.length === 0) {
-                // Se nenhum terapeuta foi selecionado, remove todas as atribuições
-                await client.query(
-                    'DELETE FROM patient_program_assignments WHERE patient_id = $1',
-                    [patientId]
-                );
-            } else {
-                // Busca as atribuições de programa existentes para este paciente
-                const existingAssignmentsQuery = `
-                    SELECT program_id, status, therapist_id
-                    FROM patient_program_assignments 
-                    WHERE patient_id = $1
-                `;
-                const { rows: existingAssignments } = await client.query(existingAssignmentsQuery, [patientId]);
-                
-                if (existingAssignments.length > 0) {
-                    // Distribui os programas existentes entre os terapeutas selecionados
-                    // Isso garante que cada programa tenha apenas um terapeuta (respeitando constraint)
-                    // mas permite que múltiplos terapeutas trabalhem com o mesmo paciente
-                    
-                    for (let i = 0; i < existingAssignments.length; i++) {
-                        const assignment = existingAssignments[i];
-                        // Distribui os programas de forma circular entre os terapeutas
-                        const therapistIndex = i % therapistIds.length;
-                        const selectedTherapistId = therapistIds[therapistIndex];
-                        
-                        await client.query(
-                            'UPDATE patient_program_assignments SET therapist_id = $1, updated_at = NOW() WHERE patient_id = $2 AND program_id = $3',
-                            [selectedTherapistId, patientId, assignment.program_id]
-                        );
-                    }
-                    
-                    console.log(`[INFO] ${existingAssignments.length} programa(s) distribuído(s) entre ${therapistIds.length} terapeuta(s) para o paciente ${patientId}.`);
-                } else {
-                    // Se não havia atribuições, não cria nenhuma nova
-                    // O admin terá que atribuir programas separadamente
-                    console.log(`[INFO] Nenhum programa estava atribuído ao paciente ${patientId}. Terapeutas selecionados mas sem programas para atribuir.`);
+
+            // Remove todas as atribuições existentes de terapeutas para este paciente
+            await client.query(
+                'DELETE FROM therapist_patient_assignments WHERE patient_id = $1',
+                [patientId]
+            );
+
+            // Insere as novas atribuições para cada terapeuta selecionado
+            if (therapistIds.length > 0) {
+                for (const therapistId of therapistIds) {
+                    await client.query(
+                        'INSERT INTO therapist_patient_assignments (therapist_id, patient_id) VALUES ($1, $2)',
+                        [therapistId, patientId]
+                    );
                 }
+                console.log(`[INFO] ${therapistIds.length} terapeuta(s) atribuído(s) ao paciente ${patientId}.`);
+            } else {
+                console.log(`[INFO] Todas as atribuições de terapeutas removidas para o paciente ${patientId}.`);
             }
-            
+
             await client.query('COMMIT');
         } catch (error) {
             await client.query('ROLLBACK');
