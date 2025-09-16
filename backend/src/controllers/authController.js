@@ -204,4 +204,50 @@ authController.acceptTerms = async (req, res) => {
     }
 };
 
+/**
+ * Buscar perfil completo do usuário autenticado
+ */
+authController.getUserProfile = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ error: 'Usuário não encontrado.' });
+        }
+
+        // Buscar dados da clínica se necessário
+        let clinicData = null;
+        if (user.clinic_id) {
+            clinicData = await ClinicModel.findById(user.clinic_id);
+        }
+
+        // Retornar dados do perfil (incluindo dados profissionais)
+        const profileData = {
+            id: user.id,
+            username: user.username,
+            full_name: user.full_name,
+            role: user.role,
+            is_admin: user.is_admin,
+            clinic_id: user.clinic_id,
+            clinic_name: clinicData?.name || null,
+            associated_patient_id: user.associated_patient_id,
+            // Dados profissionais
+            professional_id: user.professional_id,
+            qualifications: user.qualifications,
+            professional_signature: user.professional_signature,
+            // Dados dos termos
+            terms_accepted_at: user.terms_accepted_at,
+            terms_version: user.terms_version
+        };
+
+        res.json(profileData);
+
+    } catch (error) {
+        console.error('Erro ao buscar perfil do usuário:', error);
+        res.status(500).json({ error: 'Erro interno do servidor ao buscar perfil.' });
+    }
+};
+
 module.exports = authController;

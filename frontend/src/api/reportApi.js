@@ -70,7 +70,7 @@ export const updatePatientData = async (patientId, patientData) => {
  */
 export const getAutomaticAnalysis = async (patientId, options = {}) => {
   const token = localStorage.getItem('token');
-  
+
   const queryParams = new URLSearchParams();
   if (options.startDate) {
     queryParams.append('startDate', options.startDate);
@@ -96,6 +96,28 @@ export const getAutomaticAnalysis = async (patientId, options = {}) => {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || 'Erro ao gerar análise automática');
+  }
+
+  return response.json();
+};
+
+/**
+ * Buscar perfil completo do usuário autenticado (incluindo dados profissionais)
+ */
+export const getUserProfile = async () => {
+  const token = localStorage.getItem('token');
+
+  const response = await fetch(`${API_URL}/auth/profile`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Erro ao buscar perfil do usuário');
   }
 
   return response.json();

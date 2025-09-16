@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import { getUserProfile } from '../api/reportApi';
 
 const AuthContext = createContext(null);
 
@@ -12,8 +13,57 @@ export const AuthProvider = ({ children }) => {
   // <<< MELHORIA: Estado de carregamento para a verificação inicial >>>
   const [isLoading, setIsLoading] = useState(true);
 
+  // Função para sincronizar perfil do backend com localStorage
+  const syncUserProfile = useCallback(async (token) => {
+    try {
+      const profileData = await getUserProfile();
+
+      // Extrair dados profissionais para o localStorage (cache)
+      if (profileData.professional_id || profileData.qualifications || profileData.professional_signature) {
+        const professionalData = {
+          professional_id: profileData.professional_id,
+          qualifications: profileData.qualifications,
+          professional_signature: profileData.professional_signature
+        };
+        localStorage.setItem('professionalData', JSON.stringify(professionalData));
+      }
+
+      // Criar objeto de usuário completo
+      const decoded = jwtDecode(token);
+      const completeUser = {
+        ...decoded,
+        professional_id: profileData.professional_id,
+        qualifications: profileData.qualifications,
+        professional_signature: profileData.professional_signature,
+        clinic_name: profileData.clinic_name,
+        full_name: profileData.full_name || decoded.full_name
+      };
+
+      setUser(completeUser);
+      return completeUser;
+
+    } catch (error) {
+      // Se falhar a sincronização, usa dados do localStorage como fallback
+      const storedProfessionalData = localStorage.getItem('professionalData');
+      const decoded = jwtDecode(token);
+      let userWithProfessionalData = decoded;
+
+      if (storedProfessionalData) {
+        try {
+          const professionalData = JSON.parse(storedProfessionalData);
+          userWithProfessionalData = { ...decoded, ...professionalData };
+        } catch (error) {
+          localStorage.removeItem('professionalData');
+        }
+      }
+
+      setUser(userWithProfessionalData);
+      return userWithProfessionalData;
+    }
+  }, []);
+
   // Função para inicializar o estado de autenticação a partir do localStorage
-  const initializeAuth = useCallback(() => {
+  const initializeAuth = useCallback(async () => {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
       try {
@@ -23,23 +73,10 @@ export const AuthProvider = ({ children }) => {
           localStorage.removeItem('token');
           localStorage.removeItem('professionalData');
         } else {
-          // Token válido - carregar dados profissionais persistidos
-          const storedProfessionalData = localStorage.getItem('professionalData');
-          let userWithProfessionalData = decoded;
-
-          if (storedProfessionalData) {
-            try {
-              const professionalData = JSON.parse(storedProfessionalData);
-              userWithProfessionalData = { ...decoded, ...professionalData };
-            } catch (error) {
-              console.warn('Erro ao carregar dados profissionais persistidos:', error);
-              localStorage.removeItem('professionalData');
-            }
-          }
-
+          // Token válido - sincronizar com backend
           setToken(storedToken);
-          setUser(userWithProfessionalData);
           setIsAuthenticated(true);
+          await syncUserProfile(storedToken);
           return; // Sai da função se o token for válido
         }
       } catch (error) {
@@ -52,22 +89,26 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);
-  }, []);
+  }, [syncUserProfile]);
 
   // Efeito que corre apenas uma vez no arranque da aplicação
   useEffect(() => {
-    initializeAuth();
-    setIsLoading(false); // Marca o carregamento como completo
+    const initializeAuthAndComplete = async () => {
+      await initializeAuth();
+      setIsLoading(false); // Marca o carregamento como completo
+    };
+    initializeAuthAndComplete();
   }, [initializeAuth]);
 
   // <<< CORREÇÃO CRÍTICA: Funções de login e logout agora são mais robustas >>>
-  const login = (newToken) => {
+  const login = async (newToken) => {
     try {
         localStorage.setItem('token', newToken);
-        const decoded = jwtDecode(newToken);
         setToken(newToken);
-        setUser(decoded);
         setIsAuthenticated(true);
+
+        // Sincronizar dados do perfil logo após o login
+        await syncUserProfile(newToken);
     } catch (error) {
         // Erro ao processar token, limpando estado
         logout();
@@ -88,7 +129,7 @@ export const AuthProvider = ({ children }) => {
       const newUser = { ...user, ...updatedUserData };
       setUser(newUser);
 
-      // Persistir dados profissionais no localStorage se necessário
+      // Persistir dados profissionais no localStorage para manter cache sincronizado
       if (token && (updatedUserData.professional_id || updatedUserData.qualifications || updatedUserData.professional_signature)) {
         try {
           // Salvar apenas dados profissionais no localStorage separadamente
@@ -101,6 +142,8 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem('professionalData', JSON.stringify(professionalData));
 
           // Dados profissionais persistidos com sucesso
+          // Nota: Os dados já foram salvos no backend pela API updateProfessionalData
+          // O localStorage serve apenas como cache
         } catch (error) {
           // Erro ao persistir dados profissionais
         }

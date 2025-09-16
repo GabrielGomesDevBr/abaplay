@@ -3,6 +3,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const authController = require('../controllers/authController');
+const { verifyToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
@@ -47,6 +48,14 @@ router.post(
         body('userId', 'O ID do utilizador é obrigatório e deve ser um número.').isInt(),
     ],
     authController.acceptTerms
+);
+
+// Nova rota para buscar perfil completo do usuário autenticado
+// GET /api/auth/profile
+router.get(
+    '/profile',
+    verifyToken,
+    authController.getUserProfile
 );
 
 module.exports = router;

@@ -258,7 +258,7 @@ const LoginPage = () => {
       }
       
       // Login normal - fazer login e redirecionar
-      login(data.token);
+      await login(data.token);
       
       let redirectPath = '/';
       if (data.user && data.user.role) {
@@ -313,7 +313,7 @@ const LoginPage = () => {
         }
         
         // Login normal - fazer login e redirecionar
-        login(data.token);
+        await login(data.token);
         let redirectPath = '/';
         if (data.user && data.user.role) {
           const userRole = data.user.role.toLowerCase();
@@ -350,7 +350,7 @@ const LoginPage = () => {
       await acceptTerms(pendingLoginData.user.id);
       
       // Fazer login e redirecionar após aceitar termos
-      login(pendingLoginData.token);
+      await login(pendingLoginData.token);
       
       let redirectPath = '/';
       if (pendingLoginData.user && pendingLoginData.user.role) {
