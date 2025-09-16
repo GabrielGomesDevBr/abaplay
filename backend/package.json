@@ -1,7 +1,7 @@
 {
   "name": "abaplay-backend",
   "version": "1.0.0",
-  "description": "Backend API for AbaPlay",
+  "description": "Backend API for AbaPlay - Comprehensive SaaS platform for pediatric intervention clinics with ABA therapy focus, featuring multi-device professional data synchronization, advanced reporting, and real-time communication",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
