@@ -56,8 +56,51 @@ export const deleteUser = async (userId, token) => {
         const response = await axios.delete(`${API_URL}/admin/users/${userId}`, getAuthHeaders(token));
         return response.data;
     } catch (error) {
-        // Erro ao apagar utilizador
+        // Se o erro inclui requiresTransfer, lança erro especial
+        if (error.response?.data?.requiresTransfer) {
+            const err = new Error(error.response.data.errors?.[0]?.msg || 'Transferência necessária.');
+            err.requiresTransfer = true;
+            throw err;
+        }
+        // Erro genérico ao apagar utilizador
         throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível apagar o utilizador.');
+    }
+};
+
+/**
+ * <<< NOVA FUNÇÃO >>>
+ * Busca todas as atribuições de um terapeuta específico.
+ * @param {number} therapistId - O ID do terapeuta.
+ * @param {string} token - O token JWT do utilizador admin.
+ * @returns {Promise<object>} - Uma promessa que resolve para as atribuições do terapeuta.
+ */
+export const getTherapistAssignments = async (therapistId, token) => {
+    try {
+        const response = await axios.get(`${API_URL}/admin/users/${therapistId}/assignments`, getAuthHeaders(token));
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível carregar as atribuições.');
+    }
+};
+
+/**
+ * <<< NOVA FUNÇÃO >>>
+ * Transfere atribuições de um terapeuta para outros terapeutas.
+ * @param {number} therapistId - O ID do terapeuta que está saindo.
+ * @param {Array} transferList - Lista de transferências [{assignment_id, to_therapist_id}].
+ * @param {string} token - O token JWT do utilizador admin.
+ * @returns {Promise<object>} - Uma promessa que resolve para o resultado da transferência.
+ */
+export const transferTherapistAssignments = async (therapistId, transferList, token) => {
+    try {
+        const response = await axios.post(
+            `${API_URL}/admin/users/${therapistId}/transfer`,
+            { transferList },
+            getAuthHeaders(token)
+        );
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível transferir as atribuições.');
     }
 };
 

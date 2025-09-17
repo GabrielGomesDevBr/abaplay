@@ -121,12 +121,6 @@ const AdminController = {
         return res.status(403).json({ errors: [{ msg: 'Ação não permitida. Não pode apagar a sua própria conta de administrador.' }] });
       }
 
-      // 1. Antes de apagar o utilizador, removemos todas as suas atribuições a pacientes.
-      // Isto previne erros de foreign key constraint na base de dados.
-      // Assumimos que existe uma função no AssignmentModel para fazer isto.
-      await AssignmentModel.deleteAssignmentsByTherapistId(userId);
-      
-      // 2. Agora, podemos apagar o utilizador de forma segura.
       const rowCount = await UserModel.delete(userId, req.user.clinic_id);
 
       if (rowCount === 0) {
@@ -136,8 +130,53 @@ const AdminController = {
       res.status(200).json({ message: 'Utilizador apagado com sucesso!' });
 
     } catch (error) {
-      // Adicionamos um log mais detalhado para ajudar a depurar no futuro.
+      if (error.message && error.message.includes('atribuições ativas')) {
+        return res.status(400).json({
+          errors: [{ msg: error.message }],
+          requiresTransfer: true
+        });
+      }
       console.error(`Erro ao apagar utilizador com ID ${req.params.userId}:`, error);
+      next(error);
+    }
+  },
+
+  // <<< NOVOS ENDPOINTS PARA TRANSFERÊNCIA >>>
+  async getTherapistAssignments(req, res, next) {
+    try {
+      const { userId } = req.params;
+      const { clinic_id } = req.user;
+
+      const assignments = await UserModel.getTherapistAssignments(userId, clinic_id);
+      res.status(200).json(assignments);
+
+    } catch (error) {
+      console.error(`Erro ao buscar atribuições do terapeuta ${req.params.userId}:`, error);
+      next(error);
+    }
+  },
+
+  async transferTherapistAssignments(req, res, next) {
+    try {
+      const { userId } = req.params;
+      const { transferList } = req.body;
+      const { clinic_id } = req.user;
+
+      if (!Array.isArray(transferList) || transferList.length === 0) {
+        return res.status(400).json({
+          errors: [{ msg: 'Lista de transferências é obrigatória e deve conter pelo menos um item.' }]
+        });
+      }
+
+      const result = await UserModel.transferAssignments(userId, transferList);
+
+      res.status(200).json({
+        message: `${result.transferred_count} atribuições transferidas com sucesso!`,
+        result
+      });
+
+    } catch (error) {
+      console.error(`Erro ao transferir atribuições do terapeuta ${req.params.userId}:`, error);
       next(error);
     }
   },

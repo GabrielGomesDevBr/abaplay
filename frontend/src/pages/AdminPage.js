@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { fetchAllUsers, createUser, updateUser, deleteUser, fetchAllAdminPatients, createPatient, deletePatient } from '../api/adminApi'; 
+import { fetchAllUsers, createUser, updateUser, deleteUser, fetchAllAdminPatients, createPatient, deletePatient } from '../api/adminApi';
 import UserFormModal from '../components/admin/UserFormModal';
 import PatientForm from '../components/patient/PatientForm';
 import AssignmentModal from '../components/admin/AssignmentModal';
+import TransferAssignmentsModal from '../components/admin/TransferAssignmentsModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserShield, faSpinner, faExclamationTriangle, faUserPlus, faUsers, faUserGraduate, faEdit, faTrashAlt, faSearch } from '@fortawesome/free-solid-svg-icons';
 
@@ -105,6 +106,8 @@ const AdminPage = () => {
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [therapistToDelete, setTherapistToDelete] = useState(null);
   const [patientToManage, setPatientToManage] = useState(null);
   const [userToEdit, setUserToEdit] = useState(null);
 
@@ -155,11 +158,48 @@ const AdminPage = () => {
   }, [token, loadData]);
   
   const handleDeleteUser = useCallback(async (userToDelete) => {
+    // Para pais, exclusão direta
+    if (userToDelete.role === 'pai') {
       if (window.confirm(`Tem a certeza que deseja apagar o utilizador "${userToDelete.full_name}"? Esta ação não pode ser desfeita.`)) {
-          try { await deleteUser(userToDelete.id, token); await loadData(); } 
-          catch(err) { alert(`Erro ao apagar utilizador: ${err.message}`); }
+        try {
+          await deleteUser(userToDelete.id, token);
+          await loadData();
+        } catch(err) {
+          alert(`Erro ao apagar utilizador: ${err.message}`);
+        }
       }
+      return;
+    }
+
+    // Para terapeutas, tentar exclusão e verificar se precisa transferência
+    if (userToDelete.role === 'terapeuta') {
+      try {
+        await deleteUser(userToDelete.id, token);
+        await loadData();
+      } catch(err) {
+        if (err.requiresTransfer) {
+          // Abrir modal de transferência
+          setTherapistToDelete(userToDelete);
+          setIsTransferModalOpen(true);
+        } else {
+          alert(`Erro ao apagar utilizador: ${err.message}`);
+        }
+      }
+    }
   }, [token, loadData]);
+
+  const handleTransferComplete = useCallback(async () => {
+    try {
+      // Após transferência, tentar deletar novamente
+      await deleteUser(therapistToDelete.id, token);
+      await loadData();
+      setIsTransferModalOpen(false);
+      setTherapistToDelete(null);
+      alert('Terapeuta removido com sucesso após transferência das atribuições!');
+    } catch(err) {
+      alert(`Erro ao remover terapeuta após transferência: ${err.message}`);
+    }
+  }, [therapistToDelete, token, loadData]);
   
   const handleDeletePatient = useCallback(async (patientToDelete) => {
     if (window.confirm(`Tem a certeza que deseja apagar o paciente "${patientToDelete.name}"? Esta ação não pode ser desfeita e irá remover todos os dados associados.`)) {
@@ -268,6 +308,18 @@ const AdminPage = () => {
       />
       <PatientForm isOpen={isPatientModalOpen} onClose={() => setIsPatientModalOpen(false)} onSave={handleSavePatient} patientToEdit={null} />
       <AssignmentModal isOpen={isAssignmentModalOpen} onClose={() => setIsAssignmentModalOpen(false)} patient={patientToManage} allTherapists={allTherapists} />
+
+      {/* <<< NOVO MODAL DE TRANSFERÊNCIA >>> */}
+      <TransferAssignmentsModal
+        isOpen={isTransferModalOpen}
+        onClose={() => {
+          setIsTransferModalOpen(false);
+          setTherapistToDelete(null);
+        }}
+        therapistToDelete={therapistToDelete}
+        availableTherapists={allTherapists}
+        onTransferComplete={handleTransferComplete}
+      />
     </>
   );
 };

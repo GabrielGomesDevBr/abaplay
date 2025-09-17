@@ -57,6 +57,26 @@ router.delete(
     adminController.deleteUser
 );
 
+// <<< NOVAS ROTAS PARA TRANSFERÊNCIA DE TERAPEUTAS >>>
+router.get(
+    '/users/:userId/assignments',
+    [
+        param('userId', 'ID do utilizador inválido.').isInt()
+    ],
+    adminController.getTherapistAssignments
+);
+
+router.post(
+    '/users/:userId/transfer',
+    [
+        param('userId', 'ID do utilizador inválido.').isInt(),
+        body('transferList', 'Lista de transferências é obrigatória.').isArray().notEmpty(),
+        body('transferList.*.assignment_id', 'ID da atribuição inválido.').isInt(),
+        body('transferList.*.to_therapist_id', 'ID do terapeuta destino inválido.').isInt()
+    ],
+    adminController.transferTherapistAssignments
+);
+
 
 // --- ROTAS DE GESTÃO DE PACIENTES ---
 
