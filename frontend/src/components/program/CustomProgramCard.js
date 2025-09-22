@@ -10,7 +10,9 @@ import {
   faTag,
   faBullseye,
   faCog,
-  faWarning
+  faWarning,
+  faPlus,
+  faCheck
 } from '@fortawesome/free-solid-svg-icons';
 import { deleteCustomProgram } from '../../api/programApi';
 
@@ -18,11 +20,15 @@ const CustomProgramCard = ({
   program,
   onEdit,
   onDelete,
+  onAssign,
   isDeleting,
   hasAssignments = false,
   assignmentCount = 0,
   progressCount = 0,
-  userIsAdmin = false
+  userIsAdmin = false,
+  isAssigned = false,
+  isAssigning = false,
+  isPatientSelected = false
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteStep, setDeleteStep] = useState(1); // 1: warning, 2: final confirmation
@@ -157,6 +163,46 @@ const CustomProgramCard = ({
               {assignmentCount > 0 && progressCount > 0 && ' • '}
               {progressCount > 0 && `${progressCount} registro(s) de progresso`}
             </div>
+          </div>
+        )}
+
+        {/* Botão de atribuir programa */}
+        {isPatientSelected && onAssign && (
+          <div className="mt-4">
+            {isAssigned ? (
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 shadow-sm">
+                <div className="bg-white bg-opacity-20 p-1 rounded-full">
+                  <FontAwesomeIcon icon={faCheck} className="text-sm" />
+                </div>
+                <span className="font-semibold text-sm">Já Atribuído</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => onAssign(program)}
+                disabled={!isPatientSelected || isAssigning}
+                title={!isPatientSelected ? 'Selecione um cliente para atribuir' : 'Atribuir ao cliente'}
+                className={`
+                  px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2 w-full shadow-sm transform
+                  ${!isPatientSelected
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 hover:scale-105 active:scale-95'
+                  }
+                `}
+              >
+                {isAssigning ? (
+                  <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
+                ) : (
+                  <>
+                    <div className={`p-1 rounded-full ${
+                      !isPatientSelected ? 'bg-gray-300' : 'bg-white bg-opacity-20'
+                    }`}>
+                      <FontAwesomeIcon icon={faPlus} className="text-sm" />
+                    </div>
+                    <span>Atribuir Programa</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -387,11 +387,15 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
                                   program={program}
                                   onEdit={handleEditProgram}
                                   onDelete={handleDeleteProgram}
+                                  onAssign={onAssign}
                                   isDeleting={deletingProgramId === program.id}
                                   hasAssignments={program.assignment_count > 0}
                                   assignmentCount={program.assignment_count || 0}
                                   progressCount={program.progress_count || 0}
                                   userIsAdmin={user?.is_admin || false}
+                                  isAssigned={isAssigned}
+                                  isAssigning={assigningId === program.id}
+                                  isPatientSelected={isPatientSelected}
                                 />
                               );
                             } else {

@@ -233,8 +233,35 @@ const CustomProgramModal = ({ isOpen, onClose, onSuccess }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+    <>
+      {/* CSS para garantir scroll consistente */}
+      <style>{`
+        .modal-scroll-content {
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e0 #f7fafc;
+        }
+        .modal-scroll-content::-webkit-scrollbar {
+          width: 8px;
+        }
+        .modal-scroll-content::-webkit-scrollbar-track {
+          background: #f7fafc;
+          border-radius: 4px;
+        }
+        .modal-scroll-content::-webkit-scrollbar-thumb {
+          background: #cbd5e0;
+          border-radius: 4px;
+        }
+        .modal-scroll-content::-webkit-scrollbar-thumb:hover {
+          background: #a0aec0;
+        }
+      `}</style>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[95vh] sm:h-[90vh] flex flex-col overflow-hidden"
+           style={{
+             maxHeight: window.innerHeight > 600 ? '90vh' : '95vh',
+             minHeight: window.innerHeight > 600 ? '500px' : '300px',
+             height: window.innerHeight > 600 ? '90vh' : '95vh'
+           }}>
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 flex justify-between items-center">
           <div className="flex items-center space-x-3">
@@ -256,7 +283,13 @@ const CustomProgramModal = ({ isOpen, onClose, onSuccess }) => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6" style={{ minHeight: 0 }}>
+        <div className="flex-1 overflow-y-auto p-6 modal-scroll-content"
+             style={{
+               minHeight: 0,
+               maxHeight: window.innerHeight > 600 ? 'calc(90vh - 140px)' : 'calc(95vh - 120px)',
+               overflowY: 'auto',
+               WebkitOverflowScrolling: 'touch' // Para iOS
+             }}>
           {loadingHierarchy ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
@@ -556,6 +589,7 @@ const CustomProgramModal = ({ isOpen, onClose, onSuccess }) => {
         )}
       </div>
     </div>
+    </>
   );
 };
 
