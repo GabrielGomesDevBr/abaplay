@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { usePatients } from '../../context/PatientContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine, faEye, faEyeSlash, faTrashAlt, faSpinner, faArchive, faLayerGroup } from '@fortawesome/free-solid-svg-icons';
+import TrialsEditor from './TrialsEditor';
+import { updateCustomTrials } from '../../api/assignmentApi';
 
 // O componente recebe onProgramSelect e selectedProgramId da ClientsPage
 const AssignedProgramsList = ({ onProgramSelect, selectedProgramId }) => {
@@ -16,6 +18,7 @@ const AssignedProgramsList = ({ onProgramSelect, selectedProgramId }) => {
   const [togglingId, setTogglingId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [updatingTrialsId, setUpdatingTrialsId] = useState(null);
 
   const handleToggleStatus = async (assignmentId, currentStatus) => {
     setTogglingId(assignmentId);
@@ -36,6 +39,22 @@ const AssignedProgramsList = ({ onProgramSelect, selectedProgramId }) => {
         console.error("Falha ao remover programa:", error);
     } finally {
         setRemovingId(null);
+    }
+  };
+
+  const handleUpdateTrials = async (assignmentId, customTrials) => {
+    setUpdatingTrialsId(assignmentId);
+    try {
+      await updateCustomTrials(assignmentId, customTrials);
+      // Recarregar dados do paciente para refletir as mudanças
+      if (selectedPatient?.id) {
+        window.location.reload(); // Recarregar página para atualizar dados
+      }
+    } catch (error) {
+      console.error("Falha ao atualizar tentativas:", error);
+      throw error; // Permite que o TrialsEditor trate o erro
+    } finally {
+      setUpdatingTrialsId(null);
     }
   };
 
@@ -170,6 +189,16 @@ const AssignedProgramsList = ({ onProgramSelect, selectedProgramId }) => {
                               <p className="text-sm font-semibold text-gray-800 mb-1" title={program.program_name}>
                                 {program.program_name}
                               </p>
+
+                              <div className="flex items-center justify-between mt-2">
+                                <TrialsEditor
+                                  program={program}
+                                  onUpdate={handleUpdateTrials}
+                                  isLoading={updatingTrialsId === program.assignment_id}
+                                  disabled={isArchived}
+                                />
+                              </div>
+
                               {isSelected && (
                                 <div className="flex items-center text-xs text-emerald-600 mt-1">
                                   <div className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></div>

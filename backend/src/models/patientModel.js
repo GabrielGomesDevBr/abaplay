@@ -24,7 +24,9 @@ const getFullPatientData = async (patientId) => {
             p.name AS program_name,
             p.objective,
             p.procedure,
-            p.trials,
+            COALESCE(ppa.custom_trials, p.trials) AS trials,
+            p.trials AS default_trials,
+            ppa.custom_trials,
             ppa.status,
             d.name AS discipline_name
         FROM
@@ -43,13 +45,15 @@ const getFullPatientData = async (patientId) => {
     );
     
     // Mapeia os dados e aplica normalização de status
-    const rawPrograms = programsResult.rows.map(row => ({ 
+    const rawPrograms = programsResult.rows.map(row => ({
         assignment_id: row.assignment_id,
         program_id: row.program_id,
         program_name: row.program_name,
         objective: row.objective,
         procedure: row.procedure,
         trials: row.trials,
+        default_trials: row.default_trials,
+        custom_trials: row.custom_trials,
         status: row.status,
         discipline_name: row.discipline_name
     }));

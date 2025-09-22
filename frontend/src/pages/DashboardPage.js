@@ -801,7 +801,14 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
                                 <div key={program.program_id} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
                                     <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-200 px-4 py-3">
                                         <p className="text-sm font-semibold text-gray-800 truncate" title={program.program_name}>{program.program_name}</p>
-                                        <p className="text-xs text-indigo-600 mt-1">Trials: {program.trials || 'N/A'}</p>
+                                        <p className="text-xs text-indigo-600 mt-1">
+                                          Tentativas: {program.trials || 'N/A'}
+                                          {program.custom_trials !== null && program.custom_trials !== undefined && (
+                                            <span className="ml-1 text-blue-500 text-xs">
+                                              (customizado)
+                                            </span>
+                                          )}
+                                        </p>
                                     </div>
                                     <div className="p-4">
                                         <div className="bg-gradient-to-br from-gray-50 to-indigo-50 rounded-lg p-2">

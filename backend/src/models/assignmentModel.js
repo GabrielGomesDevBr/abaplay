@@ -93,17 +93,19 @@ const Assignment = {
                     'materials', p.materials,
                     'procedure', p.procedure,
                     'criteria_for_advancement', p.criteria_for_advancement,
-                    'trials', p.trials
+                    'trials', COALESCE(ppa.custom_trials, p.trials),
+                    'default_trials', p.trials,
+                    'custom_trials', ppa.custom_trials
                 ) AS program
-            FROM 
+            FROM
                 patient_program_assignments ppa
-            JOIN 
+            JOIN
                 patients pat ON ppa.patient_id = pat.id
-            JOIN 
+            JOIN
                 users ther ON ppa.therapist_id = ther.id
             JOIN
                 programs p ON ppa.program_id = p.id
-            WHERE 
+            WHERE
                 ppa.id = $1 AND ppa.status = 'active';
         `;
         const { rows } = await pool.query(query, [id]);
@@ -140,17 +142,19 @@ const Assignment = {
                     'materials', p.materials,
                     'procedure', p.procedure,
                     'criteria_for_advancement', p.criteria_for_advancement,
-                    'trials', p.trials
+                    'trials', COALESCE(ppa.custom_trials, p.trials),
+                    'default_trials', p.trials,
+                    'custom_trials', ppa.custom_trials
                 ) AS program
-            FROM 
+            FROM
                 patient_program_assignments ppa
-            JOIN 
+            JOIN
                 patients pat ON ppa.patient_id = pat.id
-            JOIN 
+            JOIN
                 users ther ON ppa.therapist_id = ther.id
             JOIN
                 programs p ON ppa.program_id = p.id
-            WHERE 
+            WHERE
                 ppa.id = $1;
         `;
         const { rows } = await pool.query(query, [id]);
@@ -356,6 +360,23 @@ const Assignment = {
         `;
         const { rows } = await pool.query(query, [therapistId, patientId]);
         return parseInt(rows[0].count) > 0;
+    },
+
+    /**
+     * Atualiza as tentativas customizadas de uma atribuição específica.
+     * @param {number} assignmentId - O ID da atribuição.
+     * @param {number|null} customTrials - O número de tentativas customizadas (null para usar o padrão).
+     * @returns {Promise<object>} A atribuição atualizada.
+     */
+    async updateCustomTrials(assignmentId, customTrials) {
+        const query = `
+            UPDATE patient_program_assignments
+            SET custom_trials = $1, updated_at = NOW()
+            WHERE id = $2
+            RETURNING id, patient_id, program_id, custom_trials, updated_at;
+        `;
+        const { rows } = await pool.query(query, [customTrials, assignmentId]);
+        return rows[0];
     }
 };
 

@@ -183,8 +183,10 @@ export const generateWeeklyRecordSheetPDF = async (patient) => {
                 }]);
                 
                 programsByArea[area].forEach(program => {
-                    const trialsText = `(${program.trials || 'N/A'} tent.)`;
-                    const programCell = `${program.title}\n${trialsText}`;
+                    const effectiveTrials = program.trials || 'N/A';
+                    const trialsText = `(${effectiveTrials} tentativas)`;
+                    const customText = program.custom_trials !== null && program.custom_trials !== undefined ? ' *' : '';
+                    const programCell = `${program.title}\n${trialsText}${customText}`;
                     body.push([programCell, '', '', '', '', '', '', '']);
                 });
             }

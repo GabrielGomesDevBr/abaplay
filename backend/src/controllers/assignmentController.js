@@ -184,3 +184,43 @@ exports.getPromptLevels = async (req, res) => {
         res.status(500).json({ errors: [{ msg: 'Erro interno do servidor.' }] });
     }
 };
+
+/**
+ * @description Atualiza as tentativas customizadas de uma atribuição.
+ * @route PUT /api/assignments/:assignmentId/custom-trials
+ */
+exports.updateCustomTrials = async (req, res) => {
+    const { assignmentId } = req.params;
+    const { customTrials } = req.body;
+
+    try {
+        // Validação: customTrials deve ser um número positivo ou null
+        if (customTrials !== null && (isNaN(customTrials) || customTrials < 1)) {
+            return res.status(400).json({
+                message: 'As tentativas customizadas devem ser um número positivo ou null para usar o padrão.',
+                error: 'INVALID_CUSTOM_TRIALS'
+            });
+        }
+
+        const updatedAssignment = await Assignment.updateCustomTrials(assignmentId, customTrials);
+
+        if (!updatedAssignment) {
+            return res.status(404).json({
+                message: 'Atribuição não encontrada.',
+                error: 'ASSIGNMENT_NOT_FOUND'
+            });
+        }
+
+        res.status(200).json({
+            message: 'Tentativas customizadas atualizadas com sucesso.',
+            data: updatedAssignment
+        });
+
+    } catch (error) {
+        console.error(`[CONTROLLER-ERROR] updateCustomTrials (AssignmentID: ${assignmentId}):`, error);
+        res.status(500).json({
+            message: 'Erro interno ao atualizar tentativas customizadas.',
+            error: 'INTERNAL_SERVER_ERROR'
+        });
+    }
+};

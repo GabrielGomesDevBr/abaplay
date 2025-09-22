@@ -228,7 +228,7 @@ const getAssignedProgramsForGrade = async (patientId) => {
     `;
     
     const query = `
-        SELECT 
+        SELECT
             d.name AS discipline_name,
             pa.name AS area_name,
             p.id,
@@ -239,7 +239,9 @@ const getAssignedProgramsForGrade = async (patientId) => {
             p.materials,
             p.procedure,
             p.criteria_for_advancement,
-            p.trials,
+            COALESCE(ppa.custom_trials, p.trials) AS trials,
+            p.trials AS default_trials,
+            ppa.custom_trials,
             ppa.status
         FROM patient_program_assignments ppa
         JOIN programs p ON ppa.program_id = p.id
@@ -286,6 +288,8 @@ const getAssignedProgramsForGrade = async (patientId) => {
                     objective: programData.objective,
                     criteria_for_advancement: programData.criteria_for_advancement,
                     trials: programData.trials,
+                    default_trials: programData.default_trials,
+                    custom_trials: programData.custom_trials,
                     skill: programData.skill,
                     materials: programData.materials,
                     procedure: programData.procedure,

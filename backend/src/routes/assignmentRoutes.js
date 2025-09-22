@@ -30,4 +30,7 @@ router.patch('/:id/status', assignmentController.updateAssignmentStatus);
 // Rota para buscar a evolução de uma designação específica
 router.get('/:assignmentId/progress', assignmentController.getEvolutionForAssignment);
 
+// Rota para atualizar tentativas customizadas de uma atribuição
+router.put('/:assignmentId/custom-trials', assignmentController.updateCustomTrials);
+
 module.exports = router;

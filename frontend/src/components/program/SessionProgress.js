@@ -58,7 +58,7 @@ const SessionProgress = ({ program, assignment }) => {
   const { user } = useAuth();
   const { selectedPatient, getPromptLevelForProgram, setPromptLevelForProgram } = usePatients();
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);
-  const [attempts, setAttempts] = useState(program?.trials || '');
+  const [attempts, setAttempts] = useState(program?.trials || program?.default_trials || '');
   const [successes, setSuccesses] = useState('');
   const [notes, setNotes] = useState('');
   const [isBaseline, setIsBaseline] = useState(false);
@@ -143,7 +143,7 @@ const SessionProgress = ({ program, assignment }) => {
     }
     
     fetchEvolutionHistory();
-    setAttempts(program.trials || '');
+    setAttempts(program.trials || program.default_trials || '');
 
     // Carrega o nível de prompting salvo para este programa/paciente
     if (selectedPatient && program) {
