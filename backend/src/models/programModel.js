@@ -17,15 +17,19 @@ const create = async (programData) => {
         materials,
         procedure,
         criteria_for_advancement,
-        trials
+        trials,
+        clinic_id = null,
+        is_global = true,
+        created_by = null
     } = programData;
 
     const query = `
         INSERT INTO programs (
-            sub_area_id, name, objective, program_slug, skill, 
-            materials, procedure, criteria_for_advancement, trials
+            sub_area_id, name, objective, program_slug, skill,
+            materials, procedure, criteria_for_advancement, trials,
+            clinic_id, is_global, created_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING *;
     `;
 
@@ -39,7 +43,10 @@ const create = async (programData) => {
         JSON.stringify(materials),
         JSON.stringify(procedure),
         criteria_for_advancement,
-        trials
+        trials,
+        clinic_id,
+        is_global,
+        created_by
     ];
 
     try {
@@ -55,11 +62,12 @@ const create = async (programData) => {
 /**
  * @description Busca todos os programas e os organiza em uma estrutura hierárquica.
  * Retorna todos os campos de cada programa, alinhado com o novo schema.
+ * @param {number|null} clinic_id - ID da clínica para filtrar programas customizados
  * @returns {Promise<object>} Um objeto representando a hierarquia: Disciplina > Área > Subárea > [Programas].
  */
-const getAllWithHierarchy = async () => {
+const getAllWithHierarchy = async (clinic_id = null) => {
     const query = `
-        SELECT 
+        SELECT
             d.name AS discipline_name,
             pa.name AS area_name,
             psa.name AS sub_area_name,
@@ -72,15 +80,23 @@ const getAllWithHierarchy = async () => {
             p.procedure,
             p.criteria_for_advancement,
             p.trials,
-            p.created_at
+            p.created_at,
+            p.clinic_id,
+            p.is_global,
+            p.created_by,
+            CASE
+                WHEN p.is_global THEN 'global'
+                ELSE 'custom'
+            END as program_type
         FROM programs p
         JOIN program_sub_areas psa ON p.sub_area_id = psa.id
         JOIN program_areas pa ON psa.area_id = pa.id
         JOIN disciplines d ON pa.discipline_id = d.id
-        ORDER BY d.name, pa.name, psa.name, p.name;
+        WHERE (p.is_global = true OR p.clinic_id = $1)
+        ORDER BY p.is_global DESC, d.name, pa.name, psa.name, p.name;
     `;
     try {
-        const { rows } = await pool.query(query);
+        const { rows } = await pool.query(query, [clinic_id]);
         
         const hierarchy = {};
         rows.forEach(row => {
@@ -314,17 +330,20 @@ const getAssignedProgramsForGrade = async (patientId) => {
  * @description Busca programas por termo de pesquisa, com filtro opcional por disciplina
  * @param {string} searchTerm - Termo de busca
  * @param {string} discipline - Nome da disciplina (opcional)
+ * @param {number|null} clinic_id - ID da clínica para filtrar programas
  * @returns {Promise<Array>} Lista de programas encontrados
  */
-const searchPrograms = async (searchTerm, discipline = null) => {
+const searchPrograms = async (searchTerm, discipline = null, clinic_id = null) => {
     let query = `
-        SELECT 
+        SELECT
             p.id,
             p.name,
             p.objective,
             p.skill,
             p.program_slug,
             p.trials,
+            p.is_global,
+            p.clinic_id,
             d.name AS discipline_name,
             pa.name AS area_name,
             psa.name AS sub_area_name
@@ -332,34 +351,181 @@ const searchPrograms = async (searchTerm, discipline = null) => {
         JOIN program_sub_areas psa ON p.sub_area_id = psa.id
         JOIN program_areas pa ON psa.area_id = pa.id
         JOIN disciplines d ON pa.discipline_id = d.id
-        WHERE (
-            LOWER(p.name) LIKE LOWER($1) OR
-            LOWER(p.objective) LIKE LOWER($1) OR
-            LOWER(p.skill) LIKE LOWER($1) OR
-            LOWER(pa.name) LIKE LOWER($1) OR
-            LOWER(psa.name) LIKE LOWER($1)
+        WHERE (p.is_global = true OR p.clinic_id = $1)
+        AND (
+            LOWER(p.name) LIKE LOWER($2) OR
+            LOWER(p.objective) LIKE LOWER($2) OR
+            LOWER(p.skill) LIKE LOWER($2) OR
+            LOWER(pa.name) LIKE LOWER($2) OR
+            LOWER(psa.name) LIKE LOWER($2)
         )
     `;
-    
-    const values = [`%${searchTerm}%`];
-    
+
+    const values = [clinic_id, `%${searchTerm}%`];
+
     // Adiciona filtro por disciplina se fornecido
     if (discipline) {
-        query += ` AND LOWER(d.name) = LOWER($2)`;
+        query += ` AND LOWER(d.name) = LOWER($3)`;
         values.push(discipline);
-        
-        console.log(`[SEARCH-DEBUG] Buscando na disciplina: "${discipline}"`);
     }
-    
-    query += ` ORDER BY d.name, pa.name, psa.name, p.name LIMIT 50`;
-    
+
+    query += ` ORDER BY p.is_global DESC, d.name, pa.name, psa.name, p.name LIMIT 50`;
+
     try {
         const { rows } = await pool.query(query, values);
-        console.log(`[SEARCH-DEBUG] Busca por "${searchTerm}"${discipline ? ` na disciplina "${discipline}"` : ''}: ${rows.length} resultados`);
         return rows;
     } catch (error) {
         console.error('[MODEL-ERROR] Erro na busca de programas:', error);
         throw error;
+    }
+};
+
+/**
+ * @description Busca programas customizados de uma clínica específica
+ * @param {number} clinic_id - ID da clínica
+ * @returns {Promise<object>} Programas organizados por hierarquia
+ */
+const getCustomProgramsByClinic = async (clinic_id) => {
+    const query = `
+        SELECT
+            d.name AS discipline_name,
+            pa.name AS area_name,
+            psa.name AS sub_area_name,
+            p.id,
+            p.name,
+            p.objective,
+            p.program_slug,
+            p.skill,
+            p.materials,
+            p.procedure,
+            p.criteria_for_advancement,
+            p.trials,
+            p.created_at,
+            p.clinic_id,
+            p.is_global,
+            p.created_by,
+            u.full_name AS created_by_name
+        FROM programs p
+        JOIN program_sub_areas psa ON p.sub_area_id = psa.id
+        JOIN program_areas pa ON psa.area_id = pa.id
+        JOIN disciplines d ON pa.discipline_id = d.id
+        LEFT JOIN users u ON p.created_by = u.id
+        WHERE p.clinic_id = $1 AND p.is_global = false
+        ORDER BY d.name, pa.name, psa.name, p.name;
+    `;
+
+    try {
+        const { rows } = await pool.query(query, [clinic_id]);
+
+        const hierarchy = {};
+        rows.forEach(row => {
+            const { discipline_name, area_name, sub_area_name, ...programData } = row;
+
+            if (!hierarchy[discipline_name]) {
+                hierarchy[discipline_name] = {};
+            }
+            if (!hierarchy[discipline_name][area_name]) {
+                hierarchy[discipline_name][area_name] = {};
+            }
+            if (!hierarchy[discipline_name][area_name][sub_area_name]) {
+                hierarchy[discipline_name][area_name][sub_area_name] = [];
+            }
+
+            hierarchy[discipline_name][area_name][sub_area_name].push({
+                ...programData,
+                program_type: 'custom'
+            });
+        });
+
+        return hierarchy;
+    } catch (error) {
+        console.error(`[MODEL-ERROR] Erro ao buscar programas customizados da clínica ${clinic_id}:`, error);
+        throw error;
+    }
+};
+
+/**
+ * @description Busca hierarquia de disciplinas, áreas e sub-áreas para formulário
+ * @returns {Promise<object>} Hierarquia de disciplinas
+ */
+const getDisciplineHierarchy = async () => {
+    const query = `
+        SELECT
+            d.id AS discipline_id,
+            d.name AS discipline_name,
+            pa.id AS area_id,
+            pa.name AS area_name,
+            psa.id AS sub_area_id,
+            psa.name AS sub_area_name
+        FROM disciplines d
+        LEFT JOIN program_areas pa ON d.id = pa.discipline_id
+        LEFT JOIN program_sub_areas psa ON pa.id = psa.area_id
+        ORDER BY d.name, pa.name, psa.name;
+    `;
+
+    try {
+        const { rows } = await pool.query(query);
+
+        const hierarchy = {};
+        rows.forEach(row => {
+            const { discipline_id, discipline_name, area_id, area_name, sub_area_id, sub_area_name } = row;
+
+            if (!hierarchy[discipline_name]) {
+                hierarchy[discipline_name] = {
+                    id: discipline_id,
+                    areas: {}
+                };
+            }
+
+            if (area_name && !hierarchy[discipline_name].areas[area_name]) {
+                hierarchy[discipline_name].areas[area_name] = {
+                    id: area_id,
+                    sub_areas: {}
+                };
+            }
+
+            if (sub_area_name && area_name) {
+                hierarchy[discipline_name].areas[area_name].sub_areas[sub_area_name] = {
+                    id: sub_area_id
+                };
+            }
+        });
+
+        return hierarchy;
+    } catch (error) {
+        console.error('[MODEL-ERROR] Erro ao buscar hierarquia de disciplinas:', error);
+        throw error;
+    }
+};
+
+/**
+ * @description Verifica se um usuário pode editar/deletar um programa
+ * @param {number} program_id - ID do programa
+ * @param {number} user_id - ID do usuário
+ * @param {number} clinic_id - ID da clínica do usuário
+ * @returns {Promise<boolean>} True se pode editar
+ */
+const canUserEditProgram = async (program_id, user_id, clinic_id) => {
+    const query = `
+        SELECT p.clinic_id, p.is_global, p.created_by, u.is_admin
+        FROM programs p, users u
+        WHERE p.id = $1 AND u.id = $2 AND u.clinic_id = $3;
+    `;
+
+    try {
+        const { rows } = await pool.query(query, [program_id, user_id, clinic_id]);
+        if (rows.length === 0) return false;
+
+        const { clinic_id: program_clinic_id, is_global, created_by, is_admin } = rows[0];
+
+        // Não pode editar programas globais
+        if (is_global) return false;
+
+        // Pode editar se é da mesma clínica e é admin ou criador
+        return program_clinic_id === clinic_id && (is_admin || created_by === user_id);
+    } catch (error) {
+        console.error('[MODEL-ERROR] Erro ao verificar permissão de edição:', error);
+        return false;
     }
 };
 
@@ -371,5 +537,8 @@ module.exports = {
     update,
     deleteById,
     getAssignedProgramsForGrade,
-    searchPrograms
+    searchPrograms,
+    getCustomProgramsByClinic,
+    getDisciplineHierarchy,
+    canUserEditProgram
 };

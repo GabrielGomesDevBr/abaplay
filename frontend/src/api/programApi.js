@@ -219,3 +219,94 @@ export const updateAssignmentStatus = async (assignmentId, status) => {
     throw error;
   }
 };
+
+// --- Funções para Programas Customizados ---
+
+/**
+ * Cria um programa customizado para a clínica
+ * @param {Object} programData - Dados do programa customizado
+ * @returns {Promise<Object>}
+ */
+export const createCustomProgram = async (programData) => {
+  try {
+    const response = await apiClient.post('/programs/custom', programData);
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao criar programa customizado:', error);
+    throw error;
+  }
+};
+
+/**
+ * Busca programas customizados da clínica
+ * @returns {Promise<Object>}
+ */
+export const getCustomPrograms = async () => {
+  try {
+    const response = await apiClient.get('/programs/custom');
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao buscar programas customizados:', error);
+    throw error;
+  }
+};
+
+/**
+ * Busca hierarquia de disciplinas para formulário
+ * @returns {Promise<Object>}
+ */
+export const getDisciplineHierarchy = async () => {
+  try {
+    const response = await apiClient.get('/programs/hierarchy');
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao buscar hierarquia de disciplinas:', error);
+    throw error;
+  }
+};
+
+/**
+ * Atualiza um programa customizado
+ * @param {number} programId - ID do programa
+ * @param {Object} programData - Dados atualizados
+ * @returns {Promise<Object>}
+ */
+export const updateCustomProgram = async (programId, programData) => {
+  try {
+    const response = await apiClient.put(`/programs/${programId}`, programData);
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao atualizar programa customizado:', error);
+    throw error;
+  }
+};
+
+/**
+ * Remove um programa customizado
+ * @param {number} programId - ID do programa
+ * @returns {Promise<Object>}
+ */
+export const deleteCustomProgram = async (programId) => {
+  try {
+    const response = await apiClient.delete(`/programs/${programId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao remover programa customizado:', error);
+    throw error;
+  }
+};
+
+/**
+ * Busca estatísticas de uso de um programa
+ * @param {number} programId - ID do programa
+ * @returns {Promise<Object>}
+ */
+export const getProgramUsageStats = async (programId) => {
+  try {
+    const response = await apiClient.get(`/programs/${programId}/usage`);
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao buscar estatísticas de uso:', error);
+    throw error;
+  }
+};

@@ -1,13 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { usePrograms } from '../../context/ProgramContext';
+import { useAuth } from '../../context/AuthContext';
 import ProgramCard from './ProgramCard';
+import CustomProgramCard from './CustomProgramCard';
 import ProgramSearch from './ProgramSearch';
+import CustomProgramModal from './CustomProgramModal';
+import EditCustomProgramModal from './EditCustomProgramModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faExclamationTriangle, faLayerGroup, faSearch, faGraduationCap } from '@fortawesome/free-solid-svg-icons';
+import {
+  faSpinner,
+  faExclamationTriangle,
+  faLayerGroup,
+  faSearch,
+  faGraduationCap,
+  faPlus,
+  faCog,
+  faGlobe,
+  faBuilding
+} from '@fortawesome/free-solid-svg-icons';
+import { getCustomPrograms } from '../../api/programApi';
 
 const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSelected }) => {
-  const { disciplines, isLoading, error } = usePrograms();
+  const { disciplines, isLoading, error, refreshPrograms } = usePrograms();
+  const { user } = useAuth();
   const [activeDiscipline, setActiveDiscipline] = useState(null);
+  const [activeTab, setActiveTab] = useState('global'); // 'global' ou 'custom'
+  const [customPrograms, setCustomPrograms] = useState({});
+  const [loadingCustom, setLoadingCustom] = useState(false);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingProgram, setEditingProgram] = useState(null);
+  const [deletingProgramId, setDeletingProgramId] = useState(null);
 
   // Define a primeira disciplina como ativa assim que os dados chegarem.
   useEffect(() => {
@@ -15,6 +38,52 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
       setActiveDiscipline(Object.keys(disciplines)[0]);
     }
   }, [disciplines]);
+
+  // Busca programas customizados quando muda para aba custom
+  useEffect(() => {
+    if (activeTab === 'custom') {
+      fetchCustomPrograms();
+    }
+  }, [activeTab]);
+
+  const fetchCustomPrograms = async () => {
+    setLoadingCustom(true);
+    try {
+      const customData = await getCustomPrograms();
+      setCustomPrograms(customData);
+      // Define primeira disciplina dos programas customizados se existir
+      if (Object.keys(customData).length > 0 && !activeDiscipline) {
+        setActiveDiscipline(Object.keys(customData)[0]);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar programas customizados:', error);
+    } finally {
+      setLoadingCustom(false);
+    }
+  };
+
+  const handleCustomProgramSuccess = () => {
+    fetchCustomPrograms();
+    refreshPrograms(); // Atualiza programas globais também
+  };
+
+  const handleEditProgram = (program) => {
+    setEditingProgram(program);
+    setShowEditModal(true);
+  };
+
+  const handleEditSuccess = () => {
+    fetchCustomPrograms();
+    setShowEditModal(false);
+    setEditingProgram(null);
+  };
+
+  const handleDeleteProgram = (programId) => {
+    setDeletingProgramId(programId);
+    // Remove o programa da lista local
+    fetchCustomPrograms();
+    setDeletingProgramId(null);
+  };
 
   if (isLoading) {
     return (
@@ -57,7 +126,17 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
     setActiveDiscipline(disciplineName);
   };
 
-  const areas = activeDiscipline ? disciplines[activeDiscipline] : {};
+  const getCurrentPrograms = () => {
+    if (activeTab === 'global') {
+      return disciplines;
+    } else {
+      return customPrograms;
+    }
+  };
+
+  const currentPrograms = getCurrentPrograms();
+  const areas = activeDiscipline ? currentPrograms[activeDiscipline] : {};
+  const hasCustomPrograms = Object.keys(customPrograms).length > 0;
   
   // Cores para cada disciplina
   const getDisciplineColors = (disciplineName) => {
@@ -80,10 +159,68 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+      {/* Sistema de abas Global/Custom */}
+      <div className="border-b border-gray-200">
+        <div className="flex">
+          <button
+            className={`
+              flex-1 px-6 py-3 font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2
+              ${
+                activeTab === 'global'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+              }
+            `}
+            onClick={() => setActiveTab('global')}
+          >
+            <FontAwesomeIcon icon={faGlobe} />
+            <span>Programas Globais</span>
+          </button>
+          <button
+            className={`
+              flex-1 px-6 py-3 font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2
+              ${
+                activeTab === 'custom'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+              }
+            `}
+            onClick={() => setActiveTab('custom')}
+          >
+            <FontAwesomeIcon icon={faBuilding} />
+            <span>Programas da Clínica</span>
+            {hasCustomPrograms && (
+              <span className="bg-white bg-opacity-20 text-xs px-2 py-1 rounded-full">
+                {Object.values(customPrograms).reduce((total, discipline) => {
+                  return total + Object.values(discipline).reduce((areaTotal, area) => {
+                    return areaTotal + Object.values(area).reduce((subAreaTotal, subArea) => {
+                      return subAreaTotal + (Array.isArray(subArea) ? subArea.length : 0);
+                    }, 0);
+                  }, 0);
+                }, 0)}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Botão de criar programa customizado */}
+      {activeTab === 'custom' && user?.is_admin && (
+        <div className="border-b border-gray-200 p-4">
+          <button
+            onClick={() => setShowCustomModal(true)}
+            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center space-x-2 shadow-md"
+          >
+            <FontAwesomeIcon icon={faPlus} />
+            <span>Criar Programa Customizado</span>
+          </button>
+        </div>
+      )}
+
       {/* Sistema de navegação por disciplinas */}
       <div className="border-b border-gray-200">
         <div className="flex flex-wrap">
-          {Object.keys(disciplines).map((disciplineName, index) => {
+          {Object.keys(currentPrograms).map((disciplineName, index) => {
             const colors = getDisciplineColors(disciplineName);
             const isActive = activeDiscipline === disciplineName;
             
@@ -92,18 +229,24 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
                 key={disciplineName}
                 className={`
                   flex-1 min-w-0 px-6 py-4 font-semibold text-sm transition-all duration-200 relative
-                  ${isActive 
-                    ? `bg-gradient-to-r ${colors.bg} text-white shadow-lg` 
+                  ${isActive
+                    ? `bg-gradient-to-r ${colors.bg} text-white shadow-lg`
                     : `bg-gradient-to-r ${colors.light} ${colors.text} hover:shadow-md`
                   }
-                  ${index === 0 ? 'rounded-tl-xl' : ''}
-                  ${index === Object.keys(disciplines).length - 1 ? 'rounded-tr-xl' : ''}
                 `}
                 onClick={() => handleTabClick(disciplineName)}
               >
                 <div className="flex items-center justify-center space-x-2">
-                  <FontAwesomeIcon icon={faGraduationCap} className="flex-shrink-0" />
+                  <FontAwesomeIcon
+                    icon={activeTab === 'custom' ? faCog : faGraduationCap}
+                    className="flex-shrink-0"
+                  />
                   <span className="truncate">{formatDisciplineName(disciplineName)}</span>
+                  {activeTab === 'custom' && (
+                    <span className="bg-white bg-opacity-20 text-xs px-2 py-1 rounded-full">
+                      Custom
+                    </span>
+                  )}
                 </div>
                 {isActive && (
                   <div className="absolute bottom-0 left-0 right-0 h-1 bg-white bg-opacity-30 rounded-full"></div>
@@ -116,23 +259,75 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
 
       {/* Conteúdo da disciplina ativa */}
       <div className="p-6">
-        {activeDiscipline && Object.keys(areas).length > 0 ? (
+        {(isLoading || loadingCustom) ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <FontAwesomeIcon icon={faSpinner} className="fa-spin text-4xl text-purple-500 mb-4" />
+              <p className="text-gray-600">
+                {activeTab === 'custom' ? 'Carregando programas customizados...' : 'Carregando biblioteca de programas...'}
+              </p>
+            </div>
+          </div>
+        ) : activeTab === 'custom' && !hasCustomPrograms ? (
+          <div className="text-center py-12">
+            <div className="bg-gradient-to-br from-purple-100 to-indigo-100 p-6 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+              <FontAwesomeIcon icon={faBuilding} className="text-4xl text-purple-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Nenhum Programa Customizado</h3>
+            <p className="text-gray-500 mb-6">Sua clínica ainda não criou programas customizados.</p>
+            {user?.is_admin && (
+              <button
+                onClick={() => setShowCustomModal(true)}
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 flex items-center space-x-2 mx-auto"
+              >
+                <FontAwesomeIcon icon={faPlus} />
+                <span>Criar Primeiro Programa</span>
+              </button>
+            )}
+          </div>
+        ) : activeDiscipline && Object.keys(areas).length > 0 ? (
           <div className="space-y-8">
-            {/* Componente de busca */}
-            <ProgramSearch 
-              onProgramSelect={() => {}} // TODO: implementar visualização
-              onAssign={onAssign}
-              assigningId={assigningId}
-              assignedPrograms={assignedPrograms}
-              isPatientSelected={isPatientSelected}
-              disciplineName={activeDiscipline}
-              disciplineDisplayName={formatDisciplineName(activeDiscipline)}
-              disciplineColors={getDisciplineColors(activeDiscipline)}
-            />
+            {/* Componente de busca - apenas para programas globais */}
+            {activeTab === 'global' && (
+              <>
+                <ProgramSearch
+                  onProgramSelect={() => {}} // TODO: implementar visualização
+                  onAssign={onAssign}
+                  assigningId={assigningId}
+                  assignedPrograms={assignedPrograms}
+                  isPatientSelected={isPatientSelected}
+                  disciplineName={activeDiscipline}
+                  disciplineDisplayName={formatDisciplineName(activeDiscipline)}
+                  disciplineColors={getDisciplineColors(activeDiscipline)}
+                />
+                {/* Divisor visual */}
+                <div className="border-b border-gray-200 my-6"></div>
+              </>
+            )}
 
-            
-            {/* Divisor visual */}
-            <div className="border-b border-gray-200 my-6"></div>
+            {/* Header da aba atual */}
+            {activeTab === 'custom' && (
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <FontAwesomeIcon icon={faBuilding} className="text-purple-600" />
+                    <div>
+                      <h3 className="font-semibold text-purple-800">Programas da Clínica</h3>
+                      <p className="text-sm text-purple-600">Programas criados especificamente para sua clínica</p>
+                    </div>
+                  </div>
+                  {user?.is_admin && (
+                    <button
+                      onClick={() => setShowCustomModal(true)}
+                      className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                    >
+                      <FontAwesomeIcon icon={faPlus} />
+                      <span>Novo</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             {Object.keys(areas).map((areaName) => {
               const subAreas = areas[areaName];
               const disciplineColors = getDisciplineColors(activeDiscipline);
@@ -184,16 +379,33 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                           {programs?.map((program) => {
                             const isAssigned = Array.isArray(assignedPrograms) && assignedPrograms.some(p => p.program_id === program.id);
-                            return (
-                              <ProgramCard
-                                key={program.id}
-                                program={program}
-                                onAssign={onAssign}
-                                isAssigned={isAssigned}
-                                isAssigning={assigningId === program.id}
-                                isPatientSelected={isPatientSelected}
-                              />
-                            );
+
+                            if (activeTab === 'custom') {
+                              return (
+                                <CustomProgramCard
+                                  key={program.id}
+                                  program={program}
+                                  onEdit={handleEditProgram}
+                                  onDelete={handleDeleteProgram}
+                                  isDeleting={deletingProgramId === program.id}
+                                  hasAssignments={program.assignment_count > 0}
+                                  assignmentCount={program.assignment_count || 0}
+                                  progressCount={program.progress_count || 0}
+                                  userIsAdmin={user?.is_admin || false}
+                                />
+                              );
+                            } else {
+                              return (
+                                <ProgramCard
+                                  key={program.id}
+                                  program={program}
+                                  onAssign={onAssign}
+                                  isAssigned={isAssigned}
+                                  isAssigning={assigningId === program.id}
+                                  isPatientSelected={isPatientSelected}
+                                />
+                              );
+                            }
                           })}
                         </div>
                       </div>
@@ -212,6 +424,24 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
           </div>
         )}
       </div>
+
+      {/* Modal de criação de programa customizado */}
+      <CustomProgramModal
+        isOpen={showCustomModal}
+        onClose={() => setShowCustomModal(false)}
+        onSuccess={handleCustomProgramSuccess}
+      />
+
+      {/* Modal de edição de programa customizado */}
+      <EditCustomProgramModal
+        isOpen={showEditModal}
+        program={editingProgram}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingProgram(null);
+        }}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 };
