@@ -440,8 +440,14 @@ superAdminController.processOverdueBills = async (req, res) => {
 superAdminController.deleteClinic = async (req, res) => {
   try {
     const { clinicId } = req.params;
-    
-    // Verificar se a clínica existe
+
+    // Validar parâmetros de entrada
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    // Verificar se a clínica existe antes de tentar eliminar
     const clinic = await SuperAdminModel.getClinicById(clinicId);
     if (!clinic) {
       return res.status(404).json({
@@ -449,18 +455,36 @@ superAdminController.deleteClinic = async (req, res) => {
       });
     }
 
-    // Eliminar com efeito cascata
+    // Proceder com a eliminação cascata
     const result = await SuperAdminModel.deleteClinicCascade(clinicId);
 
     res.json({
       success: true,
-      message: `Clínica "${clinic.name}" eliminada permanentemente.`,
-      data: result
+      message: `Clínica "${clinic.name}" eliminada permanentemente com sucesso.`,
+      data: {
+        clinic_id: clinicId,
+        clinic_name: result.clinic_name,
+        eliminated_records: result.eliminated,
+        total_eliminated: result.total_eliminated
+      }
     });
+
   } catch (error) {
     console.error('Erro ao eliminar clínica:', error);
-    res.status(500).json({
-      errors: [{ msg: 'Erro interno do servidor.' }]
+
+    let statusCode = 500;
+    let errorMessage = 'Erro interno do servidor durante a eliminação.';
+
+    if (error.message.includes('não encontrada')) {
+      statusCode = 404;
+      errorMessage = 'Clínica não encontrada para eliminação.';
+    }
+
+    res.status(statusCode).json({
+      errors: [{
+        msg: errorMessage,
+        detail: process.env.NODE_ENV === 'development' ? error.message : undefined
+      }]
     });
   }
 };

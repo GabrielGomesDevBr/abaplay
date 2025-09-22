@@ -370,58 +370,114 @@ const SuperAdminModel = {
    * @returns {Promise<object>} Resultado da eliminação.
    */
   async deleteClinicCascade(clinicId) {
+    // Verificar se a clínica existe
+    const clinicQuery = `SELECT name FROM clinics WHERE id = $1`;
+    const clinicResult = await pool.query(clinicQuery, [clinicId]);
+
+    if (!clinicResult.rows[0]) {
+      throw new Error(`Clínica com ID ${clinicId} não encontrada`);
+    }
+
+    const clinicName = clinicResult.rows[0].name;
+
     const client = await pool.connect();
-    
+
     try {
       await client.query('BEGIN');
 
-      // Buscar informações antes de deletar
-      const clinicQuery = `SELECT name FROM clinics WHERE id = $1`;
-      const clinicResult = await client.query(clinicQuery, [clinicId]);
-      const clinicName = clinicResult.rows[0]?.name;
+      // Eliminar em ordem de dependências (das folhas para a raiz)
+      const notificationsResult = await client.query(
+        'DELETE FROM notificationstatus WHERE "userId" IN (SELECT id FROM users WHERE clinic_id = $1) OR "patientId" IN (SELECT id FROM patients WHERE clinic_id = $1)',
+        [clinicId]
+      );
 
-      // Contar registros que serão eliminados
-      const countsQuery = `
-        SELECT 
-          (SELECT COUNT(*) FROM users WHERE clinic_id = $1) as users_count,
-          (SELECT COUNT(*) FROM patients WHERE clinic_id = $1) as patients_count,
-          (SELECT COUNT(*) FROM clinic_billing WHERE clinic_id = $1) as billings_count
-      `;
-      const countsResult = await client.query(countsQuery, [clinicId]);
-      const counts = countsResult.rows[0];
+      const caseDiscussionsResult = await client.query(
+        'DELETE FROM case_discussions WHERE patient_id IN (SELECT id FROM patients WHERE clinic_id = $1)',
+        [clinicId]
+      );
 
-      // Eliminar em ordem (devido a restrições de FK)
-      // 1. Eliminar cobranças
-      await client.query('DELETE FROM clinic_billing WHERE clinic_id = $1', [clinicId]);
-      
-      // 2. Eliminar relacionamentos de pacientes (se existirem tabelas de relacionamento)
-      await client.query('DELETE FROM therapist_patient_assignments WHERE patient_id IN (SELECT id FROM patients WHERE clinic_id = $1)', [clinicId]);
-      await client.query('DELETE FROM patient_program_assignments WHERE patient_id IN (SELECT id FROM patients WHERE clinic_id = $1)', [clinicId]);
-      await client.query('DELETE FROM patient_program_progress WHERE patient_id IN (SELECT id FROM patients WHERE clinic_id = $1)', [clinicId]);
-      
-      // 3. Eliminar pacientes
-      await client.query('DELETE FROM patients WHERE clinic_id = $1', [clinicId]);
-      
-      // 4. Eliminar usuários
-      await client.query('DELETE FROM users WHERE clinic_id = $1', [clinicId]);
-      
-      // 5. Eliminar clínica
-      await client.query('DELETE FROM clinics WHERE id = $1', [clinicId]);
+      const parentChatsResult = await client.query(
+        'DELETE FROM parent_therapist_chat WHERE patient_id IN (SELECT id FROM patients WHERE clinic_id = $1)',
+        [clinicId]
+      );
+
+      const programSessionsResult = await client.query(
+        'DELETE FROM program_sessions WHERE patient_id IN (SELECT id FROM patients WHERE clinic_id = $1)',
+        [clinicId]
+      );
+
+      const progressResult = await client.query(
+        'DELETE FROM patient_program_progress WHERE assignment_id IN (SELECT id FROM patient_program_assignments WHERE patient_id IN (SELECT id FROM patients WHERE clinic_id = $1))',
+        [clinicId]
+      );
+
+      const therapistAssignmentsResult = await client.query(
+        'DELETE FROM therapist_patient_assignments WHERE patient_id IN (SELECT id FROM patients WHERE clinic_id = $1)',
+        [clinicId]
+      );
+
+      const programAssignmentsResult = await client.query(
+        'DELETE FROM patient_program_assignments WHERE patient_id IN (SELECT id FROM patients WHERE clinic_id = $1)',
+        [clinicId]
+      );
+
+      const billingsResult = await client.query(
+        'DELETE FROM clinic_billing WHERE clinic_id = $1',
+        [clinicId]
+      );
+
+      const patientsResult = await client.query(
+        'DELETE FROM patients WHERE clinic_id = $1',
+        [clinicId]
+      );
+
+      const usersResult = await client.query(
+        'DELETE FROM users WHERE clinic_id = $1',
+        [clinicId]
+      );
+
+      const clinicDeleteResult = await client.query(
+        'DELETE FROM clinics WHERE id = $1',
+        [clinicId]
+      );
 
       await client.query('COMMIT');
+
+      const totalEliminated =
+        notificationsResult.rowCount +
+        caseDiscussionsResult.rowCount +
+        parentChatsResult.rowCount +
+        programSessionsResult.rowCount +
+        progressResult.rowCount +
+        therapistAssignmentsResult.rowCount +
+        programAssignmentsResult.rowCount +
+        billingsResult.rowCount +
+        patientsResult.rowCount +
+        usersResult.rowCount +
+        clinicDeleteResult.rowCount;
 
       return {
         clinic_name: clinicName,
         eliminated: {
-          users: parseInt(counts.users_count),
-          patients: parseInt(counts.patients_count),
-          billings: parseInt(counts.billings_count)
-        }
+          notifications: notificationsResult.rowCount,
+          case_discussions: caseDiscussionsResult.rowCount,
+          parent_chats: parentChatsResult.rowCount,
+          program_sessions: programSessionsResult.rowCount,
+          progress_records: progressResult.rowCount,
+          therapist_assignments: therapistAssignmentsResult.rowCount,
+          program_assignments: programAssignmentsResult.rowCount,
+          billings: billingsResult.rowCount,
+          patients: patientsResult.rowCount,
+          users: usersResult.rowCount,
+          clinic: clinicDeleteResult.rowCount
+        },
+        total_eliminated: totalEliminated
       };
 
     } catch (error) {
       await client.query('ROLLBACK');
-      throw error;
+      console.error('Erro na eliminação cascata da clínica:', error);
+      throw new Error(`Falha na eliminação da clínica: ${error.message}`);
     } finally {
       client.release();
     }

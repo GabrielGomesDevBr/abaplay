@@ -374,10 +374,35 @@ const SuperAdminPage = () => {
 
   const handleDeleteClinic = async (clinicId) => {
     try {
-      await deleteClinic(clinicId);
-      loadClinics();
-      loadInitialData(); // Recarrega métricas
+      const clinicToDelete = clinics.find(c => c.id === clinicId);
+      const result = await deleteClinic(clinicId);
+
+      if (result.success) {
+        // Mostrar feedback detalhado ao usuário
+        const eliminatedTotal = result.data.total_eliminated || 0;
+        alert(
+          `✅ Clínica "${result.data.clinic_name}" eliminada com sucesso!\n\n` +
+          `Total de registros eliminados: ${eliminatedTotal}\n\n` +
+          `Detalhes:\n` +
+          `• Usuários: ${result.data.eliminated_records?.users || 0}\n` +
+          `• Pacientes: ${result.data.eliminated_records?.patients || 0}\n` +
+          `• Cobranças: ${result.data.eliminated_records?.billings || 0}\n` +
+          `• Discussões: ${result.data.eliminated_records?.case_discussions || 0}\n` +
+          `• Chats: ${result.data.eliminated_records?.parent_chats || 0}\n` +
+          `• Sessões: ${result.data.eliminated_records?.program_sessions || 0}\n` +
+          `• Progressos: ${result.data.eliminated_records?.progress_records || 0}\n` +
+          `• Programas: ${result.data.eliminated_records?.program_assignments || 0}\n` +
+          `• Atribuições: ${result.data.eliminated_records?.therapist_assignments || 0}\n` +
+          `• Notificações: ${result.data.eliminated_records?.notifications || 0}`
+        );
+
+        // Recarregar dados
+        loadClinics();
+        loadInitialData();
+      }
     } catch (error) {
+      const errorMessage = error.response?.data?.errors?.[0]?.msg || 'Erro interno do servidor.';
+      alert(`❌ Erro ao eliminar clínica:\n\n${errorMessage}`);
       console.error('Erro ao eliminar clínica:', error);
     }
   };
