@@ -529,6 +529,104 @@ const canUserEditProgram = async (program_id, user_id, clinic_id) => {
     }
 };
 
+/**
+ * @description Busca programas globais criados por super admin
+ * @returns {Promise<object>} Programas organizados por hierarquia
+ */
+const getGlobalProgramsByAdmin = async () => {
+    const query = `
+        SELECT
+            d.name AS discipline_name,
+            pa.name AS area_name,
+            psa.name AS sub_area_name,
+            p.id,
+            p.name,
+            p.objective,
+            p.program_slug,
+            p.skill,
+            p.materials,
+            p.procedure,
+            p.criteria_for_advancement,
+            p.trials,
+            p.created_at,
+            p.clinic_id,
+            p.is_global,
+            p.created_by,
+            u.full_name AS created_by_name
+        FROM programs p
+        JOIN program_sub_areas psa ON p.sub_area_id = psa.id
+        JOIN program_areas pa ON psa.area_id = pa.id
+        JOIN disciplines d ON pa.discipline_id = d.id
+        LEFT JOIN users u ON p.created_by = u.id
+        WHERE p.is_global = true
+        ORDER BY d.name, pa.name, psa.name, p.name;
+    `;
+
+    try {
+        const { rows } = await pool.query(query);
+
+        const hierarchy = {};
+        rows.forEach(row => {
+            const { discipline_name, area_name, sub_area_name, ...programData } = row;
+
+            if (!hierarchy[discipline_name]) {
+                hierarchy[discipline_name] = {};
+            }
+            if (!hierarchy[discipline_name][area_name]) {
+                hierarchy[discipline_name][area_name] = {};
+            }
+            if (!hierarchy[discipline_name][area_name][sub_area_name]) {
+                hierarchy[discipline_name][area_name][sub_area_name] = [];
+            }
+
+            hierarchy[discipline_name][area_name][sub_area_name].push({
+                ...programData,
+                program_type: programData.created_by ? 'global_admin' : 'global_original'
+            });
+        });
+
+        return hierarchy;
+    } catch (error) {
+        console.error('[MODEL-ERROR] Erro ao buscar programas globais criados por super admin:', error);
+        throw error;
+    }
+};
+
+/**
+ * @description Busca estatísticas de uso de um programa
+ * @param {number} program_id - ID do programa
+ * @returns {Promise<object>} Estatísticas de uso
+ */
+const getProgramUsageStats = async (program_id) => {
+    const query = `
+        SELECT
+            COUNT(DISTINCT ppa.id) as assignment_count,
+            COUNT(DISTINCT ppa.patient_id) as patient_count,
+            COUNT(ppp.id) as progress_count,
+            MIN(ppp.session_date) as first_session,
+            MAX(ppp.session_date) as last_session
+        FROM patient_program_assignments ppa
+        LEFT JOIN patient_program_progress ppp ON ppa.id = ppp.assignment_id
+        WHERE ppa.program_id = $1
+    `;
+
+    try {
+        const { rows } = await pool.query(query, [program_id]);
+        const stats = rows[0];
+
+        return {
+            assignment_count: parseInt(stats.assignment_count) || 0,
+            patient_count: parseInt(stats.patient_count) || 0,
+            progress_count: parseInt(stats.progress_count) || 0,
+            first_session: stats.first_session,
+            last_session: stats.last_session
+        };
+    } catch (error) {
+        console.error(`[MODEL-ERROR] Erro ao buscar estatísticas de uso do programa ${program_id}:`, error);
+        throw error;
+    }
+};
+
 // Exporta os métodos com os nomes que o controller espera
 module.exports = {
     create,
@@ -540,5 +638,7 @@ module.exports = {
     searchPrograms,
     getCustomProgramsByClinic,
     getDisciplineHierarchy,
-    canUserEditProgram
+    canUserEditProgram,
+    getGlobalProgramsByAdmin,
+    getProgramUsageStats
 };

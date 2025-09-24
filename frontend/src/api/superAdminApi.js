@@ -330,6 +330,130 @@ export const editBillingDueDate = async (billingId, dueDateData) => {
   }
 };
 
+// =====================================
+// APIs DE PROGRAMAS GLOBAIS
+// =====================================
+
+/**
+ * Configurar cliente específico para programas (usa rota diferente)
+ */
+const programsApiClient = axios.create({
+  baseURL: `${API_BASE_URL}/programs`,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptador para adicionar token automaticamente
+programsApiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Interceptador para tratar respostas
+programsApiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('Erro na API Programas Globais:', error);
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * Busca hierarquia de disciplinas para formulário.
+ * @returns {Promise} Hierarquia de disciplinas.
+ */
+export const getDisciplineHierarchy = async () => {
+  try {
+    const response = await programsApiClient.get('/hierarchy');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Cria um programa global (apenas super admin).
+ * @param {object} programData - Dados do programa.
+ * @returns {Promise} Programa criado.
+ */
+export const createGlobalProgram = async (programData) => {
+  try {
+    const response = await programsApiClient.post('/global', programData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Busca programas globais criados por super admin.
+ * @returns {Promise} Programas globais organizados por hierarquia.
+ */
+export const getGlobalPrograms = async () => {
+  try {
+    const response = await programsApiClient.get('/global');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Atualiza um programa global (apenas super admin).
+ * @param {number} programId - ID do programa.
+ * @param {object} programData - Dados atualizados do programa.
+ * @returns {Promise} Programa atualizado.
+ */
+export const updateGlobalProgram = async (programId, programData) => {
+  try {
+    const response = await programsApiClient.put(`/global/${programId}`, programData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Exclui um programa global (apenas super admin).
+ * @param {number} programId - ID do programa.
+ * @returns {Promise} Resultado da exclusão.
+ */
+export const deleteGlobalProgram = async (programId) => {
+  try {
+    const response = await programsApiClient.delete(`/global/${programId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Busca estatísticas de uso de um programa.
+ * @param {number} programId - ID do programa.
+ * @returns {Promise} Estatísticas de uso.
+ */
+export const getProgramUsage = async (programId) => {
+  try {
+    const response = await programsApiClient.get(`/${programId}/usage`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Exportações nomeadas adicionais para compatibilidade
 const superAdminApi = {
   getSystemMetrics,
@@ -350,7 +474,14 @@ const superAdminApi = {
   getBillingAlerts,
   processOverdueBills,
   deleteClinic,
-  editBillingDueDate
+  editBillingDueDate,
+  // APIs de programas globais
+  getDisciplineHierarchy,
+  createGlobalProgram,
+  getGlobalPrograms,
+  updateGlobalProgram,
+  deleteGlobalProgram,
+  getProgramUsage
 };
 
 export default superAdminApi;

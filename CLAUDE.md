@@ -90,13 +90,17 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 ## Key Application Features
 
 ### User Roles & Authentication
-- **Admin**: Manages clinics, users, patient assignments, and program library
-- **Therapist**: Manages assigned patients, assigns programs, tracks progress with detailed session management
+- **Admin**: Manages clinics, users, patient assignments, program library, and custom clinic programs
+- **Therapist**: Manages assigned patients, assigns programs, tracks progress with detailed session management, and customizes trial quantities
 - **Parent**: Views child's progress, communicates with therapists, and accesses detailed reports
 
 ### Core Features
 - **Program Management**: Hierarchical program structure with disciplines, areas, and sub-areas
+  - **Custom Programs per Clinic**: Clinics can create their own intervention programs using the existing framework
+  - **Program Isolation**: Custom programs are isolated per clinic while maintaining access to global library
 - **Advanced Session Tracking**: Progress tracking with prompt levels, session data, and interactive charts
+  - **Customizable Trial Quantities**: Therapists can override default trial numbers per program assignment at clinic level
+  - **Clinic-Specific Configurations**: Trial customizations remain isolated to the clinic that made them
 - **Prompt Level System**: ABA-compliant prompt levels (Independent, Verbal Cue, Gestural Cue, Partial Physical Help, Total Physical Help, No Response) with visual indicators and progress scoring
 - **Communication**: Case discussions and parent-therapist chats with Socket.IO real-time messaging
 - **Notifications**: Real-time notification system with status management and badge indicators
@@ -170,6 +174,59 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 - Connection pooling configured for production deployment
 - SSL configuration for production database connections
 
+## Recent Major Features (v1.2.0)
+
+### Custom Programs per Clinic
+A comprehensive system allowing clinics to create their own intervention programs while maintaining access to the global library:
+
+#### Database Structure
+- **New fields in `programs` table**: `clinic_id`, `is_global`, `created_by`
+- **Program isolation**: Custom programs filtered by clinic while preserving global access
+- **Unique constraints**: Program names unique per clinic (same name allowed across different clinics)
+- **Data integrity**: Constraints ensure global programs have no clinic_id and custom programs require clinic_id
+
+#### Frontend Implementation
+- **CustomProgramModal.js**: Complete form for creating custom programs with hierarchical discipline selection
+- **ProgramLibrary.js**: Tab system separating "Global Programs" and "Clinic Programs"
+- **CustomProgramCard.js**: Specialized display for custom programs with edit/delete capabilities
+- **EditCustomProgramModal.js**: Full editing interface for custom programs
+
+#### Backend Implementation
+- **Enhanced programModel.js**: Methods for creating, fetching, and managing custom programs
+- **Updated programController.js**: Endpoints for custom program CRUD operations with proper permissions
+- **Security**: Only clinic administrators can create/edit custom programs
+- **API isolation**: All queries automatically filter by clinic_id to ensure data separation
+
+#### Key Benefits
+- **Framework reuse**: Custom programs leverage existing structure (disciplines, areas, sub-areas)
+- **Zero interference**: No impact on global program library or other clinics
+- **Seamless integration**: Custom programs work identically to global ones in assignments and sessions
+
+### Customizable Trial Quantities per Assignment
+Flexible system allowing clinics to override default trial numbers for specific program assignments:
+
+#### Database Structure
+- **New field in `patient_program_assignments`**: `custom_trials`
+- **Flexible logic**: Uses `COALESCE(custom_trials, default_trials)` for effective trial count
+- **Clinic isolation**: Trial customizations remain within the clinic that made them
+
+#### Frontend Implementation
+- **TrialsEditor.js**: Inline editor component with save/cancel/reset functionality
+- **Visual indicators**: Clearly shows when trials are customized vs using defaults
+- **User experience**: One-click editing with keyboard shortcuts (Enter to save, Esc to cancel)
+- **Validation**: Ensures trial numbers are between 1-999 or null to use defaults
+
+#### Backend Implementation
+- **Enhanced assignmentModel.js**: `updateCustomTrials()` method for safe trial updates
+- **assignmentController.js**: `updateCustomTrials()` endpoint with proper validation
+- **Data retrieval**: All program queries include both custom and default trial information
+
+#### Key Benefits
+- **Clinic-specific flexibility**: Each clinic can adapt programs to their methodology
+- **Global integrity**: Default trial numbers remain unchanged across the system
+- **Easy management**: Simple reset to default functionality
+- **Clear tracking**: Visual indicators show customized vs standard configurations
+
 ## Important Files to Review
 
 ### Backend Structure
@@ -186,16 +243,16 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
   - `parentChatController.js` - Parent-therapist chat functionality
   - `parentController.js` - Parent-specific operations and dashboards
   - `patientController.js` - Patient management and data access
-  - `programController.js` - Program operations and library management
+  - `programController.js` - **ENHANCED**: Program operations, library management, and custom program creation
   - `reportController.js` - Evolution report system with automatic analysis and professional data management
 - `src/models/` - Database query functions with enhanced error handling
-  - `assignmentModel.js` - Assignment operations with status constraints
+  - `assignmentModel.js` - **ENHANCED**: Assignment operations with status constraints and custom trial management
   - `caseDiscussionModel.js` - Case discussion data management
   - `clinicModel.js` - Clinic information management
   - `notificationStatusModel.js` - Notification status tracking
   - `parentChatModel.js` - Parent-therapist chat data
   - `patientModel.js` - Patient data operations with complementary fields
-  - `programModel.js` - Program library and hierarchy management
+  - `programModel.js` - **ENHANCED**: Program library, hierarchy management, and custom programs per clinic
   - `reportModel.js` - Evolution report with automatic analysis and insights
   - `contactModel.js` - Contact management system
   - `userModel.js` - **ENHANCED**: User authentication and profile management with professional data synchronization
@@ -222,7 +279,11 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
   - `patient/` - Patient components with enhanced reporting
     - `PatientDetails.js`, `PatientForm.js`, `PatientList.js`
     - `ConsolidatedReportModal.js` - **ENHANCED**: Consolidated reports with intelligent pre-filling and rich text editor
-  - `program/` - Program components (AssignedProgramsList, ProgramCard, ProgramLibrary, SessionChart, SessionProgress, PromptLevelSelector)
+  - `program/` - Program components
+    - `AssignedProgramsList.js`, `ProgramCard.js`, `ProgramLibrary.js` - **ENHANCED**: Support for custom programs and trial editing
+    - `CustomProgramModal.js`, `EditCustomProgramModal.js`, `CustomProgramCard.js` - **NEW**: Custom program management
+    - `TrialsEditor.js` - **NEW**: Inline editor for customizing trial quantities
+    - `SessionChart.js`, `SessionProgress.js`, `PromptLevelSelector.js` - Session tracking components
   - `reports/` - Complete evolution report system
     - `ReportEvolutionModal.js` - Professional data configuration and period selection
     - `ReportPreview.js` - **ENHANCED**: Editable preview with professional responsibility warnings
@@ -251,7 +312,8 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
   - `adminApi.js` - **ENHANCED**: Admin operations with sanitized logging
   - `authApi.js`, `caseDiscussionApi.js` - **ENHANCED**: With sanitized logging
   - `contactApi.js`, `notificationApi.js`, `parentApi.js`, `parentChatApi.js` - **ENHANCED**: With sanitized logging
-  - `patientApi.js`, `programApi.js` - **ENHANCED**: Prompt level support and sanitized logging
+  - `patientApi.js` - **ENHANCED**: Prompt level support and sanitized logging
+  - `programApi.js` - **ENHANCED**: Program management, custom programs, and hierarchy management with sanitized logging
   - `reportApi.js` - **ENHANCED**: Complete report API with evolution reports, automatic analysis, and user profile synchronization
 - `src/services/` - **NEW**: Business logic services
   - `reportPreFillService.js` - Intelligent text generation service with professional responsibility disclaimers
@@ -264,6 +326,20 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 ### Database & Analysis
 - `DIAGNOSTIC_QUERIES.sql` - Database debugging and analysis queries
 - `NORMALIZE_STATUS.sql` - Status standardization queries
+- `SCRIPT_PROGRAMAS_CUSTOMIZADOS.sql` - **NEW**: Database migration for custom programs per clinic
+
+### API Endpoints Added (v1.2.0)
+
+#### Custom Programs
+- `GET /api/programs/hierarchy` - Get discipline hierarchy for program creation
+- `POST /api/programs/custom` - Create custom program (admin only)
+- `GET /api/programs/custom` - Get clinic's custom programs
+- `PUT /api/programs/custom/:id` - Update custom program (creator/admin only)
+- `DELETE /api/programs/custom/:id` - Delete custom program (creator/admin only)
+
+#### Trial Customization
+- `PUT /api/assignments/:assignmentId/custom-trials` - Update custom trial quantity for assignment
+- Enhanced program queries to include `custom_trials` and `default_trials` fields
 
 ## Recent Improvements & Technical Features
 

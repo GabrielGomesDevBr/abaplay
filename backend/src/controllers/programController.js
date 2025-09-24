@@ -256,3 +256,135 @@ exports.getProgramUsage = async (req, res) => {
         res.status(500).send('Erro ao buscar estatísticas de uso do programa.');
     }
 };
+
+/**
+ * @description Cria um programa global (apenas super admin)
+ * @route POST /api/programs/global
+ * @access Super Admin Only
+ */
+exports.createGlobalProgram = async (req, res) => {
+    try {
+        const { role, id: user_id } = req.user;
+
+        // Verificação de segurança adicional
+        if (role !== 'super_admin') {
+            return res.status(403).json({ message: 'Apenas super administradores podem criar programas globais.' });
+        }
+
+        const programData = {
+            ...req.body,
+            clinic_id: null,
+            is_global: true,
+            created_by: user_id
+        };
+
+        const program = await Program.create(programData);
+        res.status(201).json(program);
+    } catch (error) {
+        console.error('[CONTROLLER-ERROR] createGlobalProgram:', error);
+        if (error.code === '23505') {
+            return res.status(409).json({ message: 'Já existe um programa global com este nome.' });
+        }
+        res.status(500).json({ message: 'Erro ao criar programa global.' });
+    }
+};
+
+/**
+ * @description Busca programas globais criados por super admin
+ * @route GET /api/programs/global
+ * @access Super Admin Only
+ */
+exports.getGlobalPrograms = async (req, res) => {
+    try {
+        const globalPrograms = await Program.getGlobalProgramsByAdmin();
+        res.json(globalPrograms);
+    } catch (error) {
+        console.error('[CONTROLLER-ERROR] getGlobalPrograms:', error);
+        res.status(500).send('Erro ao buscar programas globais.');
+    }
+};
+
+/**
+ * @description Atualiza um programa global (apenas super admin)
+ * @route PUT /api/programs/global/:id
+ * @access Super Admin Only
+ */
+exports.updateGlobalProgram = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role, id: user_id } = req.user;
+
+        // Verificação de segurança adicional
+        if (role !== 'super_admin') {
+            return res.status(403).json({ message: 'Apenas super administradores podem editar programas globais.' });
+        }
+
+        // Verificar se o programa é global e foi criado por super admin
+        const program = await Program.findById(id);
+        if (!program) {
+            return res.status(404).json({ message: 'Programa não encontrado.' });
+        }
+
+        if (!program.is_global || program.created_by === null) {
+            return res.status(403).json({ message: 'Este programa não pode ser editado.' });
+        }
+
+        const updatedProgram = await Program.update(id, req.body);
+        if (!updatedProgram) {
+            return res.status(404).json({ message: 'Programa não encontrado.' });
+        }
+        res.json(updatedProgram);
+    } catch (error) {
+        console.error(`[CONTROLLER-ERROR] updateGlobalProgram (ID: ${req.params.id}):`, error);
+        res.status(500).send('Erro ao atualizar programa global.');
+    }
+};
+
+/**
+ * @description Exclui um programa global (apenas super admin)
+ * @route DELETE /api/programs/global/:id
+ * @access Super Admin Only
+ */
+exports.deleteGlobalProgram = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role } = req.user;
+
+        // Verificação de segurança adicional
+        if (role !== 'super_admin') {
+            return res.status(403).json({ message: 'Apenas super administradores podem excluir programas globais.' });
+        }
+
+        // Verificar se o programa é global e foi criado por super admin
+        const program = await Program.findById(id);
+        if (!program) {
+            return res.status(404).json({ message: 'Programa não encontrado.' });
+        }
+
+        if (!program.is_global || program.created_by === null) {
+            return res.status(403).json({ message: 'Este programa não pode ser excluído.' });
+        }
+
+        // Verificar se o programa está sendo usado
+        const usage = await Program.getProgramUsageStats(id);
+        if (usage && usage.assignment_count > 0) {
+            return res.status(400).json({
+                message: 'Não é possível excluir um programa global que está sendo usado por clínicas.',
+                usage_info: {
+                    assignments: usage.assignment_count,
+                    patients: usage.patient_count,
+                    sessions: usage.progress_count
+                }
+            });
+        }
+
+        const result = await Program.deleteById(id);
+        if (result === 0) {
+            return res.status(404).send('Programa não encontrado para exclusão.');
+        }
+        res.status(200).send('Programa global excluído com sucesso.');
+    } catch (error) {
+        console.error(`[CONTROLLER-ERROR] deleteGlobalProgram (ID: ${req.params.id}):`, error);
+        res.status(500).send('Erro ao excluir programa global.');
+    }
+};

@@ -10,7 +10,7 @@ import {
   faCreditCard, faCalendarAlt, faUserTie, faChartPie, faArrowTrendUp,
   faUserPlus, faMoneyBillWave, faClipboardList, faHistory, faTimes, faTrash,
   faCogs, faLightbulb, faHeartbeat, faBullseye, faBrain, faMedal, faRocket,
-  faExclamationCircle, faTrophy, faTable
+  faExclamationCircle, faTrophy, faTable, faGlobe
 } from '@fortawesome/free-solid-svg-icons';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import {
@@ -57,6 +57,7 @@ import PaymentModal from '../components/superAdmin/PaymentModal';
 import BillingCalendar from '../components/superAdmin/BillingCalendar';
 import CreateBillingModal from '../components/superAdmin/CreateBillingModal';
 import EditDueDateModal from '../components/superAdmin/EditDueDateModal';
+import GlobalProgramsLibrary from '../components/superAdmin/GlobalProgramsLibrary';
 
 ChartJS.register(
   CategoryScale,
@@ -463,6 +464,7 @@ const SuperAdminPage = () => {
               { key: 'dashboard', label: 'Dashboard', icon: faTachometerAlt },
               { key: 'enterprise', label: 'Business Intelligence', icon: faBrain },
               { key: 'clinics', label: 'Clínicas', icon: faBuilding },
+              { key: 'programs', label: 'Programas Globais', icon: faGlobe },
               { key: 'financial', label: 'Financeiro', icon: faDollarSign },
               { key: 'calendar', label: 'Calendário', icon: faCalendarAlt }
             ].map((tab) => (
@@ -499,7 +501,7 @@ const SuperAdminPage = () => {
         )}
         
         {activeTab === 'clinics' && (
-          <ClinicsContent 
+          <ClinicsContent
             clinics={clinics}
             filters={clinicFilters}
             setFilters={setClinicFilters}
@@ -519,6 +521,10 @@ const SuperAdminPage = () => {
             }}
             onDeleteClinic={handleDeleteClinic}
           />
+        )}
+
+        {activeTab === 'programs' && (
+          <GlobalProgramsLibrary />
         )}
         
         {activeTab === 'financial' && (

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const programController = require('../controllers/programController');
+const { verifySuperAdmin } = require('../middleware/superAdminMiddleware');
 // O middleware de autenticação foi removido daqui, pois já é aplicado no server.js
 
 // --- Rotas focadas apenas em Programas ---
@@ -10,6 +11,20 @@ router.post('/', programController.createProgram);
 
 // Rota para buscar todos os programas
 router.get('/', programController.getAllPrograms);
+
+// --- Rotas para Programas Globais (Super Admin) ---
+
+// Rota para criar programa global (apenas super admin)
+router.post('/global', verifySuperAdmin, programController.createGlobalProgram);
+
+// Rota para buscar programas globais criados por super admin
+router.get('/global', verifySuperAdmin, programController.getGlobalPrograms);
+
+// Rota para atualizar programa global (apenas super admin)
+router.put('/global/:id', verifySuperAdmin, programController.updateGlobalProgram);
+
+// Rota para excluir programa global (apenas super admin)
+router.delete('/global/:id', verifySuperAdmin, programController.deleteGlobalProgram);
 
 // --- Rotas para Programas Customizados ---
 
