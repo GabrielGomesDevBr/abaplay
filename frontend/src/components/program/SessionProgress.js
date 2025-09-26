@@ -64,26 +64,32 @@ const SessionProgress = ({ program, assignment }) => {
   const [isBaseline, setIsBaseline] = useState(false);
   const [teachingModality, setTeachingModality] = useState('');
   
-  // Nível de prompting persistente por programa/paciente
-  const [promptLevel, setPromptLevel] = useState(5); // Inicializa com padrão
-  
-  // Carrega o nível de prompting de forma assíncrona
+  // Nível de prompting - SEMPRE carregado do banco (sem cache)
+  const [promptLevel, setPromptLevel] = useState(null); // null = ainda carregando
+  const [isLoadingPromptLevel, setIsLoadingPromptLevel] = useState(true);
+
+  // Carrega o nível de prompting SEMPRE do banco de dados
   useEffect(() => {
     const loadPromptLevel = async () => {
       if (selectedPatient && program) {
         const programId = program.program_id || program.id;
         if (programId) {
+          setIsLoadingPromptLevel(true);
           try {
+            console.log(`[SESSION-PROGRESS] Carregando prompt level para paciente ${selectedPatient.id}, programa ${programId}`);
             const level = await getPromptLevelForProgram(selectedPatient.id, programId);
             setPromptLevel(level);
+            console.log(`[SESSION-PROGRESS] Prompt level carregado: ${level}`);
           } catch (error) {
-            // Erro ao carregar prompt level
-            setPromptLevel(5); // Fallback para independente
+            console.error(`[SESSION-PROGRESS] Erro ao carregar prompt level:`, error);
+            setPromptLevel(5); // Fallback para independente apenas em caso de erro
+          } finally {
+            setIsLoadingPromptLevel(false);
           }
         }
       }
     };
-    
+
     loadPromptLevel();
   }, [selectedPatient, program, getPromptLevelForProgram]);
 
@@ -121,18 +127,37 @@ const SessionProgress = ({ program, assignment }) => {
     }
   }, [assignment]);
 
-  // Função para atualizar o nível de prompting
+  // Função para atualizar o nível de prompting - SALVA IMEDIATAMENTE
   const handlePromptLevelChange = useCallback(async (newLevel) => {
-    // Tenta usar program_id primeiro, depois id como fallback
     const programId = program?.program_id || program?.id;
     const assignmentId = assignment?.assignment_id || assignment?.id;
-    
-    setPromptLevel(newLevel);
-    if (selectedPatient && program && programId) {
-      // Passa assignmentId para salvar no banco também
-      await setPromptLevelForProgram(selectedPatient.id, programId, newLevel, assignmentId);
+
+    if (!selectedPatient || !program || !programId || !assignmentId) {
+      console.error('[SESSION-PROGRESS] Dados insuficientes para atualizar prompt level');
+      return;
     }
-  }, [selectedPatient, program, assignment, setPromptLevelForProgram]);
+
+    // Atualiza UI imediatamente
+    setPromptLevel(newLevel);
+
+    try {
+      console.log(`[SESSION-PROGRESS] Atualizando prompt level para ${newLevel}`);
+      await setPromptLevelForProgram(selectedPatient.id, programId, newLevel, assignmentId);
+      console.log(`[SESSION-PROGRESS] Prompt level ${newLevel} salvo com sucesso`);
+    } catch (error) {
+      console.error(`[SESSION-PROGRESS] Erro ao salvar prompt level:`, error);
+
+      // Em caso de erro, recarrega o valor real do banco
+      try {
+        const realLevel = await getPromptLevelForProgram(selectedPatient.id, programId);
+        setPromptLevel(realLevel);
+        console.log(`[SESSION-PROGRESS] Prompt level revertido para valor do banco: ${realLevel}`);
+      } catch (reloadError) {
+        console.error(`[SESSION-PROGRESS] Erro ao recarregar prompt level:`, reloadError);
+        setPromptLevel(5); // Último fallback
+      }
+    }
+  }, [selectedPatient, program, assignment, setPromptLevelForProgram, getPromptLevelForProgram]);
 
   useEffect(() => {
     if (!program || !assignment) {
@@ -145,14 +170,8 @@ const SessionProgress = ({ program, assignment }) => {
     fetchEvolutionHistory();
     setAttempts(program.trials || program.default_trials || '');
 
-    // Carrega o nível de prompting salvo para este programa/paciente
-    if (selectedPatient && program) {
-      const programId = program.program_id || program.id;
-      if (programId) {
-        const savedLevel = getPromptLevelForProgram(selectedPatient.id, programId);
-        setPromptLevel(savedLevel);
-      }
-    }
+    // Nível de prompting é carregado pelo useEffect dedicado acima
+    // Removido para evitar conflitos - busca sempre do banco
   }, [program, assignment, fetchEvolutionHistory, procedureSteps, selectedPatient, getPromptLevelForProgram]);
 
   const handleSubmit = async (e) => {
@@ -597,11 +616,20 @@ const SessionProgress = ({ program, assignment }) => {
             </h4>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <PromptLevelSelector
-                  selectedLevel={promptLevel}
-                  onLevelChange={handlePromptLevelChange}
-                  disabled={isSubmitting}
-                />
+                {isLoadingPromptLevel ? (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Nível de Prompting</label>
+                    <div className="animate-pulse bg-gray-200 h-10 rounded-lg flex items-center justify-center">
+                      <span className="text-gray-500 text-sm">Carregando...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <PromptLevelSelector
+                    selectedLevel={promptLevel}
+                    onLevelChange={handlePromptLevelChange}
+                    disabled={isSubmitting}
+                  />
+                )}
               </div>
               
               <div className="flex items-center justify-start lg:justify-center pt-2 lg:pt-8">

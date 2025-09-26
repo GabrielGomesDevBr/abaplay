@@ -28,12 +28,8 @@ export const PatientProvider = ({ children }) => {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [patientToEdit, setPatientToEdit] = useState(null);
   
-  // Cache em memória para níveis de prompting (apenas durante a sessão)
-  const [promptLevelsCache, setPromptLevelsCache] = useState({});
-  const [promptLevelPendingUpdates, setPromptLevelPendingUpdates] = useState({});
-  
-  // Referência para debouncing
-  const debounceTimersRef = React.useRef({});
+  // Sistema de lock para evitar condições de corrida nos prompt levels
+  const promptLevelLocks = React.useRef(new Set());
   
   const refreshData = useCallback(async (patientIdToReselect = null) => {
     if (!isAuthenticated || !user || !token) {
@@ -139,100 +135,63 @@ export const PatientProvider = ({ children }) => {
   const addSession = (sessionData) => performActionAndReload(() => createSession(selectedPatient.id, sessionData, token));
   const saveNotes = (notes) => performActionAndReload(() => updatePatientNotes(selectedPatient.id, notes, token));
 
-  // Função para buscar nível de prompting (cache em memória + banco de dados)
+  // SOLUÇÃO 1: Busca SEMPRE direta do banco - SEM CACHE
   const getPromptLevelForProgram = useCallback(async (patientId, programId) => {
-    const key = `${patientId}_${programId}`;
-    
-    // 1. Verifica se há update pendente (optimistic update)
-    if (promptLevelPendingUpdates[key] !== undefined) {
-      return promptLevelPendingUpdates[key];
-    }
-    
-    // 2. Verifica cache em memória
-    if (promptLevelsCache[key] !== undefined) {
-      return promptLevelsCache[key];
-    }
-    
-    // 3. Busca no banco de dados e salva no cache
     try {
+      // Log para tracking
+      console.log(`[PROMPT-LEVEL-FETCH] Buscando nível para paciente ${patientId}, programa ${programId}`);
+
       const { getPromptLevelByPatientAndProgram } = await import('../api/promptLevelApi');
       const response = await getPromptLevelByPatientAndProgram(patientId, programId);
       const dbLevel = response.currentPromptLevel;
-      
-      // Salva no cache em memória
-      if (dbLevel !== null && dbLevel !== undefined) {
-        setPromptLevelsCache(prev => ({ ...prev, [key]: dbLevel }));
-        return dbLevel;
-      }
-    } catch (error) {
-      // Erro ao buscar prompt level do banco
-    }
-    
-    // 4. Fallback: padrão 5 (Independente)
-    const defaultLevel = 5;
-    setPromptLevelsCache(prev => ({ ...prev, [key]: defaultLevel }));
-    return defaultLevel;
-  }, [promptLevelsCache, promptLevelPendingUpdates]);
 
+      // Retorna valor direto do banco ou padrão
+      const finalLevel = dbLevel !== null && dbLevel !== undefined ? dbLevel : 5;
+
+      console.log(`[PROMPT-LEVEL-FETCH] Nível encontrado: ${finalLevel} para paciente ${patientId}, programa ${programId}`);
+      return finalLevel;
+
+    } catch (error) {
+      console.error(`[PROMPT-LEVEL-ERROR] Erro ao buscar nível para paciente ${patientId}, programa ${programId}:`, error);
+
+      // Fallback: padrão 5 (Independente) apenas em caso de erro
+      return 5;
+    }
+  }, []);
+
+  // SOLUÇÃO 1 + 3: Salva IMEDIATAMENTE com lock anti-corrida
   const setPromptLevelForProgram = useCallback(async (patientId, programId, level, assignmentId = null) => {
     const key = `${patientId}_${programId}`;
-    
-    // 1. Optimistic update - atualiza imediatamente o estado visual
-    setPromptLevelPendingUpdates(prev => ({ ...prev, [key]: level }));
-    setPromptLevelsCache(prev => ({ ...prev, [key]: level }));
-    
-    // 2. Cancela timer anterior se existir
-    if (debounceTimersRef.current[key]) {
-      clearTimeout(debounceTimersRef.current[key]);
+
+    // Verifica se já existe operação em andamento
+    if (promptLevelLocks.current.has(key)) {
+      console.log(`[PROMPT-LEVEL-LOCK] Operação em andamento para ${key}, ignorando nova chamada`);
+      return;
     }
-    
-    // 3. Debounced save no banco de dados (500ms)
-    debounceTimersRef.current[key] = setTimeout(async () => {
-      if (assignmentId) {
-        try {
-          const { updatePromptLevel } = await import('../api/promptLevelApi');
-          await updatePromptLevel(assignmentId, level);
-          // Prompt level salvo no banco
-          
-          // Remove do pending updates após sucesso
-          setPromptLevelPendingUpdates(prev => {
-            const newPending = { ...prev };
-            delete newPending[key];
-            return newPending;
-          });
-        } catch (error) {
-          // Erro ao salvar prompt level no banco
-          
-          // Em caso de erro, reverte o optimistic update
-          setPromptLevelPendingUpdates(prev => {
-            const newPending = { ...prev };
-            delete newPending[key];
-            return newPending;
-          });
-          
-          // Tenta buscar o valor real do banco
-          try {
-            const { getPromptLevelByPatientAndProgram } = await import('../api/promptLevelApi');
-            const response = await getPromptLevelByPatientAndProgram(patientId, programId);
-            const realLevel = response.currentPromptLevel || 5;
-            setPromptLevelsCache(prev => ({ ...prev, [key]: realLevel }));
-          } catch (fetchError) {
-            // Erro ao buscar valor real do banco
-          }
-        }
-      } else {
-        // Não foi possível salvar: assignmentId não fornecido
-        // Remove do pending updates
-        setPromptLevelPendingUpdates(prev => {
-          const newPending = { ...prev };
-          delete newPending[key];
-          return newPending;
-        });
-      }
-      
-      // Limpa o timer
-      delete debounceTimersRef.current[key];
-    }, 500);
+
+    if (!assignmentId) {
+      console.error(`[PROMPT-LEVEL-ERROR] assignmentId não fornecido para paciente ${patientId}, programa ${programId}`);
+      return;
+    }
+
+    // Adiciona lock
+    promptLevelLocks.current.add(key);
+
+    try {
+      console.log(`[PROMPT-LEVEL-SAVE] Salvando nível ${level} para paciente ${patientId}, programa ${programId}, assignment ${assignmentId}`);
+
+      const { updatePromptLevel } = await import('../api/promptLevelApi');
+      await updatePromptLevel(assignmentId, level);
+
+      console.log(`[PROMPT-LEVEL-SAVE] Nível ${level} salvo com sucesso no banco para assignment ${assignmentId}`);
+
+    } catch (error) {
+      console.error(`[PROMPT-LEVEL-ERROR] Erro ao salvar nível ${level} para assignment ${assignmentId}:`, error);
+      throw error; // Re-propaga o erro para o componente que chamou
+    } finally {
+      // Remove lock sempre
+      promptLevelLocks.current.delete(key);
+    }
   }, []);
 
   const value = {
