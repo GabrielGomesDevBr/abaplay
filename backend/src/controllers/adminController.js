@@ -287,6 +287,30 @@ const AdminController = {
       next(error);
     }
   },
+
+  async getAllAssignments(req, res, next) {
+    try {
+      const { clinic_id } = req.user;
+      if (!clinic_id) {
+        return res.status(400).json({ errors: [{ msg: 'Administrador não está associado a uma clínica.' }] });
+      }
+
+      const assignments = await AssignmentModel.getAllAssignments(clinic_id);
+
+      // Formatando dados para melhor exibição
+      const formattedAssignments = assignments.map(assignment => ({
+        ...assignment,
+        average_score: Math.round(assignment.average_score * 100) / 100, // 2 casas decimais
+        total_sessions: parseInt(assignment.total_sessions) || 0,
+        has_custom_trials: assignment.custom_trials !== null
+      }));
+
+      res.status(200).json({ assignments: formattedAssignments });
+    } catch (error) {
+      console.error('Erro ao buscar todas as atribuições:', error);
+      next(error);
+    }
+  },
 };
 
 module.exports = AdminController;

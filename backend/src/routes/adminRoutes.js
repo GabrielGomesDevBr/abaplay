@@ -120,4 +120,7 @@ router.put(
     adminController.updatePatientAssignments
 );
 
+// Nova rota para listar todas as atribuições da clínica
+router.get('/assignments', adminController.getAllAssignments);
+
 module.exports = router;

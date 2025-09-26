@@ -377,6 +377,59 @@ const Assignment = {
         `;
         const { rows } = await pool.query(query, [customTrials, assignmentId]);
         return rows[0];
+    },
+
+    /**
+     * Busca todas as atribuições de programas da clínica para administradores.
+     * Inclui informações completas de paciente, programa, terapeuta e status.
+     * @param {number} clinicId - O ID da clínica.
+     * @returns {Promise<Array<object>>} Lista de todas as atribuições da clínica.
+     */
+    async getAllAssignments(clinicId) {
+        const query = `
+            SELECT
+                ppa.id AS assignment_id,
+                ppa.status,
+                ppa.current_prompt_level,
+                ppa.assigned_at AS created_at,
+                ppa.updated_at,
+                COALESCE(ppa.custom_trials, p.trials) as trials,
+                p.trials as default_trials,
+                ppa.custom_trials,
+                pat.id AS patient_id,
+                pat.name AS patient_name,
+                pat.dob AS patient_dob,
+                p.id AS program_id,
+                p.name AS program_name,
+                p.objective AS program_objective,
+                ther.id AS therapist_id,
+                ther.full_name AS therapist_name,
+                ther.username AS therapist_username,
+                -- Estatísticas de progresso
+                COUNT(ppp.id) as total_sessions,
+                COALESCE(AVG(ppp.score), 0) as average_score,
+                MAX(ppp.session_date) as last_session_date
+            FROM
+                patient_program_assignments ppa
+            JOIN
+                patients pat ON ppa.patient_id = pat.id
+            JOIN
+                users ther ON ppa.therapist_id = ther.id
+            JOIN
+                programs p ON ppa.program_id = p.id
+            LEFT JOIN
+                patient_program_progress ppp ON ppa.id = ppp.assignment_id
+            WHERE
+                pat.clinic_id = $1
+            GROUP BY
+                ppa.id, ppa.status, ppa.current_prompt_level, ppa.assigned_at, ppa.updated_at,
+                ppa.custom_trials, p.trials, pat.id, pat.name, pat.dob, p.id, p.name,
+                p.objective, ther.id, ther.full_name, ther.username
+            ORDER BY
+                ppa.updated_at DESC, pat.name ASC, p.name ASC;
+        `;
+        const { rows } = await pool.query(query, [clinicId]);
+        return rows;
     }
 };
 

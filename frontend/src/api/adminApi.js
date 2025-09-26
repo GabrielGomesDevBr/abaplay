@@ -166,3 +166,18 @@ export const updatePatientAssignments = async (patientId, therapistIds, token) =
         throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível atualizar as atribuições.');
     }
 };
+
+/**
+ * Busca todas as atribuições de programas da clínica para administradores.
+ * @param {string} token - O token JWT do utilizador admin.
+ * @returns {Promise<Array>} - Lista de todas as atribuições da clínica.
+ */
+export const fetchAllAssignments = async (token) => {
+    try {
+        const response = await axios.get(`${API_URL}/admin/assignments`, getAuthHeaders(token));
+        return response.data.assignments || [];
+    } catch (error) {
+        // Erro ao buscar atribuições
+        throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível carregar a lista de atribuições.');
+    }
+};

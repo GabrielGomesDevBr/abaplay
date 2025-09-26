@@ -76,9 +76,6 @@ export const PatientProvider = ({ children }) => {
   const selectPatient = useCallback(async (patient) => {
     if (!patient) {
       setSelectedPatient(null);
-      // Limpa cache de prompt levels quando nenhum paciente está selecionado
-      setPromptLevelsCache({});
-      setPromptLevelPendingUpdates({});
       return;
     }
     setSelectedPatient(patient);
@@ -87,19 +84,6 @@ export const PatientProvider = ({ children }) => {
   useEffect(() => {
     refreshData();
   }, [refreshData]);
-
-  // Cleanup dos timers quando o componente for desmontado
-  useEffect(() => {
-    return () => {
-      // Limpa todos os timers de debounce
-      const timers = debounceTimersRef.current;
-      if (timers) {
-        Object.values(timers).forEach(timer => {
-          if (timer) clearTimeout(timer);
-        });
-      }
-    };
-  }, []);
 
   const performActionAndReload = async (action) => {
     if (!selectedPatient) throw new Error("Nenhum cliente selecionado.");
