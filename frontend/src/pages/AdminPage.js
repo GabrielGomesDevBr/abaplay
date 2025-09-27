@@ -12,89 +12,194 @@ import TransferAssignmentsModal from '../components/admin/TransferAssignmentsMod
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserShield, faSpinner, faExclamationTriangle, faUserPlus, faUsers, faUserGraduate, faEdit, faTrashAlt, faSearch, faCogs, faArchive, faUndo, faPlay, faPause } from '@fortawesome/free-solid-svg-icons';
 
-// Componente UserList (sem alterações)
+// Componente UserList com melhorias estéticas sutis mantendo funcionalidade
 const UserList = ({ users, onEditClick, onDeleteClick }) => {
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+        <thead className="bg-gradient-to-r from-gray-50 to-slate-50">
           <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome Completo</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Função</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data de Criação</th>
-            <th scope="col" className="relative px-6 py-3"><span className="sr-only">Ações</span></th>
+            <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Nome Completo</th>
+            <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Username</th>
+            <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Função</th>
+            <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Data de Criação</th>
+            <th scope="col" className="relative px-6 py-4 border-b border-gray-200"><span className="sr-only">Ações</span></th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {users.map((user) => (
-            <tr key={user.id} className="hover:bg-gray-50">
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.full_name}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.username}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm">
-                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.is_admin ? 'bg-green-100 text-green-800' : user.role === 'pai' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'}`}>
+        <tbody className="bg-white divide-y divide-gray-100">
+          {users.map((user, index) => (
+            <tr key={user.id} className={`hover:bg-gradient-to-r hover:from-gray-50 hover:to-slate-50 transition-all duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 h-8 w-8">
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                      user.is_admin ? 'bg-purple-100 text-purple-600' :
+                      user.role === 'pai' ? 'bg-amber-100 text-amber-600' :
+                      'bg-blue-100 text-blue-600'
+                    }`}>
+                      <FontAwesomeIcon icon={
+                        user.is_admin ? faUserShield :
+                        user.role === 'pai' ? faUsers :
+                        faUserGraduate
+                      } className="text-sm" />
+                    </div>
+                  </div>
+                  <div className="ml-3">
+                    <div className="text-sm font-medium text-gray-900">{user.full_name}</div>
+                  </div>
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  {user.username}
+                </span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  user.is_admin ? 'bg-purple-100 text-purple-800' :
+                  user.role === 'pai' ? 'bg-amber-100 text-amber-800' :
+                  'bg-blue-100 text-blue-800'
+                }`}>
                   {user.is_admin ? 'Admin' : user.role === 'pai' ? 'Pai/Mãe' : 'Terapeuta'}
                 </span>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(user.created_at)}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
+              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 {!user.is_admin && (
-                    <>
-                        <button onClick={() => onEditClick(user)} className="text-indigo-600 hover:text-indigo-900"> <FontAwesomeIcon icon={faEdit} className="mr-1 h-3 w-3" /> Editar </button>
-                        <button onClick={() => onDeleteClick(user)} className="text-red-600 hover:text-red-900"> <FontAwesomeIcon icon={faTrashAlt} className="mr-1 h-3 w-3" /> Apagar </button>
-                    </>
+                  <div className="flex items-center justify-end space-x-2">
+                    <button
+                      onClick={() => onEditClick(user)}
+                      className="text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 px-2 py-1 rounded-md transition-colors duration-200"
+                    >
+                      <FontAwesomeIcon icon={faEdit} className="mr-1 h-3 w-3" /> Editar
+                    </button>
+                    <button
+                      onClick={() => onDeleteClick(user)}
+                      className="text-red-600 hover:text-red-900 hover:bg-red-50 px-2 py-1 rounded-md transition-colors duration-200"
+                    >
+                      <FontAwesomeIcon icon={faTrashAlt} className="mr-1 h-3 w-3" /> Apagar
+                    </button>
+                  </div>
                 )}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      {users.length === 0 && ( <div className="text-center py-8 text-gray-500"><FontAwesomeIcon icon={faExclamationTriangle} className="text-2xl mb-2" /><p>Nenhum utilizador encontrado.</p></div> )}
+      {users.length === 0 && (
+        <div className="text-center py-12 bg-gradient-to-br from-gray-50 to-slate-50">
+          <FontAwesomeIcon icon={faExclamationTriangle} className="text-3xl text-gray-400 mb-3" />
+          <h3 className="text-sm font-medium text-gray-900 mb-1">Nenhum utilizador encontrado</h3>
+          <p className="text-sm text-gray-500">Não há utilizadores que correspondam aos critérios de busca.</p>
+        </div>
+      )}
     </div>
   );
 };
 
-// Componente PatientList (sem alterações)
+// Componente PatientList com melhorias estéticas sutis mantendo funcionalidade
 const PatientList = ({ patients, onManageClick, onDeleteClick }) => {
     const formatDate = (dateString) => {
         if (!dateString) return '-';
         return new Date(dateString).toLocaleDateString('pt-BR');
     };
+
+    const calculateAge = (dob) => {
+        if (!dob) return null;
+        const birthDate = new Date(dob);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age;
+    };
+
     return (
         <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-gradient-to-r from-green-50 to-emerald-50">
                     <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome do Paciente</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data de Nasc.</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diagnóstico</th>
-                        <th scope="col" className="relative px-6 py-3"><span className="sr-only">Ações</span></th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Paciente</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Idade</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Data de Nasc.</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Diagnóstico</th>
+                        <th scope="col" className="relative px-6 py-4 border-b border-gray-200"><span className="sr-only">Ações</span></th>
                     </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                    {patients.map((patient) => (
-                        <tr key={patient.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{patient.name}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(patient.dob)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{patient.diagnosis || 'Não informado'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
-                                <button onClick={() => onManageClick(patient)} className="text-indigo-600 hover:text-indigo-900">Gerir Terapeutas</button>
-                                <button onClick={() => onDeleteClick(patient)} className="text-red-600 hover:text-red-900"> <FontAwesomeIcon icon={faTrashAlt} className="mr-1 h-3 w-3" /> Apagar </button>
-                            </td>
-                        </tr>
-                    ))}
+                <tbody className="bg-white divide-y divide-gray-100">
+                    {patients.map((patient, index) => {
+                        const age = calculateAge(patient.dob);
+                        return (
+                            <tr key={patient.id} className={`hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 transition-all duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                        <div className="flex-shrink-0 h-8 w-8">
+                                            <div className="h-8 w-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                                                <FontAwesomeIcon icon={faUserGraduate} className="text-sm" />
+                                            </div>
+                                        </div>
+                                        <div className="ml-3">
+                                            <div className="text-sm font-medium text-gray-900">{patient.name}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    {age !== null ? (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            {age} anos
+                                        </span>
+                                    ) : (
+                                        <span className="text-sm text-gray-500">-</span>
+                                    )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(patient.dob)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        patient.diagnosis ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600'
+                                    }`}>
+                                        {patient.diagnosis || 'Não informado'}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <div className="flex items-center justify-end space-x-2">
+                                        <button
+                                            onClick={() => onManageClick(patient)}
+                                            className="text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 px-2 py-1 rounded-md transition-colors duration-200"
+                                        >
+                                            <FontAwesomeIcon icon={faCogs} className="mr-1 h-3 w-3" /> Gerir Terapeutas
+                                        </button>
+                                        <button
+                                            onClick={() => onDeleteClick(patient)}
+                                            className="text-red-600 hover:text-red-900 hover:bg-red-50 px-2 py-1 rounded-md transition-colors duration-200"
+                                        >
+                                            <FontAwesomeIcon icon={faTrashAlt} className="mr-1 h-3 w-3" /> Apagar
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })}
                 </tbody>
             </table>
-             {patients.length === 0 && ( <div className="text-center py-8 text-gray-500"><FontAwesomeIcon icon={faExclamationTriangle} className="text-2xl mb-2" /><p>Nenhum paciente encontrado nesta clínica.</p></div> )}
+            {patients.length === 0 && (
+                <div className="text-center py-12 bg-gradient-to-br from-green-50 to-emerald-50">
+                    <FontAwesomeIcon icon={faUserGraduate} className="text-3xl text-green-400 mb-3" />
+                    <h3 className="text-sm font-medium text-gray-900 mb-1">Nenhum paciente encontrado</h3>
+                    <p className="text-sm text-gray-500">Não há pacientes nesta clínica que correspondam aos critérios de busca.</p>
+                </div>
+            )}
         </div>
     );
 };
 
-// Novo Componente AssignmentList
+// Componente AssignmentList com melhorias estéticas sutis mantendo funcionalidade
 const AssignmentList = ({ assignments, onArchiveClick, onDeleteClick, onRestoreClick, onPauseClick, onResumeClick }) => {
     const formatDate = (dateString) => {
         if (!dateString) return '-';
@@ -104,113 +209,140 @@ const AssignmentList = ({ assignments, onArchiveClick, onDeleteClick, onRestoreC
     const getStatusBadge = (status) => {
         switch(status) {
             case 'active':
-                return <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Ativo</span>;
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Ativo</span>;
             case 'archived':
-                return <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Arquivado</span>;
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Arquivado</span>;
             case 'paused':
-                return <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">Pausado</span>;
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pausado</span>;
             default:
-                return <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600">Desconhecido</span>;
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Desconhecido</span>;
         }
     };
 
     const renderActions = (assignment) => {
+        const actions = [];
+
         switch(assignment.status) {
             case 'active':
-                return (
-                    <div className="flex space-x-2">
-                        <button
-                            onClick={() => onArchiveClick(assignment)}
-                            className="text-yellow-600 hover:text-yellow-900 text-sm"
-                            title="Arquivar programa"
-                        >
-                            <FontAwesomeIcon icon={faArchive} className="mr-1" /> Arquivar
-                        </button>
-                        <button
-                            onClick={() => onPauseClick(assignment)}
-                            className="text-blue-600 hover:text-blue-900 text-sm"
-                            title="Pausar programa"
-                        >
-                            <FontAwesomeIcon icon={faPause} className="mr-1" /> Pausar
-                        </button>
-                    </div>
+                actions.push(
+                    <button
+                        key="archive"
+                        onClick={() => onArchiveClick(assignment)}
+                        className="text-amber-600 hover:text-amber-900 hover:bg-amber-50 px-2 py-1 rounded-md text-xs transition-colors duration-200"
+                        title="Arquivar programa"
+                    >
+                        <FontAwesomeIcon icon={faArchive} className="mr-1" /> Arquivar
+                    </button>,
+                    <button
+                        key="pause"
+                        onClick={() => onPauseClick(assignment)}
+                        className="text-blue-600 hover:text-blue-900 hover:bg-blue-50 px-2 py-1 rounded-md text-xs transition-colors duration-200"
+                        title="Pausar programa"
+                    >
+                        <FontAwesomeIcon icon={faPause} className="mr-1" /> Pausar
+                    </button>
                 );
+                break;
             case 'archived':
-                return (
-                    <div className="flex space-x-2">
-                        <button
-                            onClick={() => onRestoreClick(assignment)}
-                            className="text-green-600 hover:text-green-900 text-sm"
-                            title="Restaurar programa"
-                        >
-                            <FontAwesomeIcon icon={faUndo} className="mr-1" /> Restaurar
-                        </button>
-                        <button
-                            onClick={() => onDeleteClick(assignment)}
-                            className="text-red-600 hover:text-red-900 text-sm"
-                            title="Deletar permanentemente"
-                        >
-                            <FontAwesomeIcon icon={faTrashAlt} className="mr-1" /> Deletar
-                        </button>
-                    </div>
+                actions.push(
+                    <button
+                        key="restore"
+                        onClick={() => onRestoreClick(assignment)}
+                        className="text-green-600 hover:text-green-900 hover:bg-green-50 px-2 py-1 rounded-md text-xs transition-colors duration-200"
+                        title="Restaurar programa"
+                    >
+                        <FontAwesomeIcon icon={faUndo} className="mr-1" /> Restaurar
+                    </button>,
+                    <button
+                        key="delete"
+                        onClick={() => onDeleteClick(assignment)}
+                        className="text-red-600 hover:text-red-900 hover:bg-red-50 px-2 py-1 rounded-md text-xs transition-colors duration-200"
+                        title="Deletar permanentemente"
+                    >
+                        <FontAwesomeIcon icon={faTrashAlt} className="mr-1" /> Deletar
+                    </button>
                 );
+                break;
             case 'paused':
-                return (
-                    <div className="flex space-x-2">
-                        <button
-                            onClick={() => onResumeClick(assignment)}
-                            className="text-green-600 hover:text-green-900 text-sm"
-                            title="Retomar programa"
-                        >
-                            <FontAwesomeIcon icon={faPlay} className="mr-1" /> Retomar
-                        </button>
-                        <button
-                            onClick={() => onArchiveClick(assignment)}
-                            className="text-yellow-600 hover:text-yellow-900 text-sm"
-                            title="Arquivar programa"
-                        >
-                            <FontAwesomeIcon icon={faArchive} className="mr-1" /> Arquivar
-                        </button>
-                    </div>
+                actions.push(
+                    <button
+                        key="resume"
+                        onClick={() => onResumeClick(assignment)}
+                        className="text-green-600 hover:text-green-900 hover:bg-green-50 px-2 py-1 rounded-md text-xs transition-colors duration-200"
+                        title="Retomar programa"
+                    >
+                        <FontAwesomeIcon icon={faPlay} className="mr-1" /> Retomar
+                    </button>,
+                    <button
+                        key="archive2"
+                        onClick={() => onArchiveClick(assignment)}
+                        className="text-amber-600 hover:text-amber-900 hover:bg-amber-50 px-2 py-1 rounded-md text-xs transition-colors duration-200"
+                        title="Arquivar programa"
+                    >
+                        <FontAwesomeIcon icon={faArchive} className="mr-1" /> Arquivar
+                    </button>
                 );
-            default:
-                return null;
+                break;
         }
+
+        return (
+            <div className="flex flex-col space-y-1">
+                {actions}
+            </div>
+        );
     };
 
     return (
         <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
                     <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Programa</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Terapeuta</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sessões</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Sessão</th>
-                        <th scope="col" className="relative px-6 py-3"><span className="sr-only">Ações</span></th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Paciente</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Programa</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Terapeuta</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Status</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Sessões</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Última Sessão</th>
+                        <th scope="col" className="relative px-6 py-4 border-b border-gray-200"><span className="sr-only">Ações</span></th>
                     </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                    {assignments.map((assignment) => (
-                        <tr key={assignment.assignment_id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{assignment.patient_name}</td>
-                            <td className="px-6 py-4 text-sm text-gray-900">
-                                <div className="max-w-xs truncate" title={assignment.program_name}>
-                                    {assignment.program_name}
+                <tbody className="bg-white divide-y divide-gray-100">
+                    {assignments.map((assignment, index) => (
+                        <tr key={assignment.assignment_id} className={`hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                    <div className="flex-shrink-0 h-8 w-8">
+                                        <div className="h-8 w-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                            <FontAwesomeIcon icon={faUserGraduate} className="text-sm" />
+                                        </div>
+                                    </div>
+                                    <div className="ml-3">
+                                        <div className="text-sm font-medium text-gray-900">{assignment.patient_name}</div>
+                                    </div>
                                 </div>
-                                {assignment.has_custom_trials && (
-                                    <div className="text-xs text-blue-600">Tentativas customizadas</div>
-                                )}
+                            </td>
+                            <td className="px-6 py-4">
+                                <div className="text-sm text-gray-900">
+                                    <div className="max-w-xs truncate font-medium" title={assignment.program_name}>
+                                        {assignment.program_name}
+                                    </div>
+                                    {assignment.has_custom_trials && (
+                                        <div className="text-xs text-blue-600 mt-1">
+                                            <FontAwesomeIcon icon={faCogs} className="mr-1" />
+                                            Tentativas customizadas
+                                        </div>
+                                    )}
+                                </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{assignment.therapist_name}</td>
                             <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(assignment.status)}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {assignment.total_sessions}
-                                {assignment.total_sessions > 0 && assignment.average_score > 0 && (
-                                    <div className="text-xs text-green-600">{assignment.average_score.toFixed(1)}% média</div>
-                                )}
+                                <div>
+                                    <div className="font-medium">{assignment.total_sessions}</div>
+                                    {assignment.total_sessions > 0 && assignment.average_score > 0 && (
+                                        <div className="text-xs text-green-600">{assignment.average_score.toFixed(1)}% média</div>
+                                    )}
+                                </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(assignment.last_session_date)}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -221,9 +353,10 @@ const AssignmentList = ({ assignments, onArchiveClick, onDeleteClick, onRestoreC
                 </tbody>
             </table>
             {assignments.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                    <FontAwesomeIcon icon={faExclamationTriangle} className="text-2xl mb-2" />
-                    <p>Nenhuma atribuição encontrada nesta clínica.</p>
+                <div className="text-center py-12 bg-gradient-to-br from-indigo-50 to-purple-50">
+                    <FontAwesomeIcon icon={faCogs} className="text-3xl text-indigo-400 mb-3" />
+                    <h3 className="text-sm font-medium text-gray-900 mb-1">Nenhuma atribuição encontrada</h3>
+                    <p className="text-sm text-gray-500">Não há programas atribuídos que correspondam aos critérios de busca.</p>
                 </div>
             )}
         </div>
