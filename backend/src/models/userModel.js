@@ -416,6 +416,23 @@ const UserModel = {
       },
       patients
     };
+  },
+
+  /**
+   * Busca todos os terapeutas (não-administradores) de uma clínica específica
+   * @param {number} clinicId - O ID da clínica
+   * @returns {Promise<Array<object>>} Uma lista de terapeutas não-admin
+   */
+  async findTherapistsByClinicId(clinicId) {
+    const query = `
+      SELECT
+        id, username, full_name, role, is_admin, created_at
+      FROM users
+      WHERE clinic_id = $1 AND role = 'terapeuta' AND is_admin = false
+      ORDER BY full_name ASC
+    `;
+    const { rows } = await pool.query(query, [clinicId]);
+    return rows;
   }
 };
 

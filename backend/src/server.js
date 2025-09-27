@@ -18,6 +18,12 @@ const contactRoutes = require('./routes/contactRoutes');
 const promptLevelRoutes = require('./routes/promptLevelRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
+// --- Novas rotas do sistema de agendamento ---
+const schedulingRoutes = require('./routes/schedulingRoutes');
+const therapistScheduleRoutes = require('./routes/therapistScheduleRoutes');
+
+// --- Job de detecção automática de sessões ---
+const { scheduleMaintenanceJob } = require('./jobs/sessionDetectionJob');
 
 // Importa o middleware de autenticação
 const { verifyToken } = require('./middleware/authMiddleware');
@@ -93,6 +99,11 @@ app.use('/api/contacts', verifyToken, verifyClinicStatus, contactRoutes);
 app.use('/api/prompt-levels', verifyToken, verifyClinicStatus, promptLevelRoutes);
 // --- Nova rota para relatórios de evolução ---
 app.use('/api/reports', verifyToken, verifyClinicStatus, reportRoutes);
+// --- Novas rotas do sistema de agendamento ---
+app.use('/api/admin/scheduling', verifyToken, verifyClinicStatus, schedulingRoutes);
+app.use('/api/therapist/schedule', verifyToken, verifyClinicStatus, therapistScheduleRoutes);
+// --- Rota geral para justificativas (admin + terapeuta) ---
+app.use('/api/scheduling', verifyToken, verifyClinicStatus, schedulingRoutes);
 // --- Nova rota para super admin (sem verificação de clínica) ---
 app.use('/api/super-admin', superAdminRoutes);
 
@@ -105,4 +116,22 @@ const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
+
+  // Inicializar job de detecção automática apenas em produção ou se explicitamente habilitado
+  if (process.env.NODE_ENV === 'production' || process.env.ENABLE_AUTO_DETECTION === 'true') {
+    console.log('[SCHEDULING] Iniciando job de detecção automática de sessões...');
+
+    scheduleMaintenanceJob({
+      intervalMinutes: parseInt(process.env.DETECTION_INTERVAL_MINUTES) || 30,
+      detectSessions: true,
+      markMissed: true,
+      sendNotifications: true,
+      lookbackHours: parseInt(process.env.DETECTION_LOOKBACK_HOURS) || 24,
+      missedAfterHours: parseInt(process.env.MISSED_AFTER_HOURS) || 2
+    });
+
+    console.log('[SCHEDULING] Job de detecção automática configurado');
+  } else {
+    console.log('[SCHEDULING] Job de detecção automática desabilitado (NODE_ENV != production e ENABLE_AUTO_DETECTION != true)');
+  }
 });

@@ -19,6 +19,9 @@ import AdminPage from './pages/AdminPage';
 import ProgramSessionPage from './pages/ProgramSessionPage';
 import ColleaguesPage from './pages/ColleaguesPage';
 import SuperAdminPage from './pages/SuperAdminPage';
+// --- IMPORTAÇÕES DO SISTEMA DE AGENDAMENTO ---
+import SchedulingPage from './pages/SchedulingPage';
+import TherapistSchedulePage from './pages/TherapistSchedulePage';
 
 
 // Componente de Guarda para Rotas de Admin
@@ -91,7 +94,21 @@ function App() {
 
                   <Route path="notes" element={<NotesPage />} />
                   <Route path="dashboard" element={<DashboardPage />} />
-                  
+
+                  {/* --- ROTAS DO SISTEMA DE AGENDAMENTO --- */}
+                  {/* Página de agendamento para administradores */}
+                  <Route
+                    path="scheduling"
+                    element={
+                      <AdminRoute>
+                        <SchedulingPage />
+                      </AdminRoute>
+                    }
+                  />
+
+                  {/* Página de agenda pessoal para terapeutas */}
+                  <Route path="my-schedule" element={<TherapistSchedulePage />} />
+
                 </Route>
 
                 {/* Redireciona qualquer outra rota para a página inicial */}

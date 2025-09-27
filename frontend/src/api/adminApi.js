@@ -181,3 +181,32 @@ export const fetchAllAssignments = async (token) => {
         throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível carregar a lista de atribuições.');
     }
 };
+
+/**
+ * Busca todos os terapeutas (não-administradores) da clínica
+ * @param {string} token - O token JWT do utilizador admin.
+ * @returns {Promise<Array>} - Lista de terapeutas não-admin.
+ */
+export const fetchTherapists = async (token) => {
+    try {
+        const response = await axios.get(`${API_URL}/admin/therapists`, getAuthHeaders(token));
+        return response.data.therapists || [];
+    } catch (error) {
+        throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível carregar a lista de terapeutas.');
+    }
+};
+
+/**
+ * Busca programas atribuídos de um paciente específico
+ * @param {string} token - O token JWT do utilizador admin.
+ * @param {number} patientId - ID do paciente.
+ * @returns {Promise<Array>} - Lista de programas do paciente.
+ */
+export const fetchPatientPrograms = async (token, patientId) => {
+    try {
+        const response = await axios.get(`${API_URL}/admin/patient/${patientId}/programs`, getAuthHeaders(token));
+        return response.data.programs || [];
+    } catch (error) {
+        throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível carregar os programas do paciente.');
+    }
+};

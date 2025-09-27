@@ -8,7 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import NotificationBadge from '../notifications/NotificationBadge';
 import NotificationPanel from '../notifications/NotificationPanel';
 import ProgressAlert from '../notifications/ProgressAlert';
-import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faUserShield } from '@fortawesome/free-solid-svg-icons';
+import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faUserShield, faCalendarAlt, faCalendarCheck } from '@fortawesome/free-solid-svg-icons';
 
 const Navbar = ({ toggleSidebar }) => {
   const { user, logout } = useAuth();
@@ -120,6 +120,19 @@ const Navbar = ({ toggleSidebar }) => {
         <NavLink to="/programs" className={() => getLinkClass("/programs")} onClick={onLinkClick}>
             <FontAwesomeIcon icon={faFolderOpen} className="fa-fw mr-2" /> Programas
         </NavLink>
+
+        {/* --- LINKS DO SISTEMA DE AGENDAMENTO --- */}
+        {user?.is_admin && (
+          <NavLink to="/scheduling" className={() => getLinkClass("/scheduling")} onClick={onLinkClick}>
+            <FontAwesomeIcon icon={faCalendarAlt} className="fa-fw mr-2" /> Agendamentos
+          </NavLink>
+        )}
+
+        {(user?.role === 'terapeuta' && !user?.is_admin) && (
+          <NavLink to="/my-schedule" className={() => getLinkClass("/my-schedule")} onClick={onLinkClick}>
+            <FontAwesomeIcon icon={faCalendarCheck} className="fa-fw mr-2" /> Minha Agenda
+          </NavLink>
+        )}
 
         <NavLink to="/notes" className={() => getLinkClass("/notes")} onClick={onLinkClick}><FontAwesomeIcon icon={faPencilAlt} className="fa-fw mr-2" /> Anotações</NavLink>
       </>

@@ -311,6 +311,68 @@ const AdminController = {
       next(error);
     }
   },
+
+  // === NOVOS ENDPOINTS PARA SISTEMA DE AGENDAMENTO ===
+
+  /**
+   * Busca todos os terapeutas (não-administradores) da clínica
+   * GET /api/admin/therapists
+   */
+  async getTherapists(req, res, next) {
+    try {
+      const { clinic_id } = req.user;
+      if (!clinic_id) {
+        return res.status(400).json({ errors: [{ msg: 'Administrador não está associado a uma clínica.' }] });
+      }
+
+      // Buscar apenas terapeutas que não são administradores
+      const therapists = await UserModel.findTherapistsByClinicId(clinic_id);
+
+      // Remover dados sensíveis
+      const safeTherapists = therapists.map(therapist => {
+        const { password_hash, ...safeTherapist } = therapist;
+        return safeTherapist;
+      });
+
+      res.status(200).json({ therapists: safeTherapists });
+    } catch (error) {
+      console.error('Erro ao buscar terapeutas:', error);
+      next(error);
+    }
+  },
+
+  /**
+   * Busca programas atribuídos de um paciente específico
+   * GET /api/admin/patient/:patientId/programs
+   */
+  async getPatientPrograms(req, res, next) {
+    try {
+      const { clinic_id } = req.user;
+      const { patientId } = req.params;
+
+      if (!clinic_id) {
+        return res.status(400).json({ errors: [{ msg: 'Administrador não está associado a uma clínica.' }] });
+      }
+
+      if (!patientId || isNaN(patientId)) {
+        return res.status(400).json({ errors: [{ msg: 'ID do paciente inválido.' }] });
+      }
+
+      // Verificar se o paciente pertence à clínica do admin
+      const patient = await PatientModel.findById(parseInt(patientId));
+      if (!patient || patient.clinic_id !== clinic_id) {
+        return res.status(404).json({ errors: [{ msg: 'Paciente não encontrado ou não pertence à sua clínica.' }] });
+      }
+
+      // Buscar programas atribuídos ao paciente
+      const programs = await AssignmentModel.findProgramsByPatientId(parseInt(patientId));
+
+      res.status(200).json({ programs });
+    } catch (error) {
+      console.error('Erro ao buscar programas do paciente:', error);
+      next(error);
+    }
+  },
 };
 
 module.exports = AdminController;

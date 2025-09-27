@@ -430,6 +430,51 @@ const Assignment = {
         `;
         const { rows } = await pool.query(query, [clinicId]);
         return rows;
+    },
+
+    /**
+     * Busca programas atribuídos de um paciente específico para o sistema de agendamento
+     * @param {number} patientId - O ID do paciente
+     * @returns {Promise<Array<object>>} Lista de programas atribuídos ao paciente
+     */
+    async findProgramsByPatientId(patientId) {
+        const query = `
+            SELECT
+                ppa.id AS assignment_id,
+                ppa.status,
+                p.id AS program_id,
+                p.name AS program_name,
+                ther.id AS therapist_id,
+                ther.full_name AS therapist_name
+            FROM
+                patient_program_assignments ppa
+            JOIN
+                programs p ON ppa.program_id = p.id
+            JOIN
+                users ther ON ppa.therapist_id = ther.id
+            WHERE
+                ppa.patient_id = $1
+            ORDER BY
+                p.name ASC;
+        `;
+        const { rows } = await pool.query(query, [patientId]);
+        return rows;
+    },
+
+    /**
+     * Verifica se um terapeuta existe e pertence à clínica especificada
+     * @param {number} therapistId - O ID do terapeuta
+     * @param {number} clinicId - O ID da clínica
+     * @returns {Promise<boolean>} True se o terapeuta tem acesso à clínica
+     */
+    async checkTherapistAccess(therapistId, clinicId) {
+        const query = `
+            SELECT COUNT(*) as count
+            FROM users
+            WHERE id = $1 AND clinic_id = $2 AND role IN ('therapist', 'admin', 'terapeuta', 'administrador')
+        `;
+        const { rows } = await pool.query(query, [therapistId, clinicId]);
+        return parseInt(rows[0].count) > 0;
     }
 };
 

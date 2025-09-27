@@ -123,4 +123,18 @@ router.put(
 // Nova rota para listar todas as atribuições da clínica
 router.get('/assignments', adminController.getAllAssignments);
 
+// --- ROTAS PARA SISTEMA DE AGENDAMENTO ---
+
+// Buscar todos os terapeutas (não-administradores) da clínica
+router.get('/therapists', adminController.getTherapists);
+
+// Buscar programas atribuídos de um paciente específico
+router.get(
+    '/patient/:patientId/programs',
+    [
+        param('patientId', 'ID do paciente inválido.').isInt()
+    ],
+    adminController.getPatientPrograms
+);
+
 module.exports = router;
