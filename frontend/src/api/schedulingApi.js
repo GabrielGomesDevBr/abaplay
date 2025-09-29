@@ -29,9 +29,11 @@ apiClient.interceptors.request.use(
 // --- APIS ADMINISTRATIVAS ---
 
 /**
- * Criar novo agendamento
+ * Criar novo agendamento - NOVA ESTRUTURA
  * @param {Object} appointmentData - Dados do agendamento
- * @param {number} appointmentData.assignment_id - ID da atribuição
+ * @param {number} appointmentData.patient_id - ID do paciente
+ * @param {number} appointmentData.therapist_id - ID do terapeuta
+ * @param {number} [appointmentData.discipline_id] - ID da disciplina (opcional)
  * @param {string} appointmentData.scheduled_date - Data (YYYY-MM-DD)
  * @param {string} appointmentData.scheduled_time - Horário (HH:MM)
  * @param {number} appointmentData.duration_minutes - Duração em minutos
@@ -43,16 +45,11 @@ export const createAppointment = async (appointmentData) => {
     // Garantir que a data está no formato correto antes de enviar
     const normalizedData = {
       ...appointmentData,
-      scheduled_date: normalizeDateYYYYMMDD(appointmentData.scheduled_date)
+      scheduled_date: normalizeDateYYYYMMDD(appointmentData.scheduled_date),
+      patient_id: parseInt(appointmentData.patient_id),
+      therapist_id: parseInt(appointmentData.therapist_id),
+      discipline_id: appointmentData.discipline_id ? parseInt(appointmentData.discipline_id) : null
     };
-
-    // Debug apenas em desenvolvimento
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[SCHEDULING-API] Enviando dados:', {
-        original: appointmentData.scheduled_date,
-        normalized: normalizedData.scheduled_date
-      });
-    }
 
     const response = await apiClient.post('/admin/scheduling/appointments', normalizedData);
     return response.data;
@@ -167,7 +164,7 @@ export const deleteAppointment = async (appointmentId) => {
  * @param {number} hours_after - Horas após o agendamento
  * @returns {Promise<Object>} Lista de agendamentos marcados
  */
-export const markMissedAppointments = async (hours_after = 1) => {
+export const markMissedAppointments = async (hours_after = 24) => {
   try {
     const response = await apiClient.post('/admin/scheduling/mark-missed', { hours_after });
     return response.data;
@@ -200,11 +197,11 @@ export const getClinicStatistics = async (start_date, end_date) => {
 // --- APIS GERAIS (ADMIN + TERAPEUTA) ---
 
 /**
- * Justificar ausência em agendamento
+ * Justificar ausência em agendamento - SISTEMA CATEGORIZADO
  * @param {number} appointmentId - ID do agendamento
  * @param {Object} justificationData - Dados da justificativa
- * @param {string} justificationData.missed_reason - Motivo da falta
- * @param {string} justificationData.missed_by - Quem faltou
+ * @param {string} justificationData.missed_reason_type - Categoria do motivo
+ * @param {string} [justificationData.missed_reason_description] - Descrição detalhada
  * @returns {Promise<Object>} Agendamento com justificativa
  */
 export const justifyAbsence = async (appointmentId, justificationData) => {
@@ -404,15 +401,19 @@ const normalizeDateYYYYMMDD = (dateInput) => {
 };
 
 /**
- * Validar dados de agendamento
+ * Validar dados de agendamento - NOVA ESTRUTURA
  * @param {Object} appointmentData - Dados do agendamento
  * @returns {Array} Lista de erros (vazia se válido)
  */
 export const validateAppointmentData = (appointmentData) => {
   const errors = [];
 
-  if (!appointmentData.assignment_id) {
-    errors.push('Paciente e programa são obrigatórios');
+  if (!appointmentData.patient_id) {
+    errors.push('Paciente é obrigatório');
+  }
+
+  if (!appointmentData.therapist_id) {
+    errors.push('Terapeuta é obrigatório');
   }
 
   if (!appointmentData.scheduled_date) {
@@ -471,6 +472,93 @@ export const checkTimeConflict = (existingAppointments, newAppointment, excludeI
   });
 };
 
+// === NOVAS FUNCIONALIDADES PARA SESSÕES ÓRFÃS ===
+
+/**
+ * Buscar sessões órfãs (realizadas sem agendamento prévio)
+ * @param {Object} filters - Filtros de busca
+ * @returns {Promise<Object>} Lista de sessões órfãs
+ */
+export const getOrphanSessions = async (filters = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (filters.start_date) params.append('start_date', filters.start_date);
+    if (filters.end_date) params.append('end_date', filters.end_date);
+    if (filters.limit) params.append('limit', filters.limit);
+    if (filters.offset) params.append('offset', filters.offset);
+
+    const response = await apiClient.get(`/admin/scheduling/orphan-sessions?${params.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.error('[SCHEDULING-API] Erro ao buscar sessões órfãs');
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao buscar sessões órfãs');
+  }
+};
+
+/**
+ * Executar detecção inteligente de sessões
+ * @param {Object} detectionData - Parâmetros da detecção
+ * @returns {Promise<Object>} Resultados da detecção
+ */
+export const runIntelligentDetection = async (detectionData) => {
+  try {
+    const response = await apiClient.post('/admin/scheduling/intelligent-detection', detectionData);
+    return response.data;
+  } catch (error) {
+    console.error('[SCHEDULING-API] Erro na detecção inteligente');
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro na detecção inteligente');
+  }
+};
+
+/**
+ * Criar agendamento retroativo para sessão órfã
+ * @param {number} sessionId - ID da sessão
+ * @param {Object} retroactiveData - Dados do agendamento retroativo
+ * @returns {Promise<Object>} Agendamento criado
+ */
+export const createRetroactiveAppointment = async (sessionId, retroactiveData) => {
+  try {
+    const response = await apiClient.post(`/admin/scheduling/create-retroactive/${sessionId}`, retroactiveData);
+    return response.data;
+  } catch (error) {
+    console.error('[SCHEDULING-API] Erro ao criar agendamento retroativo');
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao criar agendamento retroativo');
+  }
+};
+
+// === UTILIDADES PARA SISTEMA DE JUSTIFICATIVAS ===
+
+/**
+ * Obter categorias disponíveis para justificativas
+ * @returns {Array} Lista de categorias com valor e rótulo
+ */
+export const getMissedReasonCategories = () => {
+  return [
+    { value: 'patient_illness', label: 'Doença do Paciente' },
+    { value: 'patient_travel', label: 'Viagem do Paciente' },
+    { value: 'patient_no_show', label: 'Paciente Não Compareceu' },
+    { value: 'patient_family_emergency', label: 'Emergência Familiar (Paciente)' },
+    { value: 'therapist_illness', label: 'Doença do Terapeuta' },
+    { value: 'therapist_emergency', label: 'Emergência do Terapeuta' },
+    { value: 'therapist_training', label: 'Treinamento/Capacitação' },
+    { value: 'clinic_closure', label: 'Fechamento da Clínica' },
+    { value: 'equipment_failure', label: 'Falha de Equipamento' },
+    { value: 'scheduling_error', label: 'Erro de Agendamento' },
+    { value: 'other', label: 'Outros' }
+  ];
+};
+
+/**
+ * Obter rótulo de categoria de justificativa
+ * @param {string} category - Categoria da justificativa
+ * @returns {string} Rótulo em português
+ */
+export const getMissedReasonLabel = (category) => {
+  const categories = getMissedReasonCategories();
+  const found = categories.find(cat => cat.value === category);
+  return found ? found.label : category;
+};
+
 const schedulingApi = {
   createAppointment,
   getAppointments,
@@ -481,6 +569,13 @@ const schedulingApi = {
   markMissedAppointments,
   getClinicStatistics,
   justifyAbsence,
+  // Novas funcionalidades
+  getOrphanSessions,
+  runIntelligentDetection,
+  createRetroactiveAppointment,
+  getMissedReasonCategories,
+  getMissedReasonLabel,
+  // Utilitários
   formatDate,
   formatTime,
   getStatusBadgeClass,

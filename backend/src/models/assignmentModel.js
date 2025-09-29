@@ -238,17 +238,14 @@ const Assignment = {
                 u.id,
                 u.full_name AS name,
                 u.username,
-                u.role,
-                COUNT(ppa.id) as assignments_count
-            FROM 
-                patient_program_assignments ppa
-            JOIN 
-                users u ON ppa.therapist_id = u.id
-            WHERE 
-                ppa.patient_id = $1
-            GROUP BY 
-                u.id, u.full_name, u.username, u.role
-            ORDER BY 
+                u.role
+            FROM
+                therapist_patient_assignments tpa
+            JOIN
+                users u ON tpa.therapist_id = u.id
+            WHERE
+                tpa.patient_id = $1
+            ORDER BY
                 u.full_name;
         `;
         const { rows } = await pool.query(query, [patientId]);

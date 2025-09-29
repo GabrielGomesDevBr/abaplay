@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faCalendarAlt, faClock, faUser, faStethoscope, faStickyNote, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { validateAppointmentData, validateAppointmentDateTime } from '../../api/schedulingApi';
-import { fetchTherapists, fetchAllAdminPatients, fetchPatientPrograms } from '../../api/adminApi';
+import { fetchTherapists, fetchAllAdminPatients } from '../../api/adminApi';
+import { getDisciplineHierarchy } from '../../api/programApi';
 import { useAuth } from '../../context/AuthContext';
 import { ensureYYYYMMDD, debugDateFormat } from '../../utils/dateUtils';
 
@@ -21,20 +22,20 @@ const AppointmentForm = ({
 }) => {
   const { token } = useAuth();
 
-  // Estados dos dropdowns hierárquicos
+  // Estados dos dropdowns - NOVA ESTRUTURA
   const [therapists, setTherapists] = useState([]);
   const [patients, setPatients] = useState([]);
-  const [patientPrograms, setPatientPrograms] = useState([]);
+  const [disciplines, setDisciplines] = useState([]);
 
   // Estados de loading
   const [loadingTherapists, setLoadingTherapists] = useState(false);
   const [loadingPatients, setLoadingPatients] = useState(false);
-  const [loadingPrograms, setLoadingPrograms] = useState(false);
+  const [loadingDisciplines, setLoadingDisciplines] = useState(false);
 
   const [formData, setFormData] = useState({
-    therapist_id: '',
     patient_id: '',
-    assignment_id: '',
+    therapist_id: '',
+    discipline_id: '', // Opcional: específica ou sessão geral
     scheduled_date: '',
     scheduled_time: '',
     duration_minutes: 60,
@@ -44,23 +45,14 @@ const AppointmentForm = ({
   const [errors, setErrors] = useState([]);
   const [dateTimeWarning, setDateTimeWarning] = useState(null);
 
-  // Carregar terapeutas quando modal abre
+  // Carregar dados quando modal abre
   useEffect(() => {
     if (isOpen && token) {
       loadTherapists();
       loadPatients();
+      loadDisciplines();
     }
   }, [isOpen, token]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Carregar programas quando paciente é selecionado
-  useEffect(() => {
-    if (formData.patient_id && token) {
-      loadPatientPrograms(formData.patient_id);
-    } else {
-      setPatientPrograms([]);
-      setFormData(prev => ({ ...prev, assignment_id: '' }));
-    }
-  }, [formData.patient_id, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Funções de carregamento
   const loadTherapists = async () => {
@@ -89,16 +81,27 @@ const AppointmentForm = ({
     }
   };
 
-  const loadPatientPrograms = async (patientId) => {
+  const loadDisciplines = async () => {
     try {
-      setLoadingPrograms(true);
-      const programsData = await fetchPatientPrograms(token, patientId);
-      setPatientPrograms(programsData);
+      setLoadingDisciplines(true);
+      const disciplinesData = await getDisciplineHierarchy();
+
+      // Extrair disciplinas do objeto hierárquico
+      let disciplinesList = [];
+      if (disciplinesData && typeof disciplinesData === 'object') {
+        disciplinesList = Object.keys(disciplinesData).map(disciplineName => ({
+          id: disciplinesData[disciplineName].id,
+          name: disciplineName
+        }));
+      }
+
+      setDisciplines(disciplinesList);
     } catch (error) {
-      console.error('Erro ao carregar programas do paciente');
-      setErrors(['Erro ao carregar programas do paciente']);
+      console.error('Erro ao carregar disciplinas');
+      setErrors(['Erro ao carregar lista de disciplinas']);
+      setDisciplines([]); // Garantir que seja array mesmo em caso de erro
     } finally {
-      setLoadingPrograms(false);
+      setLoadingDisciplines(false);
     }
   };
 
@@ -107,9 +110,9 @@ const AppointmentForm = ({
     if (isOpen) {
       if (editingAppointment) {
         setFormData({
-          therapist_id: editingAppointment.therapist_id || '',
           patient_id: editingAppointment.patient_id || '',
-          assignment_id: editingAppointment.assignment_id || '',
+          therapist_id: editingAppointment.therapist_id || '',
+          discipline_id: editingAppointment.discipline_id || '',
           scheduled_date: ensureYYYYMMDD(editingAppointment.scheduled_date) || '',
           scheduled_time: editingAppointment.scheduled_time || '',
           duration_minutes: editingAppointment.duration_minutes || 60,
@@ -117,9 +120,9 @@ const AppointmentForm = ({
         });
       } else {
         setFormData({
-          therapist_id: '',
           patient_id: '',
-          assignment_id: '',
+          therapist_id: '',
+          discipline_id: '',
           scheduled_date: '',
           scheduled_time: '',
           duration_minutes: 60,
@@ -151,10 +154,7 @@ const AppointmentForm = ({
       setErrors([]);
     }
 
-    // Se mudou paciente, limpar seleção de programa
-    if (name === 'patient_id') {
-      setFormData(prev => ({ ...prev, assignment_id: '' }));
-    }
+    // Não há mais dependência hierárquica entre os campos na nova estrutura
 
     // Validação em tempo real para data/hora
     if ((name === 'scheduled_date' || name === 'scheduled_time') &&
@@ -184,24 +184,18 @@ const AppointmentForm = ({
       return;
     }
 
-    // Submeter dados com data garantidamente no formato correto
+    // Submeter dados com data garantidamente no formato correto - NOVA ESTRUTURA
     const submitData = {
       ...formData,
-      assignment_id: parseInt(formData.assignment_id),
+      patient_id: parseInt(formData.patient_id),
+      therapist_id: parseInt(formData.therapist_id),
+      discipline_id: formData.discipline_id ? parseInt(formData.discipline_id) : null,
       duration_minutes: parseInt(formData.duration_minutes),
       scheduled_date: ensureYYYYMMDD(formData.scheduled_date)
     };
 
-    // Debug detalhado dos dados enviados
-    console.log('[APPOINTMENT-FORM] Dados enviados:', {
-      'formData': formData,
-      'submitData': submitData,
-      'therapist_id': submitData.therapist_id,
-      'patient_id': submitData.patient_id,
-      'assignment_id': submitData.assignment_id,
-      'scheduled_date': submitData.scheduled_date,
-      'scheduled_time': submitData.scheduled_time
-    });
+    // Dados enviados (novo formato)
+    // console.log('[APPOINTMENT-FORM] Dados enviados:', submitData);
 
     onSubmit(submitData);
   };
@@ -257,34 +251,9 @@ const AppointmentForm = ({
             </div>
           )}
 
-          {/* Dropdown Hierárquico: Terapeuta → Paciente → Programa */}
+          {/* Nova estrutura: Paciente → Terapeuta → Disciplina (opcional) */}
           <div className="space-y-6 mb-6">
-            {/* 1. Seleção de Terapeuta */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <FontAwesomeIcon icon={faStethoscope} className="mr-2 text-gray-400" />
-                Terapeuta *
-              </label>
-              <select
-                name="therapist_id"
-                value={formData.therapist_id}
-                onChange={handleInputChange}
-                required
-                disabled={isLoading || loadingTherapists}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">
-                  {loadingTherapists ? 'Carregando terapeutas...' : 'Selecione um terapeuta'}
-                </option>
-                {therapists.map((therapist) => (
-                  <option key={therapist.id} value={therapist.id}>
-                    {therapist.full_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 2. Seleção de Paciente */}
+            {/* 1. Seleção de Paciente */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <FontAwesomeIcon icon={faUser} className="mr-2 text-gray-400" />
@@ -309,39 +278,60 @@ const AppointmentForm = ({
               </select>
             </div>
 
-            {/* 3. Seleção de Programa */}
+            {/* 2. Seleção de Terapeuta */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                <FontAwesomeIcon icon={faStickyNote} className="mr-2 text-gray-400" />
-                Programa *
+                <FontAwesomeIcon icon={faStethoscope} className="mr-2 text-gray-400" />
+                Terapeuta *
               </label>
               <select
-                name="assignment_id"
-                value={formData.assignment_id}
+                name="therapist_id"
+                value={formData.therapist_id}
                 onChange={handleInputChange}
                 required
-                disabled={isLoading || loadingPrograms || !formData.patient_id}
+                disabled={isLoading || loadingTherapists}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 <option value="">
-                  {!formData.patient_id
-                    ? 'Primeiro selecione um paciente'
-                    : loadingPrograms
-                      ? 'Carregando programas...'
-                      : 'Selecione um programa'
-                  }
+                  {loadingTherapists ? 'Carregando terapeutas...' : 'Selecione um terapeuta'}
                 </option>
-                {patientPrograms.map((program) => (
-                  <option key={program.assignment_id} value={program.assignment_id}>
-                    {program.program_name}
-                    {program.status !== 'active' && ` (${program.status})`}
+                {therapists.map((therapist) => (
+                  <option key={therapist.id} value={therapist.id}>
+                    {therapist.full_name}
                   </option>
                 ))}
               </select>
-              {loadingPrograms && (
+            </div>
+
+            {/* 3. Seleção de Disciplina (Opcional) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <FontAwesomeIcon icon={faStickyNote} className="mr-2 text-gray-400" />
+                Área de Intervenção <span className="text-gray-500 text-sm">(opcional)</span>
+              </label>
+              <select
+                name="discipline_id"
+                value={formData.discipline_id}
+                onChange={handleInputChange}
+                disabled={isLoading || loadingDisciplines}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <option value="">
+                  {loadingDisciplines ? 'Carregando disciplinas...' : 'Sessão geral (todos os programas)'}
+                </option>
+                {Array.isArray(disciplines) && disciplines.map((discipline) => (
+                  <option key={discipline.id} value={discipline.id}>
+                    {discipline.name}
+                  </option>
+                ))}
+              </select>
+              <div className="mt-1 text-xs text-gray-500">
+                💡 Deixe em branco para sessão geral que pode trabalhar qualquer programa do paciente
+              </div>
+              {loadingDisciplines && (
                 <div className="mt-2 flex items-center text-sm text-gray-500">
                   <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
-                  Carregando programas do paciente...
+                  Carregando áreas de intervenção...
                 </div>
               )}
             </div>

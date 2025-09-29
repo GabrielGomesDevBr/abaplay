@@ -185,7 +185,7 @@ const AppointmentDetailsModal = ({
                   Editar
                 </button>
               )}
-              {canDelete && (isScheduled || isCancelled) && onDelete && (
+              {canDelete && (isScheduled || isCancelled || isMissed || isCompleted) && onDelete && (
                 <button
                   onClick={() => onDelete(appointment)}
                   className="px-3 py-2 text-sm font-medium text-red-700 bg-red-100 border border-red-300 rounded-md hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center"
@@ -259,17 +259,28 @@ const AppointmentDetailsModal = ({
           <div className="bg-purple-50 p-4 rounded-lg mb-6">
             <h3 className="text-sm font-medium text-purple-800 mb-3 flex items-center">
               <FontAwesomeIcon icon={faStethoscope} className="mr-2" />
-              Programa de Intervenção
+              Área de Intervenção
             </h3>
             <div className="space-y-2">
               <div className="text-sm">
-                <span className="font-medium text-purple-700">Programa:</span>
-                <span className="ml-2 text-purple-600">{appointment.program_name}</span>
+                <span className="font-medium text-purple-700">Área:</span>
+                <span className="ml-2 text-purple-600">{appointment.discipline_name || 'Sessão Geral'}</span>
               </div>
-              {appointment.discipline_name && (
+              {appointment.active_programs_count > 0 && (
                 <div className="text-sm">
-                  <span className="font-medium text-purple-700">Disciplina:</span>
-                  <span className="ml-2 text-purple-600">{appointment.discipline_name}</span>
+                  <span className="font-medium text-purple-700">Programas Ativos:</span>
+                  <span className="ml-2 text-purple-600">{appointment.active_programs_count} programa(s)</span>
+                </div>
+              )}
+              {appointment.available_programs && (
+                <div className="text-sm">
+                  <span className="font-medium text-purple-700">Programas Disponíveis:</span>
+                  <div className="ml-2 text-purple-600 text-xs mt-1">
+                    {appointment.available_programs.length > 100
+                      ? appointment.available_programs.substring(0, 100) + '...'
+                      : appointment.available_programs
+                    }
+                  </div>
                 </div>
               )}
               {appointment.area_name && (

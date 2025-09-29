@@ -1,20 +1,30 @@
-# 📅 SISTEMA DE AGENDAMENTO ABAPLAY - ESPECIFICAÇÃO COMPLETA
+# 📅 SISTEMA DE AGENDAMENTO ABAPLAY - ESPECIFICAÇÃO COMPLETA V2
 
 ## 📋 **RESUMO EXECUTIVO**
 
-Este documento detalha a implementação completa do Sistema de Agendamento para o ABAplay, incluindo todas as fases (MVP, Melhorias e Avançado). O sistema permite agendamento de sessões, monitoramento de comparecimento, estatísticas de performance e auditoria completa.
+Este documento detalha a implementação corrigida e aprimorada do Sistema de Agendamento para o ABAplay. **REVISÃO CRÍTICA**: Corrige conceito fundamental de agendamento baseado em sessão de trabalho vs programa específico, alinhando com a prática real da terapia ABA.
 
-**Status**: ✅ FASE 1 - MVP IMPLEMENTADA E FUNCIONAL (Setembro 2025)
-**Fase Atual**: Fase 1 completa - Sistema básico de agendamento operacional
-**Próximas Fases**: Fases 2 e 3 aguardando implementação
-**Complexidade**: Média-Baixa
-**Risco**: Mínimo (zero breaking changes)
+**Status**: 🔄 REFORMULAÇÃO NECESSÁRIA - Correção conceitual crítica identificada
+**Problema Identificado**: Sistema atual agenda por programa específico, mas ABA trabalha múltiplos programas por sessão
+**Solução Proposta**: Agendamento por sessão de trabalho (paciente + terapeuta + disciplina opcional)
+**Complexidade**: Média-Alta (requer migração estrutural)
+**Risco**: Médio (requer migração de dados e atualização conceitual)
 
 ---
 
-## 🚀 **STATUS ATUAL DA IMPLEMENTAÇÃO** *(Atualizado em 27/09/2025)*
+## 🚀 **ANÁLISE CRÍTICA E REFORMULAÇÃO** *(Atualizado em 28/09/2025)*
 
-### **✅ FASE 1 - MVP COMPLETAMENTE IMPLEMENTADA (100% FUNCIONAL)**
+### **⚠️ PROBLEMA CONCEITUAL IDENTIFICADO**
+
+**Erro Fundamental**: O sistema atual agenda baseado em `assignment_id` (programa específico), mas a prática ABA real trabalha múltiplos programas simultaneamente numa única sessão.
+
+**Consequências do Erro**:
+- Para 1 paciente com 3 programas = 3 agendamentos separados ❌
+- Detecção automática só marca 1 agendamento como realizado ❌
+- Interface administrativa confusa e não intuitiva ❌
+- Estatísticas incorretas e fragmentadas ❌
+
+### **✅ SOLUÇÃO CORRIGIDA - AGENDAMENTO POR SESSÃO DE TRABALHO**
 
 #### **📱 Frontend Implementado:**
 - ✅ **SchedulingPage** (`/scheduling`) - ⭐ **PÁGINA ADMIN DE AGENDAMENTO COMPLETA**
@@ -168,15 +178,25 @@ Este documento detalha a implementação completa do Sistema de Agendamento para
 
 ### **🗃️ Estrutura de Banco de Dados**
 
-#### **1. Tabela Principal: `scheduled_sessions`**
+#### **1. Tabela Principal: `scheduled_sessions` (NOVA ESTRUTURA CORRIGIDA)**
 ```sql
 CREATE TABLE scheduled_sessions (
     id SERIAL PRIMARY KEY,
-    assignment_id INTEGER NOT NULL REFERENCES patient_program_assignments(id) ON DELETE CASCADE,
+    patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    therapist_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    discipline_id INTEGER REFERENCES disciplines(id), -- OPCIONAL: filtro por área (Psicologia, Fonoaudiologia, etc.)
     scheduled_date DATE NOT NULL,
     scheduled_time TIME NOT NULL,
     duration_minutes INTEGER DEFAULT 60,
     status VARCHAR(20) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'missed', 'cancelled')),
+
+    -- NOVO: Sistema de justificativas para faltas
+    missed_reason_type VARCHAR(50) CHECK (missed_reason_type IN (
+        'patient_illness', 'patient_travel', 'patient_no_show', 'patient_family_emergency',
+        'therapist_illness', 'therapist_emergency', 'therapist_training',
+        'clinic_closure', 'equipment_failure', 'scheduling_error', 'other'
+    )),
+    missed_reason_description TEXT, -- Campo livre para detalhes adicionais
 
     -- Recorrência (Fase 3)
     is_recurring BOOLEAN DEFAULT FALSE,
@@ -832,7 +852,151 @@ O Sistema de Agendamento representa uma evolução significativa do ABAplay, adi
 
 ---
 
-**Documento criado em**: 26/09/2025
-**Versão**: 1.0
-**Status**: ✅ Aprovado para Implementação
-**Próximo passo**: Iniciar Fase 1 - MVP
+---
+
+## 🚨 **ADENDOS CRÍTICOS - SISTEMA DE JUSTIFICATIVAS**
+
+### **Sistema de Justificativas Categorizadas para Faltas**
+
+Quando um agendamento é marcado como `missed`, o sistema deve obrigatoriamente solicitar justificativa:
+
+#### **Opções de Justificativa (SelectBox):**
+- **Relacionadas ao Paciente:**
+  - `patient_illness` - "Paciente doente"
+  - `patient_travel` - "Paciente viajando"
+  - `patient_no_show` - "Paciente não compareceu"
+  - `patient_family_emergency` - "Emergência familiar"
+
+- **Relacionadas ao Terapeuta:**
+  - `therapist_illness` - "Terapeuta doente"
+  - `therapist_emergency` - "Emergência do terapeuta"
+  - `therapist_training` - "Terapeuta em treinamento"
+
+- **Relacionadas à Clínica:**
+  - `clinic_closure` - "Clínica fechada"
+  - `equipment_failure` - "Falha de equipamento"
+  - `scheduling_error` - "Erro de agendamento"
+
+- **Outros:**
+  - `other` - "Outros motivos"
+
+#### **Campo de Descrição Adicional:**
+- Campo de texto livre obrigatório para complementar a justificativa
+- Máximo 500 caracteres
+- Utilizado para detalhes específicos do motivo
+
+#### **Interface de Justificativa:**
+```javascript
+// Modal de justificativa
+<JustificationModal>
+  <SelectBox options={justificationTypes} required />
+  <TextArea
+    placeholder="Descreva os detalhes do motivo da falta..."
+    maxLength={500}
+    required
+  />
+  <Button>Confirmar Justificativa</Button>
+</JustificationModal>
+```
+
+---
+
+## 🔄 **DETECÇÃO DE SESSÕES POR DISCIPLINA**
+
+### **Cenários de Detecção por Disciplina:**
+
+#### **Agendamento Genérico (discipline_id = NULL):**
+- **Significado**: Sessão geral que pode trabalhar qualquer área
+- **Detecção**: Qualquer programa registrado do paciente+terapeuta
+- **Exemplo**: "Sessão ABA geral - trabalhar conforme necessidade"
+
+#### **Agendamento Específico (discipline_id = Psicologia):**
+- **Significado**: Sessão focada em programas de psicologia
+- **Detecção**: Apenas programas de psicologia são considerados
+- **Exemplo**: "Sessão de psicologia - foco em comportamento"
+
+#### **Lógica de Detecção SQL:**
+```sql
+-- Busca sessões realizadas
+WHERE ppa.patient_id = agendamento.patient_id
+AND ppa.therapist_id = agendamento.therapist_id
+AND ppp.session_date = agendamento.scheduled_date
+AND ppp.created_at BETWEEN janela_inicio AND janela_fim
+-- Filtro por disciplina apenas se especificada
+AND (agendamento.discipline_id IS NULL OR ppa.program_discipline_id = agendamento.discipline_id)
+```
+
+---
+
+## 🔄 **MIGRAÇÃO CRÍTICA E DEPLOY**
+
+### **⚠️ PROCEDIMENTO DE MIGRAÇÃO SEGURA**
+```sql
+-- FASE 1: Backup e preparação
+BEGIN;
+-- Backup completo
+CREATE TABLE scheduled_sessions_backup AS SELECT * FROM scheduled_sessions;
+
+-- FASE 2: Criação da nova estrutura
+DROP TABLE IF EXISTS scheduled_sessions_new;
+CREATE TABLE scheduled_sessions_new (
+    id SERIAL PRIMARY KEY,
+    patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    therapist_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    discipline_id INTEGER REFERENCES disciplines(id),
+    scheduled_date DATE NOT NULL,
+    scheduled_time TIME NOT NULL,
+    duration_minutes INTEGER DEFAULT 60,
+    status VARCHAR(20) DEFAULT 'scheduled',
+    missed_reason_type VARCHAR(50),
+    missed_reason_description TEXT,
+    -- outros campos...
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- FASE 3: Migração inteligente dos dados
+INSERT INTO scheduled_sessions_new (
+    patient_id, therapist_id, scheduled_date, scheduled_time,
+    duration_minutes, status, created_by, notes, created_at
+)
+SELECT DISTINCT
+    ppa.patient_id,
+    ppa.therapist_id,
+    ss.scheduled_date,
+    ss.scheduled_time,
+    ss.duration_minutes,
+    ss.status,
+    ss.created_by,
+    'Migrado de assignment_id: ' || ss.assignment_id || '. ' || COALESCE(ss.notes, ''),
+    ss.created_at
+FROM scheduled_sessions ss
+JOIN patient_program_assignments ppa ON ss.assignment_id = ppa.id
+ORDER BY ss.created_at;
+
+-- FASE 4: Validação e substituição
+-- [Validações de integridade]
+-- DROP TABLE scheduled_sessions;
+-- ALTER TABLE scheduled_sessions_new RENAME TO scheduled_sessions;
+COMMIT;
+```
+
+### **📋 Checklist de Deploy CRÍTICO**
+- [ ] **OBRIGATÓRIO**: Backup completo do banco de dados
+- [ ] **CRÍTICO**: Validar migração em ambiente de teste
+- [ ] **OBRIGATÓRIO**: Executar migração estrutural com rollback preparado
+- [ ] **CRÍTICO**: Validar integridade dos dados migrados
+- [ ] Deploy do backend reformulado
+- [ ] Deploy do frontend com interface corrigida
+- [ ] **CRÍTICO**: Ativar novo job de detecção inteligente
+- [ ] **CRÍTICO**: Desativar job antigo de detecção
+- [ ] Configurar monitoramento de sessões órfãs
+- [ ] **OBRIGATÓRIO**: Testes extensivos da nova lógica
+- [ ] **OBRIGATÓRIO**: Treinamento da equipe no novo conceito
+- [ ] Notificar sobre mudanças conceituais importantes
+
+---
+
+**Documento atualizado em**: 28/09/2025
+**Versão**: 2.0 - REFORMULAÇÃO CRÍTICA
+**Status**: 🔄 REFORMULAÇÃO OBRIGATÓRIA IDENTIFICADA
+**Próximo passo**: Executar migração estrutural e reformulação conceitual

@@ -48,10 +48,30 @@ export class AppointmentReportGenerator {
     const appointments = appointmentsResponse.appointments || [];
 
     // Buscar estatísticas da clínica
-    const statistics = await getClinicStatistics(
+    const statisticsResponse = await getClinicStatistics(
       config.period.startDate,
       config.period.endDate
     );
+
+    // Mapear para o formato esperado pelo relatório
+    const statistics = statisticsResponse.clinic_statistics ? {
+      total_appointments: statisticsResponse.clinic_statistics.total_appointments || 0,
+      completed_appointments: statisticsResponse.clinic_statistics.completed || 0,
+      missed_appointments: statisticsResponse.clinic_statistics.missed || 0,
+      cancelled_appointments: statisticsResponse.clinic_statistics.cancelled || 0,
+      scheduled_appointments: statisticsResponse.clinic_statistics.scheduled || 0,
+      attendance_rate: statisticsResponse.clinic_statistics.attendance_rate || 0,
+      completion_rate: statisticsResponse.clinic_statistics.completion_rate || 0
+    } : {
+      total_appointments: 0,
+      completed_appointments: 0,
+      missed_appointments: 0,
+      cancelled_appointments: 0,
+      scheduled_appointments: 0,
+      attendance_rate: 0,
+      completion_rate: 0
+    };
+
 
     return {
       appointments,
@@ -96,7 +116,7 @@ export class AppointmentReportGenerator {
 
     // Agenda Detalhada
     yPosition = checkAndAddPage(yPosition);
-    this.addDetailedSchedule(doc, appointments, yPosition);
+    yPosition = this.addDetailedSchedule(doc, appointments, yPosition);
 
     // Footer final
     this.addReportFooter(doc);
@@ -114,32 +134,39 @@ export class AppointmentReportGenerator {
   generateIndividualReport(data, config) {
     const doc = new jsPDF('portrait', 'mm', 'a4');
     const { appointments } = data;
+    const margin = 15;
 
     // Encontrar nome do terapeuta
     const therapistName = appointments.length > 0 ?
       appointments[0].therapist_name : 'Terapeuta Não Encontrado';
 
     // Header do relatório
-    this.addReportHeader(doc, `RELATÓRIO INDIVIDUAL - ${therapistName.toUpperCase()}`, config);
+    let yPosition = this.addReportHeader(doc, `RELATÓRIO INDIVIDUAL - ${therapistName.toUpperCase()}`, config);
 
-    let yPosition = 60;
+    // Função para verificar e adicionar nova página (mesmo padrão do relatório geral)
+    const checkAndAddPage = (currentY, requiredHeight = 30) => {
+      if (currentY > doc.internal.pageSize.getHeight() - margin - requiredHeight) {
+        this.addReportFooter(doc);
+        doc.addPage();
+        return margin + 10;
+      }
+      return currentY;
+    };
 
     // Performance Individual
+    yPosition = checkAndAddPage(yPosition);
     yPosition = this.addIndividualPerformance(doc, appointments, yPosition);
 
     // Detalhamento Estatístico
+    yPosition = checkAndAddPage(yPosition);
     yPosition = this.addStatisticalDetails(doc, appointments, yPosition);
 
-    // Nova página se necessário
-    if (yPosition > 200) {
-      doc.addPage();
-      yPosition = 20;
-    }
-
     // Agenda Detalhada Individual
+    yPosition = checkAndAddPage(yPosition);
     yPosition = this.addIndividualDetailedSchedule(doc, appointments, yPosition);
 
     // Resumo para Pagamento
+    yPosition = checkAndAddPage(yPosition);
     yPosition = this.addPaymentSummary(doc, appointments, config, yPosition);
 
     // Footer
@@ -153,125 +180,170 @@ export class AppointmentReportGenerator {
   }
 
   /**
-   * Adiciona header padrão do relatório (seguindo padrão dos PDFs existentes)
+   * Adiciona header simples seguindo padrão dos relatórios existentes
    */
   addReportHeader(doc, title, config) {
     const margin = 15;
     const pageWidth = doc.internal.pageSize.getWidth();
+    let y = margin + 10;
 
-    // Título principal
+    // Título principal centralizado
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text(title, pageWidth / 2, margin + 10, { align: 'center' });
+    doc.text(title, pageWidth / 2, y, { align: 'center' });
+    y += 8;
 
-    // Informações do período
+    // Informações básicas
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Periodo: ${this.formatDate(config.period.startDate)} a ${this.formatDate(config.period.endDate)}`, margin, margin + 20);
+    doc.text(`Período: ${this.formatDate(config.period.startDate)} a ${this.formatDate(config.period.endDate)}`, margin, y);
+    doc.text(`Gerado em: ${this.formatDate(new Date().toISOString())}`, pageWidth - margin, y, { align: 'right' });
+    y += 6;
 
     const scopeText = config.scope.type === 'all' ?
       'Escopo: Todos os Terapeutas' :
       'Escopo: Terapeuta Individual';
-    doc.text(scopeText, margin, margin + 26);
+    doc.text(scopeText, margin, y);
+    y += 10;
 
-    // Data de geração
-    doc.text(`Gerado em: ${this.formatDate(new Date().toISOString())}`, pageWidth - margin, margin + 20, { align: 'right' });
-
-    // Linha separadora
-    doc.setDrawColor(0, 0, 0);
+    // Linha separadora simples
     doc.setLineWidth(0.2);
-    doc.line(margin, margin + 35, pageWidth - margin, margin + 35);
+    doc.line(margin, y, pageWidth - margin, y);
 
-    return margin + 45; // Retorna posição Y após header
+    return y + 8;
   }
 
   /**
-   * Adiciona resumo executivo (seguindo padrão dos PDFs existentes)
+   * Adiciona resumo executivo seguindo padrão dos relatórios existentes
    */
   addExecutiveSummary(doc, statistics, yPosition) {
     const margin = 15;
+    const pageWidth = doc.internal.pageSize.getWidth();
 
+    // Título da seção com cor azul
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('RESUMO EXECUTIVO', margin, yPosition);
+    doc.setFillColor(240, 248, 255); // Azul muito claro
+    doc.rect(margin, yPosition - 4, pageWidth - (margin * 2), 7, 'F');
+    doc.setTextColor(25, 118, 210); // Azul escuro no texto
+    doc.text('RESUMO EXECUTIVO', margin + 2, yPosition);
+    doc.setTextColor(0, 0, 0); // Reset para preto
 
-    yPosition += 8;
+    yPosition += 12;
 
     const summaryData = [
       ['Total de Agendamentos', `${statistics.total_appointments || 0}`],
-      ['Sessoes Realizadas', `${statistics.completed_appointments || 0} (${this.calculatePercentage(statistics.completed_appointments, statistics.total_appointments)}%)`],
-      ['Faltas', `${statistics.missed_appointments || 0} (${this.calculatePercentage(statistics.missed_appointments, statistics.total_appointments)}%)`],
+      ['Sessões Realizadas', `${statistics.completed_appointments || 0} (${this.calculatePercentage(statistics.completed_appointments, statistics.total_appointments)}%)`],
+      ['Faltas Registradas', `${statistics.missed_appointments || 0} (${this.calculatePercentage(statistics.missed_appointments, statistics.total_appointments)}%)`],
       ['Cancelamentos', `${statistics.cancelled_appointments || 0} (${this.calculatePercentage(statistics.cancelled_appointments, statistics.total_appointments)}%)`],
       ['Taxa de Comparecimento', `${statistics.attendance_rate || 0}%`]
     ];
 
-    // Usar autoTable para formatação consistente
     doc.autoTable({
       startY: yPosition,
-      head: [['Métrica', 'Valor']],
+      head: [['Indicador', 'Resultado']],
       body: summaryData,
-      theme: 'plain',
+      theme: 'grid',
       headStyles: {
-        fillColor: [240, 240, 240],
-        textColor: [0, 0, 0],
-        fontStyle: 'bold'
+        fillColor: [25, 118, 210], // Azul para resumo executivo
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 10,
+        halign: 'center'
       },
-      styles: { fontSize: 9 },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [60, 60, 60],
+        lineColor: [200, 200, 200],
+        lineWidth: 0.5
+      },
       columnStyles: {
-        0: { cellWidth: 80 },
-        1: { cellWidth: 60, halign: 'center' }
+        0: {
+          cellWidth: 110,
+          halign: 'left',
+          fontStyle: 'normal',
+          textColor: [70, 70, 70]
+        },
+        1: {
+          cellWidth: 70,
+          halign: 'center',
+          fontStyle: 'bold',
+          textColor: [25, 118, 210] // Azul nos números
+        }
       },
-      margin: { left: margin }
+      margin: { left: margin, right: margin }
     });
 
-    return doc.lastAutoTable.finalY + 10;
+    return doc.lastAutoTable.finalY + 20;
   }
 
   /**
-   * Adiciona seção Previsto vs Realizado (seguindo padrão dos PDFs existentes)
+   * Adiciona seção de análise de efetividade seguindo padrão simples
    */
   addPredictedVsActual(doc, statistics, yPosition) {
     const margin = 15;
+    const pageWidth = doc.internal.pageSize.getWidth();
 
+    // Título da seção com cor laranja
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('PREVISTO vs REALIZADO', margin, yPosition);
+    doc.setFillColor(255, 247, 237); // Laranja muito claro
+    doc.rect(margin, yPosition - 4, pageWidth - (margin * 2), 7, 'F');
+    doc.setTextColor(234, 88, 12); // Laranja escuro no texto
+    doc.text('ANÁLISE DE EFETIVIDADE', margin + 2, yPosition);
+    doc.setTextColor(0, 0, 0); // Reset para preto
 
-    yPosition += 8;
+    yPosition += 12;
 
-    const scheduled = statistics.total_appointments || 0;
+    // Para "previsto vs realizado", consideramos apenas agendamentos que já deveriam ter acontecido
+    const totalPrevisto = (statistics.completed_appointments || 0) + (statistics.missed_appointments || 0);
     const completed = statistics.completed_appointments || 0;
-    const difference = scheduled - completed;
-    const effectiveRate = this.calculatePercentage(completed, scheduled);
-    const diffPercentage = this.calculatePercentage(Math.abs(difference), scheduled);
+    const missed = statistics.missed_appointments || 0;
+    const effectiveRate = this.calculatePercentage(completed, totalPrevisto);
 
     const predictedData = [
-      ['Agendamentos Previstos', `${scheduled} sessoes`],
-      ['Sessoes Efetivamente Realizadas', `${completed} sessoes`],
-      ['Diferenca', `${difference >= 0 ? '-' : '+'}${Math.abs(difference)} sessoes (${difference >= 0 ? '-' : '+'}${diffPercentage}%)`],
-      ['Taxa de Efetivacao', `${effectiveRate}%`]
+      ['Sessões Programadas (Passadas)', `${totalPrevisto}`],
+      ['Sessões Efetivamente Realizadas', `${completed}`],
+      ['Ausências Registradas', `${missed}`],
+      ['Taxa de Efetividade Geral', `${effectiveRate}%`]
     ];
 
-    // Usar autoTable para formatação consistente
     doc.autoTable({
       startY: yPosition,
-      head: [['Métrica', 'Valor']],
+      head: [['Métrica', 'Resultado']],
       body: predictedData,
-      theme: 'plain',
+      theme: 'grid',
       headStyles: {
-        fillColor: [240, 240, 240],
-        textColor: [0, 0, 0],
-        fontStyle: 'bold'
+        fillColor: [234, 88, 12], // Laranja para efetividade
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 10,
+        halign: 'center'
       },
-      styles: { fontSize: 9 },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [60, 60, 60],
+        lineColor: [200, 200, 200],
+        lineWidth: 0.5
+      },
       columnStyles: {
-        0: { cellWidth: 100 },
-        1: { cellWidth: 60, halign: 'center' }
+        0: {
+          cellWidth: 110,
+          halign: 'left',
+          fontStyle: 'normal',
+          textColor: [70, 70, 70]
+        },
+        1: {
+          cellWidth: 70,
+          halign: 'center',
+          fontStyle: 'bold',
+          textColor: [234, 88, 12] // Laranja nos números
+        }
       },
-      margin: { left: margin }
+      margin: { left: margin, right: margin }
     });
 
-    return doc.lastAutoTable.finalY + 10;
+    return doc.lastAutoTable.finalY + 20;
   }
 
   /**
@@ -279,15 +351,28 @@ export class AppointmentReportGenerator {
    */
   addTherapistPerformance(doc, appointments, yPosition) {
     const margin = 15;
+    const pageWidth = doc.internal.pageSize.getWidth();
 
+    // Título da seção com cor verde
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('PERFORMANCE POR TERAPEUTA', margin, yPosition);
+    doc.setFillColor(240, 253, 244); // Verde muito claro
+    doc.rect(margin, yPosition - 4, pageWidth - (margin * 2), 7, 'F');
+    doc.setTextColor(21, 128, 61); // Verde escuro no texto
+    doc.text('PERFORMANCE POR TERAPEUTA', margin + 2, yPosition);
+    doc.setTextColor(0, 0, 0); // Reset para preto
 
-    yPosition += 8;
+    yPosition += 12;
 
     // Agrupar dados por terapeuta
     const therapistStats = this.groupAppointmentsByTherapist(appointments);
+
+    if (therapistStats.length === 0) {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Nenhum dado de performance encontrado para o período selecionado.', margin, yPosition + 10);
+      return yPosition + 30;
+    }
 
     const tableData = therapistStats.map(therapist => [
       therapist.name,
@@ -313,19 +398,26 @@ export class AppointmentReportGenerator {
       startY: yPosition,
       theme: 'grid',
       headStyles: {
-        fillColor: [230, 230, 230],
-        textColor: [0, 0, 0],
-        fontStyle: 'bold'
+        fillColor: [21, 128, 61], // Verde para performance
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 10,
+        halign: 'center'
       },
-      styles: { fontSize: 9 },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [60, 60, 60],
+        lineColor: [200, 200, 200],
+        lineWidth: 0.5
+      },
       columnStyles: {
-        0: { cellWidth: 60 },
-        1: { cellWidth: 25, halign: 'center' },
-        2: { cellWidth: 25, halign: 'center' },
-        3: { cellWidth: 25, halign: 'center' },
-        4: { cellWidth: 25, halign: 'center' }
+        0: { cellWidth: 90, halign: 'left', textColor: [70, 70, 70] },
+        1: { cellWidth: 22, halign: 'center', textColor: [21, 128, 61] }, // Verde nos agendados
+        2: { cellWidth: 22, halign: 'center', textColor: [21, 128, 61], fontStyle: 'bold' }, // Verde bold nos realizados
+        3: { cellWidth: 22, halign: 'center', textColor: [185, 28, 28] }, // Vermelho nas faltas
+        4: { cellWidth: 24, halign: 'center', textColor: [21, 128, 61], fontStyle: 'bold' } // Verde bold na taxa
       },
-      margin: { left: margin }
+      margin: { left: margin, right: margin }
     });
 
     return doc.lastAutoTable.finalY + 15;
@@ -336,12 +428,18 @@ export class AppointmentReportGenerator {
    */
   addDetailedSchedule(doc, appointments, yPosition) {
     const margin = 15;
+    const pageWidth = doc.internal.pageSize.getWidth();
 
+    // Título da seção com cor roxa
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('AGENDA DETALHADA', margin, yPosition);
+    doc.setFillColor(250, 245, 255); // Roxo muito claro
+    doc.rect(margin, yPosition - 4, pageWidth - (margin * 2), 7, 'F');
+    doc.setTextColor(124, 58, 237); // Roxo escuro no texto
+    doc.text('AGENDA DETALHADA', margin + 2, yPosition);
+    doc.setTextColor(0, 0, 0); // Reset para preto
 
-    yPosition += 8;
+    yPosition += 12;
 
     // Ordenar agendamentos por data e hora
     const sortedAppointments = appointments.sort((a, b) => {
@@ -352,7 +450,7 @@ export class AppointmentReportGenerator {
 
     const tableData = sortedAppointments.slice(0, 50).map(appointment => [
       this.formatDate(appointment.scheduled_date),
-      appointment.scheduled_time,
+      appointment.scheduled_time || '',
       appointment.patient_name || 'N/A',
       appointment.therapist_name || 'N/A',
       this.formatStatus(appointment.status)
@@ -364,97 +462,196 @@ export class AppointmentReportGenerator {
       startY: yPosition,
       theme: 'grid',
       headStyles: {
-        fillColor: [66, 139, 202],
+        fillColor: [124, 58, 237], // Roxo para agenda
         textColor: [255, 255, 255],
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        fontSize: 10
       },
-      styles: { fontSize: 8 },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [60, 60, 60],
+        lineColor: [200, 200, 200],
+        lineWidth: 0.5
+      },
       columnStyles: {
-        0: { cellWidth: 25 },
-        1: { cellWidth: 20 },
-        2: { cellWidth: 45 },
-        3: { cellWidth: 45 },
-        4: { cellWidth: 25 }
-      }
+        0: { cellWidth: 24, halign: 'center' },
+        1: { cellWidth: 18, halign: 'center' },
+        2: { cellWidth: 56, halign: 'left' },
+        3: { cellWidth: 56, halign: 'left' },
+        4: { cellWidth: 26, halign: 'center' }
+      },
+      didParseCell: function(data) {
+        // Aplicar cores na coluna Status (índice 4)
+        if (data.column.index === 4 && data.section === 'body') {
+          const status = data.cell.raw;
+          switch (status) {
+            case 'Realizada':
+              data.cell.styles.fillColor = [220, 252, 231]; // Verde claro
+              data.cell.styles.textColor = [21, 128, 61]; // Verde escuro
+              data.cell.styles.fontStyle = 'bold';
+              break;
+            case 'Falta':
+              data.cell.styles.fillColor = [254, 226, 226]; // Vermelho claro
+              data.cell.styles.textColor = [185, 28, 28]; // Vermelho escuro
+              data.cell.styles.fontStyle = 'bold';
+              break;
+            case 'Cancelada':
+              data.cell.styles.fillColor = [249, 250, 251]; // Cinza claro
+              data.cell.styles.textColor = [107, 114, 128]; // Cinza escuro
+              break;
+            case 'Agendada':
+              data.cell.styles.fillColor = [239, 246, 255]; // Azul claro
+              data.cell.styles.textColor = [29, 78, 216]; // Azul escuro
+              break;
+            default:
+              // Manter estilo padrão
+              break;
+          }
+        }
+      },
+      margin: { left: margin, right: margin }
     });
+
+    let finalY = doc.lastAutoTable.finalY + 10;
 
     if (sortedAppointments.length > 50) {
       doc.setFontSize(8);
-      doc.text(`Nota: Mostrando apenas os primeiros 50 registros de ${sortedAppointments.length} total.`, 20, doc.lastAutoTable.finalY + 5);
+      doc.text(`Nota: Mostrando apenas os primeiros 50 registros de ${sortedAppointments.length} total.`, margin, finalY);
+      finalY += 8;
     }
+
+    return finalY;
   }
 
   /**
    * Adiciona performance individual
    */
   addIndividualPerformance(doc, appointments, yPosition) {
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('📊 PERFORMANCE INDIVIDUAL', 20, yPosition);
+    const margin = 15;
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-    yPosition += 10;
+    // Título da seção com cor azul (mesmo padrão do resumo executivo)
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setFillColor(240, 248, 255); // Azul muito claro
+    doc.rect(margin, yPosition - 4, pageWidth - (margin * 2), 7, 'F');
+    doc.setTextColor(25, 118, 210); // Azul escuro no texto
+    doc.text('PERFORMANCE INDIVIDUAL', margin + 2, yPosition);
+    doc.setTextColor(0, 0, 0); // Reset para preto
+
+    yPosition += 12;
 
     const stats = this.calculateIndividualStats(appointments);
 
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-
     const performanceData = [
-      [`Total de Agendamentos`, `${stats.total}`],
-      [`Sessões Realizadas`, `${stats.completed} (${stats.completedRate}%)`],
-      [`Faltas`, `${stats.missed} (${stats.missedRate}%)`],
-      [`Cancelamentos`, `${stats.cancelled} (${stats.cancelledRate}%)`],
-      [`Taxa de Comparecimento`, `${stats.attendanceRate}%`]
+      ['Total de Agendamentos', `${stats.total}`],
+      ['Sessões Realizadas', `${stats.completed} (${stats.completedRate}%)`],
+      ['Faltas Registradas', `${stats.missed} (${stats.missedRate}%)`],
+      ['Cancelamentos', `${stats.cancelled} (${stats.cancelledRate}%)`],
+      ['Taxa de Comparecimento', `${stats.attendanceRate}%`]
     ];
 
-    performanceData.forEach(([label, value]) => {
-      doc.text(`├── ${label}: ${value}`, 25, yPosition);
-      yPosition += 6;
+    doc.autoTable({
+      startY: yPosition,
+      head: [['Indicador', 'Resultado']],
+      body: performanceData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [25, 118, 210], // Azul para performance individual
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 10,
+        halign: 'center'
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [60, 60, 60],
+        lineColor: [200, 200, 200],
+        lineWidth: 0.5
+      },
+      columnStyles: {
+        0: { cellWidth: 90, halign: 'left' },
+        1: { cellWidth: 60, halign: 'center' }
+      },
+      margin: { left: margin, right: margin }
     });
 
-    return yPosition + 10;
+    return doc.lastAutoTable.finalY + 15;
   }
 
   /**
    * Adiciona detalhamento estatístico
    */
   addStatisticalDetails(doc, appointments, yPosition) {
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('📈 DETALHAMENTO ESTATÍSTICO', 20, yPosition);
+    const margin = 15;
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-    yPosition += 10;
+    // Título da seção com cor verde (mesmo padrão da performance por terapeuta)
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setFillColor(240, 253, 244); // Verde muito claro
+    doc.rect(margin, yPosition - 4, pageWidth - (margin * 2), 7, 'F');
+    doc.setTextColor(21, 128, 61); // Verde escuro no texto
+    doc.text('DETALHAMENTO ESTATÍSTICO', margin + 2, yPosition);
+    doc.setTextColor(0, 0, 0); // Reset para preto
+
+    yPosition += 12;
 
     const stats = this.calculateAdvancedStats(appointments);
 
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-
     const statisticalData = [
-      [`Agendamentos por Semana`, `${stats.avgPerWeek} (média)`],
-      [`Sessões Realizadas por Semana`, `${stats.completedPerWeek} (média)`],
-      [`Maior Sequência de Sucessos`, `${stats.longestSuccessStreak} sessões`],
-      [`Última Falta Registrada`, stats.lastMissed || 'Nenhuma falta no período'],
-      [`Pontualidade Geral`, `${stats.punctuality}%`]
+      ['Agendamentos por Semana', `${stats.avgPerWeek} (média)`],
+      ['Sessões Realizadas por Semana', `${stats.completedPerWeek} (média)`],
+      ['Maior Sequência de Sucessos', `${stats.longestSuccessStreak} sessões`],
+      ['Última Falta Registrada', stats.lastMissed || 'Nenhuma falta no período'],
+      ['Pontualidade Geral', `${stats.punctuality}%`]
     ];
 
-    statisticalData.forEach(([label, value]) => {
-      doc.text(`├── ${label}: ${value}`, 25, yPosition);
-      yPosition += 6;
+    doc.autoTable({
+      startY: yPosition,
+      head: [['Indicador Avançado', 'Valor']],
+      body: statisticalData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [21, 128, 61], // Verde para estatísticas avançadas
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 10,
+        halign: 'center'
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [60, 60, 60],
+        lineColor: [200, 200, 200],
+        lineWidth: 0.5
+      },
+      columnStyles: {
+        0: { cellWidth: 90, halign: 'left' },
+        1: { cellWidth: 60, halign: 'center' }
+      },
+      margin: { left: margin, right: margin }
     });
 
-    return yPosition + 10;
+    return doc.lastAutoTable.finalY + 15;
   }
 
   /**
    * Adiciona agenda detalhada individual
    */
   addIndividualDetailedSchedule(doc, appointments, yPosition) {
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('📅 AGENDA DETALHADA - TERAPEUTA', 20, yPosition);
+    const margin = 15;
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-    yPosition += 10;
+    // Título da seção com cor roxa (mesmo padrão da agenda detalhada geral)
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setFillColor(250, 245, 255); // Roxo muito claro
+    doc.rect(margin, yPosition - 4, pageWidth - (margin * 2), 7, 'F');
+    doc.setTextColor(124, 58, 237); // Roxo escuro no texto
+    doc.text('AGENDA DETALHADA - TERAPEUTA', margin + 2, yPosition);
+    doc.setTextColor(0, 0, 0); // Reset para preto
+
+    yPosition += 12;
 
     const sortedAppointments = appointments.sort((a, b) => {
       const dateA = new Date(`${a.scheduled_date}T${a.scheduled_time}`);
@@ -466,27 +663,34 @@ export class AppointmentReportGenerator {
       this.formatDate(appointment.scheduled_date),
       appointment.scheduled_time,
       appointment.patient_name || 'N/A',
-      appointment.program_name || 'N/A',
+      appointment.discipline_name || 'Sessão Geral',
       this.formatStatus(appointment.status)
     ]);
 
     doc.autoTable({
-      head: [['Data', 'Hora', 'Paciente', 'Programa', 'Status']],
+      head: [['Data', 'Hora', 'Paciente', 'Área/Disciplina', 'Status']],
       body: tableData,
       startY: yPosition,
       theme: 'grid',
       headStyles: {
-        fillColor: [66, 139, 202],
+        fillColor: [124, 58, 237], // Roxo para agenda detalhada (mesmo padrão)
         textColor: [255, 255, 255],
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        fontSize: 10,
+        halign: 'center'
       },
-      styles: { fontSize: 8 },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [60, 60, 60],
+        lineColor: [200, 200, 200],
+        lineWidth: 0.5
+      },
       columnStyles: {
-        0: { cellWidth: 25 },
-        1: { cellWidth: 20 },
-        2: { cellWidth: 45 },
-        3: { cellWidth: 45 },
-        4: { cellWidth: 25 }
+        0: { cellWidth: 22, halign: 'center' },
+        1: { cellWidth: 18, halign: 'center' },
+        2: { cellWidth: 48, halign: 'left' },
+        3: { cellWidth: 48, halign: 'left' },
+        4: { cellWidth: 22, halign: 'center' }
       }
     });
 
@@ -497,35 +701,61 @@ export class AppointmentReportGenerator {
    * Adiciona resumo para pagamento
    */
   addPaymentSummary(doc, appointments, config, yPosition) {
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('📊 RESUMO PARA PAGAMENTO', 20, yPosition);
+    const margin = 15;
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-    yPosition += 10;
+    // Título da seção com cor laranja (para destacar seção de pagamento)
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setFillColor(255, 247, 237); // Laranja muito claro
+    doc.rect(margin, yPosition - 4, pageWidth - (margin * 2), 7, 'F');
+    doc.setTextColor(194, 65, 12); // Laranja escuro no texto
+    doc.text('RESUMO PARA PAGAMENTO', margin + 2, yPosition);
+    doc.setTextColor(0, 0, 0); // Reset para preto
+
+    yPosition += 12;
 
     const stats = this.calculateIndividualStats(appointments);
     const justifiedMissed = appointments.filter(a => a.status === 'missed' && a.justified_at).length;
 
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-
     const paymentData = [
-      [`Total de Sessões Efetivamente Realizadas`, `${stats.completed}`],
-      [`Período de Referência`, `${this.formatDate(config.period.startDate)} a ${this.formatDate(config.period.endDate)}`],
-      [`Taxa de Efetivação`, `${stats.attendanceRate}%`],
-      [`Observações`, `${justifiedMissed} falta(s) justificada(s)`]
+      ['Total de Sessões Efetivamente Realizadas', `${stats.completed}`],
+      ['Período de Referência', `${this.formatDate(config.period.startDate)} a ${this.formatDate(config.period.endDate)}`],
+      ['Taxa de Efetivação', `${stats.attendanceRate}%`],
+      ['Observações', `${justifiedMissed} falta(s) justificada(s)`]
     ];
 
-    paymentData.forEach(([label, value]) => {
-      doc.text(`├── ${label}: ${value}`, 25, yPosition);
-      yPosition += 6;
+    doc.autoTable({
+      startY: yPosition,
+      head: [['Item', 'Valor']],
+      body: paymentData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [194, 65, 12], // Laranja para resumo de pagamento
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 10,
+        halign: 'center'
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [60, 60, 60],
+        lineColor: [200, 200, 200],
+        lineWidth: 0.5
+      },
+      columnStyles: {
+        0: { cellWidth: 100, halign: 'left', fontStyle: 'bold' }, // Item em negrito
+        1: { cellWidth: 50, halign: 'center' }
+      },
+      margin: { left: margin, right: margin }
     });
 
-    return yPosition + 10;
+    return doc.lastAutoTable.finalY + 15;
   }
 
+
   /**
-   * Adiciona footer do relatório seguindo padrão dos PDFs existentes
+   * Adiciona footer simples seguindo padrão dos relatórios existentes
    */
   addReportFooter(doc) {
     const pageCount = doc.internal.getNumberOfPages();
@@ -536,11 +766,10 @@ export class AppointmentReportGenerator {
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
       doc.setTextColor(100);
 
       // Página atual
-      const footerText = `Pagina ${i} de ${pageCount}`;
+      const footerText = `Página ${i} de ${pageCount}`;
       doc.text(footerText, pageWidth / 2, pageHeight - margin / 2, { align: 'center' });
 
       // Data de geração
@@ -552,7 +781,14 @@ export class AppointmentReportGenerator {
 
   // Métodos auxiliares
   formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Data inválida';
+      return date.toLocaleDateString('pt-BR');
+    } catch (error) {
+      return 'Data inválida';
+    }
   }
 
   formatStatus(status) {
@@ -571,11 +807,17 @@ export class AppointmentReportGenerator {
   }
 
   groupAppointmentsByTherapist(appointments) {
+    if (!appointments || appointments.length === 0) {
+      return [];
+    }
+
     const therapistMap = new Map();
 
     appointments.forEach(appointment => {
       const therapistId = appointment.therapist_id;
       const therapistName = appointment.therapist_name || 'Terapeuta Desconhecido';
+
+      if (!therapistId) return; // Skip appointments without therapist ID
 
       if (!therapistMap.has(therapistId)) {
         therapistMap.set(therapistId, {
@@ -599,6 +841,9 @@ export class AppointmentReportGenerator {
           break;
         case 'cancelled':
           stats.cancelled++;
+          break;
+        default:
+          // Status desconhecido - mantém apenas como scheduled
           break;
       }
     });

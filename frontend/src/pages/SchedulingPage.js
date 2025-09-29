@@ -8,13 +8,18 @@ import {
   faChartBar,
   faRefresh,
   faExclamationTriangle,
-  faFilePdf
+  faFilePdf,
+  faBrain,
+  faSearch
 } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../context/AuthContext';
 import AppointmentForm from '../components/scheduling/AppointmentForm';
 import AppointmentsList from '../components/scheduling/AppointmentsList';
 import AppointmentDetailsModal from '../components/scheduling/AppointmentDetailsModal';
 import ReportConfigModal from '../components/scheduling/ReportConfigModal';
+import OrphanSessionsList from '../components/scheduling/OrphanSessionsList';
+import IntelligentDetectionModal from '../components/scheduling/IntelligentDetectionModal';
+import RetroactiveAppointmentModal from '../components/scheduling/RetroactiveAppointmentModal';
 import {
   getAppointments,
   createAppointment,
@@ -44,10 +49,17 @@ const SchedulingPage = () => {
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showIntelligentDetection, setShowIntelligentDetection] = useState(false);
+  const [showRetroactiveModal, setShowRetroactiveModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [selectedOrphanSession, setSelectedOrphanSession] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+  // Estado para abas
+  const [activeTab, setActiveTab] = useState('appointments'); // 'appointments' | 'orphans'
+  const [orphanRefreshTrigger, setOrphanRefreshTrigger] = useState(0);
 
   // Estados de filtros e paginação
   const [filters, setFilters] = useState({
@@ -61,6 +73,24 @@ const SchedulingPage = () => {
   });
 
   const [pagination, setPagination] = useState(null);
+
+  // Função para lidar com criação de agendamento retroativo
+  const handleCreateRetroactive = (orphanSession) => {
+    setSelectedOrphanSession(orphanSession);
+    setShowRetroactiveModal(true);
+  };
+
+  // Função para lidar com conclusão da detecção inteligente
+  const handleDetectionComplete = (results) => {
+    loadAppointments();
+    setOrphanRefreshTrigger(prev => prev + 1);
+  };
+
+  // Função para lidar com sucesso de agendamento retroativo
+  const handleRetroactiveSuccess = () => {
+    loadAppointments();
+    setOrphanRefreshTrigger(prev => prev + 1);
+  };
 
   const refreshAssignments = useCallback(async () => {
     try {
@@ -199,7 +229,7 @@ const SchedulingPage = () => {
     if (!confirmMark) return;
 
     try {
-      const result = await markMissedAppointments(1); // 1 hora após o agendamento
+      const result = await markMissedAppointments(24); // 24 horas após o agendamento
       await loadAppointments();
       await loadStatistics();
 
@@ -348,6 +378,13 @@ const SchedulingPage = () => {
                 Gerar Relatório
               </button>
               <button
+                onClick={() => setShowIntelligentDetection(true)}
+                className="px-4 py-2 text-sm font-medium text-purple-700 bg-purple-100 border border-purple-300 rounded-md shadow-sm hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 flex items-center"
+              >
+                <FontAwesomeIcon icon={faBrain} className="mr-2 w-4 h-4" />
+                Detecção Inteligente
+              </button>
+              <button
                 onClick={handleMarkMissedAppointments}
                 className="px-4 py-2 text-sm font-medium text-red-700 bg-red-100 border border-red-300 rounded-md shadow-sm hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center"
               >
@@ -396,17 +433,56 @@ const SchedulingPage = () => {
           </div>
         )}
 
-        {/* Appointments List */}
-        <AppointmentsList
-          appointments={appointments}
-          onEdit={handleEditAppointment}
-          onDelete={handleDeleteAppointment}
-          onView={handleViewAppointment}
-          isLoading={isLoading}
-          pagination={pagination}
-          onPageChange={handlePageChange}
-          showFilters={true}
-        />
+        {/* Abas de Navegação */}
+        <div className="mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+              <button
+                onClick={() => setActiveTab('appointments')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'appointments'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <FontAwesomeIcon icon={faCalendarAlt} className="mr-2" />
+                Agendamentos
+              </button>
+              <button
+                onClick={() => setActiveTab('orphans')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'orphans'
+                    ? 'border-orange-500 text-orange-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
+                Sessões Órfãs
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        {/* Conteúdo das Abas */}
+        {activeTab === 'appointments' && (
+          <AppointmentsList
+            appointments={appointments}
+            onEdit={handleEditAppointment}
+            onDelete={handleDeleteAppointment}
+            onView={handleViewAppointment}
+            isLoading={isLoading}
+            pagination={pagination}
+            onPageChange={handlePageChange}
+            showFilters={true}
+          />
+        )}
+
+        {activeTab === 'orphans' && (
+          <OrphanSessionsList
+            onCreateRetroactive={handleCreateRetroactive}
+            refreshTrigger={orphanRefreshTrigger}
+          />
+        )}
       </div>
 
       {/* Modals */}
@@ -441,6 +517,23 @@ const SchedulingPage = () => {
         onGenerate={handleGenerateReport}
         therapists={getTherapists()}
         isGenerating={isGeneratingReport}
+      />
+
+      {/* Novos Modais para Gestão de Órfãs */}
+      <IntelligentDetectionModal
+        isOpen={showIntelligentDetection}
+        onClose={() => setShowIntelligentDetection(false)}
+        onDetectionComplete={handleDetectionComplete}
+      />
+
+      <RetroactiveAppointmentModal
+        isOpen={showRetroactiveModal}
+        onClose={() => {
+          setShowRetroactiveModal(false);
+          setSelectedOrphanSession(null);
+        }}
+        orphanSession={selectedOrphanSession}
+        onSuccess={handleRetroactiveSuccess}
       />
     </div>
   );

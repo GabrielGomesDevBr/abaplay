@@ -16,7 +16,7 @@ const formatValidationErrors = (errors) => {
 const SchedulingController = {
 
     /**
-     * Criar novo agendamento (apenas admins)
+     * Criar novo agendamento (apenas admins) - NOVA ESTRUTURA
      * POST /api/admin/scheduling/appointments
      */
     async createAppointment(req, res, next) {
@@ -27,77 +27,37 @@ const SchedulingController = {
 
         try {
             const {
-                assignment_id,
+                patient_id,
+                therapist_id,
+                discipline_id = null, // Opcional: específica ou sessão geral
                 scheduled_date,
                 scheduled_time,
                 duration_minutes = 60,
-                notes,
-                therapist_id
+                notes
             } = req.body;
 
             const { clinic_id, id: userId } = req.user;
 
-            // Verificar se a atribuição pertence à clínica do admin
-            const assignment = await AssignmentModel.getAssignmentDetailsWithHistory(assignment_id);
-            if (!assignment) {
-                return res.status(404).json({
-                    errors: [{ msg: 'Atribuição não encontrada.' }]
-                });
-            }
-
-            // Verificar se paciente pertence à clínica (segurança)
-            if (assignment.patient.clinic_id && assignment.patient.clinic_id !== clinic_id) {
-                return res.status(403).json({
-                    errors: [{ msg: 'Acesso negado. Atribuição não pertence a esta clínica.' }]
-                });
-            }
-
-            // Validar terapeuta selecionado (se fornecido)
-            let selectedTherapistId = therapist_id;
-            if (therapist_id) {
-                // Verificar se o terapeuta existe e pertence à mesma clínica
-                const therapistCheck = await AssignmentModel.checkTherapistAccess(therapist_id, clinic_id);
-                if (!therapistCheck) {
-                    return res.status(400).json({
-                        errors: [{ msg: 'Terapeuta selecionado não encontrado ou não pertence a esta clínica.' }]
-                    });
-                }
-            } else {
-                // Se não foi fornecido therapist_id, usar o terapeuta da atribuição original
-                selectedTherapistId = assignment.therapist_id;
-            }
-
-            // Debug dos dados recebidos
-            console.log('[SCHEDULING-DEBUG] Dados recebidos:', {
-                'assignment_id': assignment_id,
-                'scheduled_date': scheduled_date,
-                'scheduled_time': scheduled_time,
-                'duration_minutes': duration_minutes,
-                'notes': notes,
-                'body_completo': req.body
-            });
-
-            // Validar data/hora usando utilitário robusto (aceita Date ou string)
+            // Validar data/hora usando utilitário robusto
             const dateTimeValidation = validateAppointmentDateTime(scheduled_date, scheduled_time);
-
             if (!dateTimeValidation.isValid) {
                 return res.status(400).json({
                     errors: [{ msg: dateTimeValidation.message }]
                 });
             }
 
-            // Criar agendamento - converter data para string se necessário
+            // Criar agendamento com nova estrutura
             const sessionData = {
-                assignment_id,
-                scheduled_date: normalizeToDateString(scheduled_date), // Garantir que seja string YYYY-MM-DD
+                patient_id: parseInt(patient_id),
+                therapist_id: parseInt(therapist_id),
+                discipline_id: discipline_id ? parseInt(discipline_id) : null,
+                scheduled_date: normalizeToDateString(scheduled_date),
                 scheduled_time,
-                duration_minutes,
+                duration_minutes: parseInt(duration_minutes),
                 created_by: userId,
-                notes,
-                therapist_id: selectedTherapistId // Usar terapeuta selecionado ou da atribuição
+                notes: notes || null,
+                detection_source: 'manual'
             };
-
-            console.log('[SCHEDULING-DEBUG] Dados para salvar:', sessionData);
 
             const newAppointment = await ScheduledSessionModel.create(sessionData);
 
@@ -315,7 +275,7 @@ const SchedulingController = {
     },
 
     /**
-     * Adicionar justificativa a agendamento perdido
+     * Adicionar justificativa categorizada a agendamento perdido - NOVA ESTRUTURA
      * POST /api/scheduling/justify-absence/:id
      */
     async justifyAbsence(req, res, next) {
@@ -326,17 +286,21 @@ const SchedulingController = {
 
         try {
             const { id } = req.params;
-            const { missed_reason, missed_by } = req.body;
+            const { missed_reason_type, missed_reason_description } = req.body;
             const { clinic_id, id: userId } = req.user;
 
-            const updateData = {
-                missed_reason,
-                missed_by,
+            const justificationData = {
+                missed_reason_type,
+                missed_reason_description: missed_reason_description || null,
                 justified_by: userId,
                 justified_at: new Date().toISOString()
             };
 
-            const justifiedAppointment = await ScheduledSessionModel.update(parseInt(id), updateData, clinic_id);
+            const justifiedAppointment = await ScheduledSessionModel.addJustification(
+                parseInt(id),
+                justificationData,
+                clinic_id
+            );
 
             if (!justifiedAppointment) {
                 return res.status(404).json({
@@ -441,6 +405,101 @@ const SchedulingController = {
 
         } catch (error) {
             console.error('[SCHEDULING-CONTROLLER] Erro ao buscar estatísticas da clínica:', error);
+            next(error);
+        }
+    },
+
+    // === NOVAS FUNCIONALIDADES PARA SESSÕES ÓRFÃS ===
+
+    /**
+     * Buscar sessões órfãs (realizadas sem agendamento prévio)
+     * GET /api/admin/scheduling/orphan-sessions
+     */
+    async getOrphanSessions(req, res, next) {
+        try {
+            const { clinic_id } = req.user;
+            const { start_date, end_date, limit = 50, offset = 0 } = req.query;
+
+            const orphanSessions = await ScheduledSessionModel.findOrphanSessions({
+                clinic_id,
+                start_date,
+                end_date,
+                limit: parseInt(limit),
+                offset: parseInt(offset)
+            });
+
+            res.status(200).json({
+                orphan_sessions: orphanSessions,
+                message: 'Sessões órfãs encontradas (realizadas sem agendamento prévio).'
+            });
+
+        } catch (error) {
+            console.error('[SCHEDULING-CONTROLLER] Erro ao buscar sessões órfãs:', error);
+            next(error);
+        }
+    },
+
+    /**
+     * Executar detecção inteligente de sessões
+     * POST /api/admin/scheduling/intelligent-detection
+     */
+    async runIntelligentDetection(req, res, next) {
+        try {
+            const { clinic_id } = req.user;
+            const { start_date, end_date, auto_create_retroactive = false } = req.body;
+
+            const detectionResults = await ScheduledSessionModel.intelligentSessionDetection({
+                clinic_id,
+                start_date,
+                end_date,
+                auto_create_retroactive
+            });
+
+            res.status(200).json({
+                detection_results: detectionResults,
+                message: `Detecção concluída. ${detectionResults.completed_sessions.length} sessões marcadas como completadas.`,
+                orphan_sessions_found: detectionResults.orphan_sessions?.length || 0
+            });
+
+        } catch (error) {
+            console.error('[SCHEDULING-CONTROLLER] Erro na detecção inteligente:', error);
+            next(error);
+        }
+    },
+
+    /**
+     * Criar agendamento retroativo para sessão órfã
+     * POST /api/admin/scheduling/create-retroactive/:sessionId
+     */
+    async createRetroactiveAppointment(req, res, next) {
+        try {
+            const { sessionId } = req.params;
+            const { discipline_id = null, notes } = req.body;
+            const { clinic_id, id: userId } = req.user;
+
+            const retroactiveAppointment = await ScheduledSessionModel.createRetroactiveAppointment(
+                parseInt(sessionId),
+                {
+                    discipline_id: discipline_id ? parseInt(discipline_id) : null,
+                    notes: notes || 'Agendamento criado retroativamente para sessão realizada.',
+                    created_by: userId
+                },
+                clinic_id
+            );
+
+            if (!retroactiveAppointment) {
+                return res.status(404).json({
+                    errors: [{ msg: 'Sessão não encontrada ou já possui agendamento.' }]
+                });
+            }
+
+            res.status(201).json({
+                message: 'Agendamento retroativo criado com sucesso!',
+                appointment: retroactiveAppointment
+            });
+
+        } catch (error) {
+            console.error(`[SCHEDULING-CONTROLLER] Erro ao criar agendamento retroativo para sessão ${req.params.sessionId}:`, error);
             next(error);
         }
     }

@@ -4,14 +4,17 @@ const pool = require('./db');
 
 /**
  * Modelo para gerenciar agendamentos de sessões terapêuticas
- * Implementação da Fase 1 - MVP do Sistema de Agendamento
+ * VERSÃO CORRIGIDA V2 - Agendamento por sessão de trabalho (não por programa específico)
+ * Corrige conceito fundamental: 1 sessão pode trabalhar múltiplos programas
  */
 const ScheduledSession = {
 
     /**
-     * Cria um novo agendamento de sessão
+     * Cria um novo agendamento de sessão de trabalho
      * @param {Object} sessionData - Dados do agendamento
-     * @param {number} sessionData.assignment_id - ID da atribuição paciente-programa-terapeuta
+     * @param {number} sessionData.patient_id - ID do paciente
+     * @param {number} sessionData.therapist_id - ID do terapeuta
+     * @param {number} sessionData.discipline_id - ID da disciplina (opcional)
      * @param {string} sessionData.scheduled_date - Data do agendamento (YYYY-MM-DD)
      * @param {string} sessionData.scheduled_time - Horário do agendamento (HH:MM)
      * @param {number} sessionData.duration_minutes - Duração em minutos (padrão: 60)
@@ -21,40 +24,43 @@ const ScheduledSession = {
      */
     async create(sessionData) {
         const {
-            assignment_id,
+            patient_id,
+            therapist_id,
+            discipline_id = null,
             scheduled_date,
             scheduled_time,
             duration_minutes = 60,
             created_by,
-            notes = null,
-            therapist_id = null
+            notes = null
         } = sessionData;
 
-        // Verificar conflitos antes de criar
-        const hasConflict = await this.checkConflict(assignment_id, scheduled_date, scheduled_time, duration_minutes);
+        // Verificar conflitos antes de criar (nova função)
+        const hasConflict = await this.checkSessionConflict(patient_id, therapist_id, scheduled_date, scheduled_time, duration_minutes);
         if (hasConflict) {
-            throw new Error('Conflito de agendamento: Já existe um agendamento para este terapeuta no mesmo horário.');
+            throw new Error('Conflito de agendamento: Já existe uma sessão para este terapeuta no mesmo horário.');
         }
 
         const query = `
             INSERT INTO scheduled_sessions (
-                assignment_id,
+                patient_id,
+                therapist_id,
+                discipline_id,
                 scheduled_date,
                 scheduled_time,
                 duration_minutes,
                 created_by,
                 notes,
-                therapist_id
+                detection_source
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'manual')
             RETURNING *;
         `;
 
-        const values = [assignment_id, scheduled_date, scheduled_time, duration_minutes, created_by, notes, therapist_id];
+        const values = [patient_id, therapist_id, discipline_id, scheduled_date, scheduled_time, duration_minutes, created_by, notes];
 
         try {
             const { rows } = await pool.query(query, values);
-            console.log(`[SCHEDULING] Agendamento criado: ID ${rows[0].id}, Assignment ${assignment_id}, Data ${scheduled_date} ${scheduled_time}`);
+            console.log(`[SCHEDULING-V2] Sessão agendada: ID ${rows[0].id}, Paciente ${patient_id}, Terapeuta ${therapist_id}, Data ${scheduled_date} ${scheduled_time}`);
             return rows[0];
         } catch (error) {
             console.error('[SCHEDULING-ERROR] Erro ao criar agendamento:', error);
@@ -92,25 +98,8 @@ const ScheduledSession = {
         }
 
         let query = `
-            SELECT
-                ss.*,
-                ppa.patient_id,
-                ppa.program_id,
-                COALESCE(ss.therapist_id, ppa.therapist_id) as therapist_id,
-                pat.name as patient_name,
-                prog.name as program_name,
-                u_therapist.full_name as therapist_name,
-                u_creator.full_name as created_by_name,
-                ppp.session_date as actual_session_date,
-                ppp.score as session_score
-            FROM scheduled_sessions ss
-            JOIN patient_program_assignments ppa ON ss.assignment_id = ppa.id
-            JOIN patients pat ON ppa.patient_id = pat.id
-            JOIN programs prog ON ppa.program_id = prog.id
-            JOIN users u_therapist ON COALESCE(ss.therapist_id, ppa.therapist_id) = u_therapist.id
-            JOIN users u_creator ON ss.created_by = u_creator.id
-            LEFT JOIN patient_program_progress ppp ON ss.progress_session_id = ppp.id
-            WHERE pat.clinic_id = $1
+            SELECT * FROM v_scheduled_sessions_complete
+            WHERE patient_clinic_id = $1
         `;
 
         const values = [clinic_id];
@@ -119,37 +108,37 @@ const ScheduledSession = {
         // Adicionar filtros opcionais
         if (therapist_id) {
             paramCount++;
-            query += ` AND COALESCE(ss.therapist_id, ppa.therapist_id) = $${paramCount}`;
+            query += ` AND therapist_id = $${paramCount}`;
             values.push(therapist_id);
         }
 
         if (patient_id) {
             paramCount++;
-            query += ` AND ppa.patient_id = $${paramCount}`;
+            query += ` AND patient_id = $${paramCount}`;
             values.push(patient_id);
         }
 
         if (status) {
             paramCount++;
-            query += ` AND ss.status = $${paramCount}`;
+            query += ` AND status = $${paramCount}`;
             values.push(status);
         }
 
         if (start_date) {
             paramCount++;
-            query += ` AND ss.scheduled_date >= $${paramCount}`;
+            query += ` AND scheduled_date >= $${paramCount}`;
             values.push(start_date);
         }
 
         if (end_date) {
             paramCount++;
-            query += ` AND ss.scheduled_date <= $${paramCount}`;
+            query += ` AND scheduled_date <= $${paramCount}`;
             values.push(end_date);
         }
 
         // Ordenação e paginação
         query += `
-            ORDER BY ss.scheduled_date DESC, ss.scheduled_time DESC
+            ORDER BY scheduled_date DESC, scheduled_time DESC
             LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
         `;
         values.push(limit, offset);
@@ -172,9 +161,7 @@ const ScheduledSession = {
     async findById(id, clinic_id) {
         const query = `
             SELECT * FROM v_scheduled_sessions_complete
-            WHERE id = $1 AND patient_id IN (
-                SELECT id FROM patients WHERE clinic_id = $2
-            )
+            WHERE id = $1 AND patient_clinic_id = $2
         `;
 
         try {
@@ -233,7 +220,7 @@ const ScheduledSession = {
      * @returns {Promise<Object>} O agendamento atualizado
      */
     async update(id, updateData, clinic_id) {
-        const allowedFields = ['scheduled_date', 'scheduled_time', 'duration_minutes', 'status', 'notes', 'missed_reason', 'missed_by'];
+        const allowedFields = ['scheduled_date', 'scheduled_time', 'duration_minutes', 'status', 'notes', 'missed_reason_type', 'missed_reason_description', 'discipline_id', 'justified_by', 'justified_at'];
         const updates = [];
         const values = [];
         let paramCount = 0;
@@ -263,9 +250,9 @@ const ScheduledSession = {
             const time = updateData.scheduled_time || existing.scheduled_time;
             const duration = updateData.duration_minutes || existing.duration_minutes;
 
-            const hasConflict = await this.checkConflict(existing.assignment_id, date, time, duration, id);
+            const hasConflict = await this.checkSessionConflict(existing.patient_id, existing.therapist_id, date, time, duration, id);
             if (hasConflict) {
-                throw new Error('Conflito de agendamento: Já existe um agendamento para este terapeuta no novo horário.');
+                throw new Error('Conflito de agendamento: Já existe uma sessão para este terapeuta no novo horário.');
             }
         }
 
@@ -316,14 +303,34 @@ const ScheduledSession = {
     /**
      * Marca um agendamento como cancelado
      * @param {number} id - ID do agendamento
-     * @param {string} reason - Motivo do cancelamento
+     * @param {string} reason_type - Tipo do motivo do cancelamento
+     * @param {string} reason_description - Descrição do motivo
      * @param {number} clinic_id - ID da clínica (para segurança)
      * @returns {Promise<Object>} O agendamento cancelado
      */
-    async cancel(id, reason, clinic_id) {
+    async cancel(id, reason_type, reason_description, clinic_id) {
         return await this.update(id, {
             status: 'cancelled',
-            missed_reason: reason
+            missed_reason_type: reason_type,
+            missed_reason_description: reason_description
+        }, clinic_id);
+    },
+
+    /**
+     * Adiciona justificativa para agendamento perdido
+     * @param {number} id - ID do agendamento
+     * @param {string} reason_type - Tipo da justificativa
+     * @param {string} reason_description - Descrição da justificativa
+     * @param {number} justified_by - ID de quem justificou
+     * @param {number} clinic_id - ID da clínica (para segurança)
+     * @returns {Promise<Object>} O agendamento justificado
+     */
+    async addJustification(id, reason_type, reason_description, justified_by, clinic_id) {
+        return await this.update(id, {
+            missed_reason_type: reason_type,
+            missed_reason_description: reason_description,
+            justified_by: justified_by,
+            justified_at: new Date().toISOString()
         }, clinic_id);
     },
 
@@ -354,26 +361,41 @@ const ScheduledSession = {
     },
 
     /**
-     * Busca agendamentos que podem estar relacionados a uma sessão registrada
-     * @param {number} assignment_id - ID da atribuição
+     * Busca agendamentos que podem estar relacionados a uma sessão registrada (NOVA VERSÃO)
+     * @param {number} patient_id - ID do paciente
+     * @param {number} therapist_id - ID do terapeuta
      * @param {string} session_date - Data da sessão (YYYY-MM-DD)
-     * @param {number} tolerance_hours - Tolerância em horas (padrão: 4)
+     * @param {string} session_time - Horário da sessão registrada
+     * @param {number} tolerance_hours - Tolerância em horas (padrão: 24)
      * @returns {Promise<Array>} Lista de agendamentos candidatos
      */
-    async findCandidatesForSession(assignment_id, session_date, tolerance_hours = 4) {
-        const query = `
+    async findCandidatesForSession(patient_id, therapist_id, session_date, session_time = null, tolerance_hours = 24) {
+        let query = `
             SELECT *
             FROM scheduled_sessions
-            WHERE assignment_id = $1
-              AND scheduled_date = $2
+            WHERE patient_id = $1
+              AND therapist_id = $2
+              AND scheduled_date = $3
               AND status = 'scheduled'
               AND progress_session_id IS NULL
-            ORDER BY ABS(EXTRACT(EPOCH FROM (scheduled_time - CURRENT_TIME))/3600) ASC
-            LIMIT 5
         `;
 
+        const values = [patient_id, therapist_id, session_date];
+
+        // Se temos horário da sessão, ordenar por proximidade
+        if (session_time) {
+            query += `
+            ORDER BY ABS(EXTRACT(EPOCH FROM (scheduled_time - $4::time))/3600) ASC
+            `;
+            values.push(session_time);
+        } else {
+            query += ` ORDER BY scheduled_time ASC`;
+        }
+
+        query += ` LIMIT 5`;
+
         try {
-            const { rows } = await pool.query(query, [assignment_id, session_date]);
+            const { rows } = await pool.query(query, values);
             return rows;
         } catch (error) {
             console.error(`[SCHEDULING-ERROR] Erro ao buscar candidatos para sessão:`, error);
@@ -383,18 +405,20 @@ const ScheduledSession = {
 
     /**
      * Marca agendamentos vencidos como perdidos
-     * @param {number} hours_after - Horas após o agendamento para considerar perdido (padrão: 1)
+     * @param {number} hours_after - Horas após o agendamento para considerar perdido (padrão: 24)
      * @returns {Promise<Array>} Lista de agendamentos marcados como perdidos
      */
-    async markMissedAppointments(hours_after = 1) {
+    async markMissedAppointments(hours_after = 24) {
         const query = `
             UPDATE scheduled_sessions
             SET status = 'missed', updated_at = NOW()
             WHERE status = 'scheduled'
-              AND scheduled_date < CURRENT_DATE
-              OR (
-                  scheduled_date = CURRENT_DATE
-                  AND scheduled_time < (CURRENT_TIME - INTERVAL '${hours_after} hours')
+              AND (
+                  scheduled_date < CURRENT_DATE
+                  OR (
+                      scheduled_date = CURRENT_DATE
+                      AND scheduled_time < (CURRENT_TIME - INTERVAL '${hours_after} hours')
+                  )
               )
             RETURNING *
         `;
@@ -412,19 +436,20 @@ const ScheduledSession = {
     },
 
     /**
-     * Verifica conflitos de agendamento
-     * @param {number} assignment_id - ID da atribuição
+     * Verifica conflitos de agendamento (NOVA FUNÇÃO CORRIGIDA)
+     * @param {number} patient_id - ID do paciente
+     * @param {number} therapist_id - ID do terapeuta
      * @param {string} scheduled_date - Data do agendamento
      * @param {string} scheduled_time - Horário do agendamento
      * @param {number} duration_minutes - Duração em minutos
      * @param {number} exclude_id - ID do agendamento a excluir da verificação
      * @returns {Promise<boolean>} True se há conflito
      */
-    async checkConflict(assignment_id, scheduled_date, scheduled_time, duration_minutes = 60, exclude_id = null) {
+    async checkSessionConflict(patient_id, therapist_id, scheduled_date, scheduled_time, duration_minutes = 60, exclude_id = null) {
         try {
             const { rows } = await pool.query(
-                'SELECT check_appointment_conflict($1, $2, $3, $4, $5) as has_conflict',
-                [assignment_id, scheduled_date, scheduled_time, duration_minutes, exclude_id]
+                'SELECT check_session_conflict($1, $2, $3, $4, $5, $6) as has_conflict',
+                [patient_id, therapist_id, scheduled_date, scheduled_time, duration_minutes, exclude_id]
             );
             return rows[0].has_conflict;
         } catch (error) {
@@ -434,7 +459,29 @@ const ScheduledSession = {
     },
 
     /**
-     * Obtém estatísticas de agendamento para um terapeuta
+     * FUNÇÃO LEGACY - Mantida para compatibilidade temporária
+     * @deprecated Use checkSessionConflict em vez desta
+     */
+    async checkConflict(assignment_id, scheduled_date, scheduled_time, duration_minutes = 60, exclude_id = null) {
+        console.warn('[SCHEDULING] DEPRECATED: checkConflict será removido. Use checkSessionConflict.');
+        // Buscar dados da assignment para converter
+        try {
+            const { rows } = await pool.query(
+                'SELECT patient_id, therapist_id FROM patient_program_assignments WHERE id = $1',
+                [assignment_id]
+            );
+            if (rows.length === 0) return false;
+
+            const { patient_id, therapist_id } = rows[0];
+            return await this.checkSessionConflict(patient_id, therapist_id, scheduled_date, scheduled_time, duration_minutes, exclude_id);
+        } catch (error) {
+            console.error('[SCHEDULING-ERROR] Erro ao verificar conflito (legacy):', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Obtém estatísticas de agendamento para um terapeuta (FUNÇÃO CORRIGIDA)
      * @param {number} therapist_id - ID do terapeuta
      * @param {string} start_date - Data inicial (opcional)
      * @param {string} end_date - Data final (opcional)
@@ -443,7 +490,7 @@ const ScheduledSession = {
     async getTherapistStats(therapist_id, start_date = null, end_date = null) {
         try {
             const { rows } = await pool.query(
-                'SELECT * FROM get_therapist_appointment_stats($1, $2, $3)',
+                'SELECT * FROM get_therapist_schedule_stats($1, $2, $3)',
                 [therapist_id, start_date, end_date]
             );
             return rows[0] || {
@@ -485,281 +532,269 @@ const ScheduledSession = {
     },
 
     /**
-     * Busca agendamentos que podem ter sessões correspondentes para detecção automática
-     * @param {number} lookbackHours - Quantas horas olhar para trás
-     * @returns {Promise<Array>} Lista de agendamentos candidatos
+     * NOVA FUNÇÃO: Detecta sessões realizadas sem agendamento (órfãs)
+     * @param {Object} options - Opções de busca
+     * @param {number} options.clinic_id - ID da clínica (opcional)
+     * @param {string} options.start_date - Data inicial (opcional)
+     * @param {string} options.end_date - Data final (opcional)
+     * @param {number} options.lookbackDays - Quantos dias olhar para trás (padrão: 2)
+     * @returns {Promise<Array>} Lista de sessões órfãs detectadas
      */
-    async findPendingDetection(lookbackHours = 24) {
-        const query = `
-            SELECT
-                ss.*,
+    async findOrphanSessions(options = {}) {
+        const { clinic_id, start_date, end_date, lookbackDays = 2 } = options;
+
+        // Definir período padrão se não fornecido
+        const defaultStartDate = start_date || new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const defaultEndDate = end_date || new Date().toISOString().split('T')[0];
+
+        let query = `
+            SELECT DISTINCT
+                ppp.id as session_id,
+                ppp.session_date,
+                ppp.created_at,
                 ppa.patient_id,
                 ppa.therapist_id,
                 p.name as patient_name,
                 u.full_name as therapist_name,
-                prog.name as program_name,
                 u.clinic_id
-            FROM scheduled_sessions ss
-            JOIN patient_program_assignments ppa ON ss.assignment_id = ppa.id
+            FROM patient_program_progress ppp
+            JOIN patient_program_assignments ppa ON ppp.assignment_id = ppa.id
             JOIN patients p ON ppa.patient_id = p.id
             JOIN users u ON ppa.therapist_id = u.id
-            JOIN programs prog ON ppa.program_id = prog.id
             WHERE
-                ss.status = 'scheduled'
-                AND ss.progress_session_id IS NULL
-                AND ss.scheduled_date >= CURRENT_DATE - INTERVAL '${lookbackHours} hours'
-                AND ss.scheduled_date <= CURRENT_DATE
-            ORDER BY ss.scheduled_date, ss.scheduled_time;
+                ppp.session_date >= $1::date
+                AND ppp.session_date <= $2::date
+                AND NOT EXISTS (
+                    SELECT 1 FROM scheduled_sessions ss
+                    WHERE ss.patient_id = ppa.patient_id
+                    AND ss.therapist_id = ppa.therapist_id
+                    AND ss.scheduled_date = ppp.session_date
+                    AND (ss.status = 'completed' OR ss.progress_session_id = ppp.id)
+                )
         `;
 
+        const values = [defaultStartDate, defaultEndDate];
+        let paramCount = 2;
+
+        // Filtrar por clínica se especificado
+        if (clinic_id) {
+            paramCount++;
+            query += ` AND u.clinic_id = $${paramCount}`;
+            values.push(clinic_id);
+        }
+
+        query += ` ORDER BY ppp.session_date DESC, ppp.created_at DESC`;
+
         try {
-            const result = await pool.query(query);
+            const result = await pool.query(query, values);
             return result.rows;
         } catch (error) {
-            console.error('[SCHEDULED-SESSION-MODEL] Erro ao buscar agendamentos para detecção:', error.message);
+            console.error('[SCHEDULED-SESSION-MODEL] Erro ao buscar sessões órfãs:', error.message);
             throw error;
         }
     },
 
     /**
-     * Detecta e vincula automaticamente uma sessão a um agendamento
-     * @param {number} appointmentId - ID do agendamento
+     * NOVA FUNÇÃO: Cria agendamento retroativo para sessão órfã
+     * @param {Object} orphanData - Dados da sessão órfã
+     * @returns {Promise<Object>} Agendamento retroativo criado
+     */
+    async createRetroactiveAppointment(orphanData) {
+        const {
+            patient_id,
+            therapist_id,
+            session_date,
+            session_time = '10:00', // Horário padrão se não especificado
+            session_id,
+            created_by = 1 // ID padrão para sistema
+        } = orphanData;
+
+        const query = `
+            INSERT INTO scheduled_sessions (
+                patient_id,
+                therapist_id,
+                discipline_id,
+                scheduled_date,
+                scheduled_time,
+                duration_minutes,
+                status,
+                created_by,
+                notes,
+                detection_source,
+                is_retroactive,
+                progress_session_id
+            )
+            VALUES ($1, $2, NULL, $3, $4, 60, 'completed', $5,
+                    'Agendamento criado retroativamente para sessão realizada sem agendamento prévio',
+                    'orphan_converted', TRUE, $6)
+            RETURNING *;
+        `;
+
+        const values = [patient_id, therapist_id, session_date, session_time, created_by, session_id];
+
+        try {
+            const { rows } = await pool.query(query, values);
+            console.log(`[SCHEDULING-V2] Agendamento retroativo criado: ID ${rows[0].id} para sessão órfã ${session_id}`);
+            return rows[0];
+        } catch (error) {
+            console.error('[SCHEDULING-ERROR] Erro ao criar agendamento retroativo:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * NOVA FUNÇÃO: Detecção inteligente de sessões realizadas
+     * Substitui a detecção antiga baseada em assignment_id
+     * @param {Object} options - Opções de detecção
+     * @param {number} options.clinic_id - ID da clínica
+     * @param {string} options.start_date - Data inicial (YYYY-MM-DD)
+     * @param {string} options.end_date - Data final (YYYY-MM-DD)
+     * @param {boolean} options.auto_create_retroactive - Criar retroativos automaticamente
      * @returns {Promise<Object>} Resultado da detecção
      */
-    async detectAndLinkSession(appointmentId) {
+    async intelligentSessionDetection(options = {}) {
         try {
-            // Buscar dados do agendamento
-            const appointmentQuery = `
-                SELECT
-                    ss.*,
-                    ppa.patient_id,
-                    ppa.therapist_id,
-                    ppa.program_id
-                FROM scheduled_sessions ss
-                JOIN patient_program_assignments ppa ON ss.assignment_id = ppa.id
-                WHERE ss.id = $1;
-            `;
+            const { clinic_id, start_date, end_date, auto_create_retroactive = false } = options;
 
-            const appointmentResult = await pool.query(appointmentQuery, [appointmentId]);
-            if (appointmentResult.rows.length === 0) {
-                return { success: false, reason: 'Agendamento não encontrado' };
+            // Validar que clinic_id seja obrigatório para segurança
+            if (!clinic_id) {
+                throw new Error('clinic_id é obrigatório para a detecção inteligente');
             }
 
-            const appointment = appointmentResult.rows[0];
+            // Definir período padrão se não fornecido
+            const defaultStartDate = start_date || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            const defaultEndDate = end_date || new Date().toISOString().split('T')[0];
 
-            // Buscar sessões realizadas no mesmo dia pelo mesmo terapeuta para o mesmo paciente/programa
-            const sessionQuery = `
-                SELECT
-                    ppp.id,
+            let completedSessions = [];
+            let orphanSessions = [];
+            let retroactiveCreated = [];
+
+            // 1. Buscar agendamentos pendentes no período (filtrado por clínica)
+            const pendingQuery = `
+                SELECT ss.*, p.name as patient_name, u.full_name as therapist_name
+                FROM scheduled_sessions ss
+                JOIN patients p ON ss.patient_id = p.id
+                JOIN users u ON ss.therapist_id = u.id
+                WHERE ss.status = 'scheduled'
+                AND ss.scheduled_date >= $1::date
+                AND ss.scheduled_date <= $2::date
+                AND ss.progress_session_id IS NULL
+                AND p.clinic_id = $3
+                ORDER BY ss.scheduled_date, ss.scheduled_time;
+            `;
+
+            const pendingAppointments = await pool.query(pendingQuery, [defaultStartDate, defaultEndDate, clinic_id]);
+
+            // 2. Para cada agendamento, buscar sessão correspondente
+            for (const appointment of pendingAppointments.rows) {
+                const sessionQuery = `
+                    SELECT DISTINCT ppp.id, ppp.created_at, ppp.session_date
+                    FROM patient_program_progress ppp
+                    JOIN patient_program_assignments ppa ON ppp.assignment_id = ppa.id
+                    WHERE ppa.patient_id = $1
+                    AND ppa.therapist_id = $2
+                    AND ppp.session_date = $3
+                    AND ppp.created_at >= $4::timestamp - INTERVAL '1 hour'
+                    AND ppp.created_at <= $4::timestamp + INTERVAL '3 hours'
+                    ORDER BY ppp.created_at DESC
+                    LIMIT 1;
+                `;
+
+                // Converter data para formato ISO correto
+                const dateObj = new Date(appointment.scheduled_date);
+                const dateISO = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD
+                const scheduledDateTime = `${dateISO}T${appointment.scheduled_time}`;
+                const sessionResult = await pool.query(sessionQuery, [
+                    appointment.patient_id,
+                    appointment.therapist_id,
+                    dateISO, // Usar data no formato ISO
+                    scheduledDateTime
+                ]);
+
+                if (sessionResult.rows.length > 0) {
+                    // Sessão encontrada - marcar como completed
+                    await pool.query(
+                        'UPDATE scheduled_sessions SET status = $1, progress_session_id = $2, updated_at = NOW() WHERE id = $3',
+                        ['completed', sessionResult.rows[0].id, appointment.id]
+                    );
+
+                    completedSessions.push({
+                        appointment_id: appointment.id,
+                        session_id: sessionResult.rows[0].id,
+                        patient_name: appointment.patient_name,
+                        therapist_name: appointment.therapist_name,
+                        scheduled_date: appointment.scheduled_date
+                    });
+
+                    console.log(`[DETECTION] Sessão detectada: Agendamento ${appointment.id} → Sessão ${sessionResult.rows[0].id}`);
+                }
+            }
+
+            // 3. Buscar sessões órfãs no período (filtradas por clínica)
+            const orphanQuery = `
+                SELECT DISTINCT
+                    ppp.id as session_id,
                     ppp.session_date,
                     ppp.created_at,
-                    ABS(EXTRACT(EPOCH FROM (ppp.created_at::time - $4::time)) / 60) as time_diff_minutes
+                    ppa.patient_id,
+                    ppa.therapist_id,
+                    p.name as patient_name,
+                    u.full_name as therapist_name
                 FROM patient_program_progress ppp
                 JOIN patient_program_assignments ppa ON ppp.assignment_id = ppa.id
-                WHERE
-                    ppa.patient_id = $1
-                    AND ppa.therapist_id = $2
-                    AND ppa.program_id = $3
-                    AND ppp.session_date = $5
-                    AND ppp.id NOT IN (
-                        SELECT DISTINCT progress_session_id
-                        FROM scheduled_sessions
-                        WHERE progress_session_id IS NOT NULL
-                    )
-                ORDER BY time_diff_minutes ASC
-                LIMIT 5;
+                JOIN patients p ON ppa.patient_id = p.id
+                JOIN users u ON ppa.therapist_id = u.id
+                WHERE ppp.session_date >= $1::date
+                AND ppp.session_date <= $2::date
+                AND p.clinic_id = $3
+                AND NOT EXISTS (
+                    SELECT 1 FROM scheduled_sessions ss
+                    WHERE ss.patient_id = ppa.patient_id
+                    AND ss.therapist_id = ppa.therapist_id
+                    AND ss.scheduled_date = ppp.session_date
+                    AND ss.status IN ('completed', 'scheduled')
+                )
+                ORDER BY ppp.session_date DESC, ppp.created_at DESC;
             `;
 
-            const sessionResult = await pool.query(sessionQuery, [
-                appointment.patient_id,
-                appointment.therapist_id,
-                appointment.program_id,
-                appointment.scheduled_time,
-                appointment.scheduled_date
-            ]);
+            const orphanResult = await pool.query(orphanQuery, [defaultStartDate, defaultEndDate, clinic_id]);
+            orphanSessions = orphanResult.rows;
 
-            if (sessionResult.rows.length === 0) {
-                return { success: false, reason: 'Nenhuma sessão encontrada no mesmo dia' };
+            // 4. Criar agendamentos retroativos se solicitado
+            if (auto_create_retroactive && orphanSessions.length > 0) {
+                for (const orphan of orphanSessions) {
+                    try {
+                        const retroactiveResult = await pool.query(`
+                            INSERT INTO scheduled_sessions (
+                                patient_id, therapist_id, scheduled_date, scheduled_time,
+                                duration_minutes, status, created_by, progress_session_id,
+                                is_retroactive, detection_source, notes
+                            ) VALUES ($1, $2, $3, '00:00', 60, 'completed', $4, $5, true, 'auto_detected', $6)
+                            RETURNING id, patient_id, therapist_id, scheduled_date
+                        `, [
+                            orphan.patient_id,
+                            orphan.therapist_id,
+                            orphan.session_date,
+                            1, // created_by admin (ajustar conforme necessário)
+                            orphan.session_id,
+                            `Agendamento retroativo criado automaticamente para sessão realizada em ${orphan.session_date}`
+                        ]);
+
+                        retroactiveCreated.push(retroactiveResult.rows[0]);
+                    } catch (error) {
+                        console.error(`[DETECTION] Erro ao criar retroativo para sessão ${orphan.session_id}:`, error);
+                    }
+                }
             }
 
-            // Pegar a sessão mais próxima em horário (menor diferença)
-            const bestMatch = sessionResult.rows[0];
-
-            // Verificar se a diferença de tempo é aceitável (até 2 horas de diferença)
-            if (bestMatch.time_diff_minutes > 120) {
-                return {
-                    success: false,
-                    reason: `Sessão encontrada mas com muita diferença de horário (${bestMatch.time_diff_minutes} minutos)`
-                };
-            }
-
-            // Vincular a sessão ao agendamento
-            const linkResult = await this.linkToCompletedSession(appointmentId, bestMatch.id);
-
-            if (linkResult) {
-                return {
-                    success: true,
-                    session_id: bestMatch.id,
-                    time_difference_minutes: bestMatch.time_diff_minutes
-                };
-            } else {
-                return { success: false, reason: 'Erro ao vincular sessão' };
-            }
+            return {
+                completed_sessions: completedSessions,
+                orphan_sessions: orphanSessions,
+                retroactive_created: retroactiveCreated
+            };
 
         } catch (error) {
-            console.error(`[SCHEDULED-SESSION-MODEL] Erro na detecção automática para agendamento ${appointmentId}:`, error.message);
-            return { success: false, reason: `Erro interno: ${error.message}` };
-        }
-    },
-
-    /**
-     * Busca administradores de uma clínica
-     * @param {number} clinicId - ID da clínica
-     * @returns {Promise<Array>} Lista de administradores
-     */
-    async getClinicAdmins(clinicId) {
-        const query = `
-            SELECT
-                id as user_id,
-                name,
-                email
-            FROM users
-            WHERE
-                clinic_id = $1
-                AND is_admin = true
-                AND active = true;
-        `;
-
-        try {
-            const result = await pool.query(query, [clinicId]);
-            return result.rows;
-        } catch (error) {
-            console.error('[SCHEDULED-SESSION-MODEL] Erro ao buscar admins da clínica:', error.message);
-            throw error;
-        }
-    },
-
-    /**
-     * Busca estatísticas detalhadas do sistema de agendamento
-     * @param {Object} filters - Filtros opcionais
-     * @param {string} filters.start_date - Data inicial
-     * @param {string} filters.end_date - Data final
-     * @param {number} filters.clinic_id - ID da clínica
-     * @returns {Promise<Object>} Estatísticas do sistema
-     */
-    async getSystemStatistics(filters = {}) {
-        const { start_date, end_date, clinic_id } = filters;
-
-        let whereClause = 'WHERE 1=1';
-        const params = [];
-
-        if (start_date) {
-            params.push(start_date);
-            whereClause += ` AND ss.scheduled_date >= $${params.length}`;
-        }
-
-        if (end_date) {
-            params.push(end_date);
-            whereClause += ` AND ss.scheduled_date <= $${params.length}`;
-        }
-
-        if (clinic_id) {
-            params.push(clinic_id);
-            whereClause += ` AND u.clinic_id = $${params.length}`;
-        }
-
-        const query = `
-            SELECT
-                COUNT(*) as total_appointments,
-                COUNT(CASE WHEN ss.status = 'scheduled' THEN 1 END) as scheduled_appointments,
-                COUNT(CASE WHEN ss.status = 'completed' THEN 1 END) as completed_appointments,
-                COUNT(CASE WHEN ss.status = 'missed' THEN 1 END) as missed_appointments,
-                COUNT(CASE WHEN ss.status = 'cancelled' THEN 1 END) as cancelled_appointments,
-                COUNT(CASE WHEN ss.progress_session_id IS NOT NULL THEN 1 END) as auto_linked_sessions,
-                COUNT(CASE WHEN ss.scheduled_date = CURRENT_DATE THEN 1 END) as today_appointments,
-                ROUND(
-                    (COUNT(CASE WHEN ss.status = 'completed' THEN 1 END)::decimal /
-                     NULLIF(COUNT(CASE WHEN ss.status != 'cancelled' THEN 1 END), 0)) * 100,
-                    2
-                ) as attendance_rate,
-                ROUND(
-                    (COUNT(CASE WHEN ss.status = 'completed' THEN 1 END)::decimal /
-                     NULLIF(COUNT(*), 0)) * 100,
-                    2
-                ) as completion_rate,
-                COUNT(DISTINCT ppa.patient_id) as unique_patients,
-                COUNT(DISTINCT ppa.therapist_id) as unique_therapists
-            FROM scheduled_sessions ss
-            JOIN patient_program_assignments ppa ON ss.assignment_id = ppa.id
-            JOIN users u ON ppa.therapist_id = u.id
-            ${whereClause};
-        `;
-
-        try {
-            const result = await pool.query(query, params);
-            return result.rows[0];
-        } catch (error) {
-            console.error('[SCHEDULED-SESSION-MODEL] Erro ao buscar estatísticas do sistema:', error.message);
-            throw error;
-        }
-    },
-
-    /**
-     * Busca agendamentos que precisam de notificação de lembrete
-     * @param {number} hoursAhead - Quantas horas antes notificar (padrão: 24)
-     * @returns {Promise<Array>} Lista de agendamentos para notificar
-     */
-    async findUpcomingForReminders(hoursAhead = 24) {
-        const query = `
-            SELECT
-                ss.*,
-                ppa.patient_id,
-                ppa.therapist_id,
-                p.name as patient_name,
-                u.full_name as therapist_name,
-                u.email as therapist_email,
-                prog.name as program_name,
-                u.clinic_id
-            FROM scheduled_sessions ss
-            JOIN patient_program_assignments ppa ON ss.assignment_id = ppa.id
-            JOIN patients p ON ppa.patient_id = p.id
-            JOIN users u ON ppa.therapist_id = u.id
-            JOIN programs prog ON ppa.program_id = prog.id
-            WHERE
-                ss.status = 'scheduled'
-                AND ss.scheduled_date = CURRENT_DATE + INTERVAL '1 day'
-                AND ss.reminder_sent = false
-            ORDER BY ss.scheduled_time;
-        `;
-
-        try {
-            const result = await pool.query(query);
-            return result.rows;
-        } catch (error) {
-            console.error('[SCHEDULED-SESSION-MODEL] Erro ao buscar agendamentos para lembrete:', error.message);
-            throw error;
-        }
-    },
-
-    /**
-     * Marca lembrete como enviado
-     * @param {number} appointmentId - ID do agendamento
-     * @returns {Promise<boolean>} Sucesso da operação
-     */
-    async markReminderSent(appointmentId) {
-        const query = `
-            UPDATE scheduled_sessions
-            SET
-                reminder_sent = true,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $1;
-        `;
-
-        try {
-            const result = await pool.query(query, [appointmentId]);
-            return result.rowCount > 0;
-        } catch (error) {
-            console.error('[SCHEDULED-SESSION-MODEL] Erro ao marcar lembrete como enviado:', error.message);
+            console.error('[SCHEDULING-ERROR] Erro na detecção inteligente:', error);
             throw error;
         }
     }

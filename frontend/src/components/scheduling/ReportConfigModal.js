@@ -49,19 +49,19 @@ const ReportConfigModal = ({
     switch (period.type) {
       case 'week':
         startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-        endDate = today;
+        endDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000); // +30 dias para agendamentos futuros
         break;
       case '2weeks':
         startDate = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
-        endDate = today;
+        endDate = new Date(today.getTime() + 45 * 24 * 60 * 60 * 1000); // +45 dias para agendamentos futuros
         break;
       case 'month':
         startDate = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-        endDate = today;
+        endDate = new Date(today.getFullYear(), today.getMonth() + 2, today.getDate()); // +2 meses para agendamentos futuros
         break;
       case 'quarter':
         startDate = new Date(today.getFullYear(), today.getMonth() - 3, today.getDate());
-        endDate = today;
+        endDate = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate()); // +3 meses para agendamentos futuros
         break;
       default:
         return; // Para custom, não alterar as datas
@@ -220,10 +220,10 @@ const ReportConfigModal = ({
   // Obter tipo de período em texto
   const getPeriodTypeText = () => {
     const types = {
-      'week': 'Última Semana',
-      '2weeks': 'Últimas 2 Semanas',
-      'month': 'Último Mês',
-      'quarter': 'Último Trimestre',
+      'week': 'Última Semana + Próximo Mês',
+      '2weeks': 'Últimas 2 Semanas + Próximos 45 Dias',
+      'month': 'Último Mês + Próximos 2 Meses',
+      'quarter': 'Último Trimestre + Próximos 3 Meses',
       'custom': 'Período Customizado'
     };
     return types[period.type] || 'Período não definido';
@@ -302,10 +302,10 @@ const ReportConfigModal = ({
 
                 <div className="space-y-2">
                   {[
-                    { value: 'week', label: 'Última Semana' },
-                    { value: '2weeks', label: 'Últimas 2 Semanas' },
-                    { value: 'month', label: 'Último Mês' },
-                    { value: 'quarter', label: 'Último Trimestre' },
+                    { value: 'week', label: 'Última Semana + Próximo Mês' },
+                    { value: '2weeks', label: 'Últimas 2 Semanas + Próximos 45 Dias' },
+                    { value: 'month', label: 'Último Mês + Próximos 2 Meses' },
+                    { value: 'quarter', label: 'Último Trimestre + Próximos 3 Meses' },
                     { value: 'custom', label: 'Período Customizado' }
                   ].map(option => (
                     <label key={option.value} className="flex items-center">

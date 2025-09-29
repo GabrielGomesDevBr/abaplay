@@ -66,7 +66,7 @@ const AppointmentsList = ({
   const filteredAppointments = appointments.filter(appointment => {
     const matchesSearch = !filters.search ||
       appointment.patient_name.toLowerCase().includes(filters.search.toLowerCase()) ||
-      appointment.program_name.toLowerCase().includes(filters.search.toLowerCase()) ||
+      (appointment.discipline_name && appointment.discipline_name.toLowerCase().includes(filters.search.toLowerCase())) ||
       appointment.therapist_name.toLowerCase().includes(filters.search.toLowerCase());
 
     const matchesStatus = !filters.status || appointment.status === filters.status;
@@ -178,7 +178,7 @@ const AppointmentsList = ({
                 type="text"
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
-                placeholder="Paciente, programa ou terapeuta..."
+                placeholder="Paciente, disciplina ou terapeuta..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -287,7 +287,7 @@ const AppointmentsList = ({
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <FontAwesomeIcon icon={faStethoscope} className="mr-2" />
-                  Programa
+                  Área de Intervenção
                 </th>
                 <th
                   onClick={() => handleSort('therapist_name')}
@@ -343,11 +343,11 @@ const AppointmentsList = ({
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">
-                      {appointment.program_name}
+                      {appointment.discipline_name || 'Sessão Geral'}
                     </div>
-                    {appointment.discipline_name && (
+                    {appointment.active_programs_count > 0 && (
                       <div className="text-sm text-gray-500">
-                        {appointment.discipline_name}
+                        {appointment.active_programs_count} programa(s) ativo(s)
                       </div>
                     )}
                   </td>
@@ -383,7 +383,7 @@ const AppointmentsList = ({
                         <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
                       </button>
                     )}
-                    {(appointment.status === 'scheduled' || appointment.status === 'cancelled') && onDelete && (
+                    {(appointment.status === 'scheduled' || appointment.status === 'cancelled' || appointment.status === 'missed' || appointment.status === 'completed') && onDelete && (
                       <button
                         onClick={() => onDelete(appointment)}
                         className="text-red-600 hover:text-red-900 transition-colors"
