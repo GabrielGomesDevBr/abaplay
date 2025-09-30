@@ -13,8 +13,11 @@ const verifyToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log('[AUTH-MIDDLEWARE] Verificando token para:', req.method, req.path);
+  console.log('[AUTH-MIDDLEWARE] Authorization header:', authHeader ? `${authHeader.substring(0, 30)}...` : 'null');
+
   if (!token) {
-    console.warn('Tentativa de acesso negada: Token não fornecido.');
+    console.warn('[AUTH-MIDDLEWARE] Tentativa de acesso negada: Token não fornecido.');
     // CORREÇÃO: Usa o formato de erro padronizado.
     return res.status(401).json({ errors: [{ msg: 'Acesso negado. Token não fornecido.' }] });
   }
@@ -22,7 +25,12 @@ const verifyToken = (req, res, next) => {
   try {
     const decodedPayload = jwt.verify(token, dbConfig.JWT_SECRET);
     req.user = decodedPayload;
-    // Removido o log daqui para reduzir o ruído em caso de sucesso.
+    console.log('[AUTH-MIDDLEWARE] Token válido para usuário:', {
+      id: decodedPayload.id,
+      role: decodedPayload.role,
+      is_admin: decodedPayload.is_admin,
+      clinic_id: decodedPayload.clinic_id
+    });
     next();
   } catch (error) {
     // MELHORIA: Log detalhado do erro no console do backend para depuração.

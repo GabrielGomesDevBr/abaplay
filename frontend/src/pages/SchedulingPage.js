@@ -9,8 +9,7 @@ import {
   faRefresh,
   faExclamationTriangle,
   faFilePdf,
-  faBrain,
-  faSearch
+  faBrain
 } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../context/AuthContext';
 import AppointmentForm from '../components/scheduling/AppointmentForm';
@@ -20,6 +19,7 @@ import ReportConfigModal from '../components/scheduling/ReportConfigModal';
 import OrphanSessionsList from '../components/scheduling/OrphanSessionsList';
 import IntelligentDetectionModal from '../components/scheduling/IntelligentDetectionModal';
 import RetroactiveAppointmentModal from '../components/scheduling/RetroactiveAppointmentModal';
+import RecurringTemplatesList from '../components/scheduling/RecurringTemplatesList';
 import {
   getAppointments,
   createAppointment,
@@ -58,7 +58,7 @@ const SchedulingPage = () => {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   // Estado para abas
-  const [activeTab, setActiveTab] = useState('appointments'); // 'appointments' | 'orphans'
+  const [activeTab, setActiveTab] = useState('appointments'); // 'appointments' | 'orphans' | 'recurring'
   const [orphanRefreshTrigger, setOrphanRefreshTrigger] = useState(0);
 
   // Estados de filtros e paginação
@@ -90,6 +90,19 @@ const SchedulingPage = () => {
   const handleRetroactiveSuccess = () => {
     loadAppointments();
     setOrphanRefreshTrigger(prev => prev + 1);
+  };
+
+  // Função para criar novo template recorrente
+  const handleCreateRecurringTemplate = () => {
+    setShowAppointmentForm(true);
+    setEditingAppointment(null);
+  };
+
+  // Função para ver agendamentos de um template
+  const handleViewTemplateAppointments = (template) => {
+    // Implementar modal ou navegação para ver agendamentos do template
+    // Por agora, só mostrar alerta
+    alert(`Visualizar agendamentos do template:\n\n${template.patient_name} - ${template.therapist_name}\nTemplate ID: ${template.id}`);
   };
 
   const refreshAssignments = useCallback(async () => {
@@ -145,18 +158,36 @@ const SchedulingPage = () => {
   const handleCreateAppointment = async (appointmentData) => {
     try {
       setIsSubmitting(true);
-      const newAppointment = await createAppointment(appointmentData);
 
-      // Atualizar lista
-      await loadAppointments();
-      await loadStatistics();
+      // Verificar se é agendamento recorrente ou único
+      if (appointmentData.type === 'recurring') {
+        // Agendamento recorrente - mostrar resultado
+        const { template, generated_appointments, conflicts } = appointmentData;
 
-      setShowAppointmentForm(false);
-      setEditingAppointment(null);
+        setShowAppointmentForm(false);
+        setEditingAppointment(null);
 
-      // Mostrar detalhes do novo agendamento
-      setSelectedAppointment(newAppointment.appointment);
-      setShowAppointmentDetails(true);
+        // Mostrar resultado
+        alert(`Template recorrente criado com sucesso!\n\n${generated_appointments} agendamentos gerados\n${conflicts} conflitos encontrados\n\nTemplate ID: ${template.id}`);
+
+        // Atualizar listas
+        await loadAppointments();
+        await loadStatistics();
+      } else {
+        // Agendamento único
+        const newAppointment = await createAppointment(appointmentData);
+
+        // Atualizar lista
+        await loadAppointments();
+        await loadStatistics();
+
+        setShowAppointmentForm(false);
+        setEditingAppointment(null);
+
+        // Mostrar detalhes do novo agendamento
+        setSelectedAppointment(newAppointment.appointment);
+        setShowAppointmentDetails(true);
+      }
     } catch (error) {
       console.error('Erro ao criar agendamento');
       throw error;
@@ -459,6 +490,17 @@ const SchedulingPage = () => {
                 <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
                 Sessões Órfãs
               </button>
+              <button
+                onClick={() => setActiveTab('recurring')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'recurring'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <FontAwesomeIcon icon={faRefresh} className="mr-2" />
+                Recorrentes
+              </button>
             </nav>
           </div>
         </div>
@@ -481,6 +523,13 @@ const SchedulingPage = () => {
           <OrphanSessionsList
             onCreateRetroactive={handleCreateRetroactive}
             refreshTrigger={orphanRefreshTrigger}
+          />
+        )}
+
+        {activeTab === 'recurring' && (
+          <RecurringTemplatesList
+            onCreateNew={handleCreateRecurringTemplate}
+            onViewAppointments={handleViewTemplateAppointments}
           />
         )}
       </div>

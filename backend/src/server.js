@@ -21,9 +21,13 @@ const superAdminRoutes = require('./routes/superAdminRoutes');
 // --- Novas rotas do sistema de agendamento ---
 const schedulingRoutes = require('./routes/schedulingRoutes');
 const therapistScheduleRoutes = require('./routes/therapistScheduleRoutes');
+// --- Sistema de agendamentos recorrentes ---
+const recurringAppointmentRoutes = require('./routes/recurringAppointmentRoutes');
 
 // --- Job de detecção automática de sessões ---
 const { scheduleMaintenanceJob } = require('./jobs/sessionDetectionJob');
+// --- Job de agendamentos recorrentes ---
+const { recurringJobInstance } = require('./jobs/recurringAppointmentJob');
 
 // Importa o middleware de autenticação
 const { verifyToken } = require('./middleware/authMiddleware');
@@ -102,6 +106,8 @@ app.use('/api/reports', verifyToken, verifyClinicStatus, reportRoutes);
 // --- Novas rotas do sistema de agendamento ---
 app.use('/api/admin/scheduling', verifyToken, verifyClinicStatus, schedulingRoutes);
 app.use('/api/therapist/schedule', verifyToken, verifyClinicStatus, therapistScheduleRoutes);
+// --- Sistema de agendamentos recorrentes ---
+app.use('/api/admin/recurring-appointments', verifyToken, verifyClinicStatus, recurringAppointmentRoutes);
 // --- Rota geral para justificativas (admin + terapeuta) ---
 app.use('/api/scheduling', verifyToken, verifyClinicStatus, schedulingRoutes);
 // --- Nova rota para super admin (sem verificação de clínica) ---
@@ -133,5 +139,14 @@ server.listen(PORT, () => {
     console.log('[SCHEDULING] Job de detecção automática configurado');
   } else {
     console.log('[SCHEDULING] Job de detecção automática desabilitado (NODE_ENV != production e ENABLE_AUTO_DETECTION != true)');
+  }
+
+  // Inicializar job de agendamentos recorrentes
+  if (process.env.NODE_ENV === 'production' || process.env.ENABLE_RECURRING_JOBS === 'true') {
+    console.log('[RECURRING] Iniciando jobs de agendamentos recorrentes...');
+    recurringJobInstance.initializeScheduledJobs();
+    console.log('[RECURRING] Jobs de agendamentos recorrentes configurados');
+  } else {
+    console.log('[RECURRING] Jobs de agendamentos recorrentes desabilitados (NODE_ENV != production e ENABLE_RECURRING_JOBS != true)');
   }
 });

@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faCalendarAlt, faClock, faUser, faStethoscope, faStickyNote, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faTimes, faCalendarAlt, faClock, faUser, faStethoscope, faStickyNote, faSpinner, faRedoAlt, faEye, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 import { validateAppointmentData, validateAppointmentDateTime } from '../../api/schedulingApi';
 import { fetchTherapists, fetchAllAdminPatients } from '../../api/adminApi';
 import { getDisciplineHierarchy } from '../../api/programApi';
+import { recurringAppointmentApi } from '../../api/recurringAppointmentApi';
 import { useAuth } from '../../context/AuthContext';
 import { ensureYYYYMMDD, debugDateFormat } from '../../utils/dateUtils';
 
@@ -41,6 +42,20 @@ const AppointmentForm = ({
     duration_minutes: 60,
     notes: ''
   });
+
+  // Estados para recorrência - NOVO
+  const [recurrenceEnabled, setRecurrenceEnabled] = useState(false);
+  const [recurrenceConfig, setRecurrenceConfig] = useState({
+    type: 'weekly',
+    endDate: '',
+    generateWeeks: 4,
+    skipHolidays: false,
+    notes: ''
+  });
+  const [recurrencePreview, setRecurrencePreview] = useState([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [checkingConflicts, setCheckingConflicts] = useState(false);
+  const [conflicts, setConflicts] = useState([]);
 
   const [errors, setErrors] = useState([]);
   const [dateTimeWarning, setDateTimeWarning] = useState(null);
@@ -109,6 +124,7 @@ const AppointmentForm = ({
   useEffect(() => {
     if (isOpen) {
       if (editingAppointment) {
+        // Modo de edição - desabilitar recorrência
         setFormData({
           patient_id: editingAppointment.patient_id || '',
           therapist_id: editingAppointment.therapist_id || '',
@@ -118,7 +134,9 @@ const AppointmentForm = ({
           duration_minutes: editingAppointment.duration_minutes || 60,
           notes: editingAppointment.notes || ''
         });
+        setRecurrenceEnabled(false); // Desabilitar recorrência no modo edição
       } else {
+        // Modo criação - resetar tudo
         setFormData({
           patient_id: '',
           therapist_id: '',
@@ -128,8 +146,20 @@ const AppointmentForm = ({
           duration_minutes: 60,
           notes: ''
         });
+        setRecurrenceEnabled(false);
+        setRecurrenceConfig({
+          type: 'weekly',
+          endDate: '',
+          generateWeeks: 4,
+          skipHolidays: false,
+          notes: ''
+        });
+        setRecurrencePreview([]);
+        setShowPreview(false);
+        setConflicts([]);
       }
       setErrors([]);
+      setDateTimeWarning(null);
     }
   }, [isOpen, editingAppointment]);
 
@@ -174,30 +204,141 @@ const AppointmentForm = ({
     }
   };
 
-  const handleSubmit = (e) => {
+  // Função para lidar com mudanças na configuração de recorrência
+  const handleRecurrenceConfigChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    const newValue = type === 'checkbox' ? checked : value;
+
+    setRecurrenceConfig(prev => ({
+      ...prev,
+      [name]: newValue
+    }));
+
+    // Atualizar preview automaticamente se campos essenciais estão preenchidos
+    if (formData.scheduled_date && formData.scheduled_time && formData.patient_id && formData.therapist_id) {
+      updateRecurrencePreview({ ...recurrenceConfig, [name]: newValue });
+    }
+  };
+
+  // Atualizar preview de recorrência
+  const updateRecurrencePreview = (config = recurrenceConfig) => {
+    if (!formData.scheduled_date || !formData.scheduled_time || !recurrenceEnabled) {
+      setRecurrencePreview([]);
+      return;
+    }
+
+    const dayOfWeek = new Date(formData.scheduled_date).getDay();
+
+    const templateData = {
+      start_date: formData.scheduled_date,
+      end_date: config.endDate || null,
+      recurrence_type: config.type,
+      day_of_week: dayOfWeek,
+      scheduled_time: formData.scheduled_time,
+      generate_weeks_ahead: config.generateWeeks
+    };
+
+    const preview = recurringAppointmentApi.generatePreview(templateData);
+    setRecurrencePreview(preview);
+  };
+
+  // Verificar conflitos
+  const checkConflicts = async () => {
+    if (!formData.patient_id || !formData.therapist_id || !formData.scheduled_date || !formData.scheduled_time) {
+      return;
+    }
+
+    setCheckingConflicts(true);
+    try {
+      const dayOfWeek = new Date(formData.scheduled_date).getDay();
+
+      const conflictData = {
+        patient_id: parseInt(formData.patient_id),
+        therapist_id: parseInt(formData.therapist_id),
+        day_of_week: dayOfWeek,
+        scheduled_time: formData.scheduled_time,
+        start_date: formData.scheduled_date,
+        end_date: recurrenceConfig.endDate || null
+      };
+
+      const result = await recurringAppointmentApi.checkConflicts(conflictData);
+      setConflicts(result.conflicts || []);
+    } catch (error) {
+      console.error('Erro ao verificar conflitos:', error);
+      setConflicts([]);
+    } finally {
+      setCheckingConflicts(false);
+    }
+  };
+
+  // Atualizar preview quando dados essenciais mudam
+  useEffect(() => {
+    if (recurrenceEnabled && formData.scheduled_date && formData.scheduled_time) {
+      updateRecurrencePreview();
+    }
+  }, [formData.scheduled_date, formData.scheduled_time, recurrenceEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validar dados
+    // Validar dados básicos
     const validationErrors = validateAppointmentData(formData);
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
       return;
     }
 
-    // Submeter dados com data garantidamente no formato correto - NOVA ESTRUTURA
-    const submitData = {
-      ...formData,
-      patient_id: parseInt(formData.patient_id),
-      therapist_id: parseInt(formData.therapist_id),
-      discipline_id: formData.discipline_id ? parseInt(formData.discipline_id) : null,
-      duration_minutes: parseInt(formData.duration_minutes),
-      scheduled_date: ensureYYYYMMDD(formData.scheduled_date)
-    };
+    // Se recorrência está habilitada, criar template recorrente
+    if (recurrenceEnabled && !editingAppointment) {
+      // Validar dados de recorrência
+      const dayOfWeek = new Date(formData.scheduled_date).getDay();
 
-    // Dados enviados (novo formato)
-    // console.log('[APPOINTMENT-FORM] Dados enviados:', submitData);
+      const templateData = {
+        patient_id: parseInt(formData.patient_id),
+        therapist_id: parseInt(formData.therapist_id),
+        discipline_id: formData.discipline_id ? parseInt(formData.discipline_id) : null,
+        recurrence_type: recurrenceConfig.type,
+        day_of_week: dayOfWeek,
+        scheduled_time: formData.scheduled_time,
+        duration_minutes: parseInt(formData.duration_minutes),
+        start_date: ensureYYYYMMDD(formData.scheduled_date),
+        end_date: recurrenceConfig.endDate ? ensureYYYYMMDD(recurrenceConfig.endDate) : null,
+        generate_weeks_ahead: parseInt(recurrenceConfig.generateWeeks),
+        skip_holidays: Boolean(recurrenceConfig.skipHolidays),
+        notes: recurrenceConfig.notes || formData.notes || null
+      };
 
-    onSubmit(submitData);
+      const templateErrors = recurringAppointmentApi.validateTemplate(templateData);
+      if (templateErrors.length > 0) {
+        setErrors(templateErrors);
+        return;
+      }
+
+      try {
+        const result = await recurringAppointmentApi.createTemplate(templateData);
+        // Chamar callback de sucesso com informações da recorrência
+        onSubmit({
+          type: 'recurring',
+          template: result.template,
+          generated_appointments: result.generated_appointments,
+          conflicts: result.conflicts
+        });
+      } catch (error) {
+        setErrors(error.errors?.map(err => err.msg) || ['Erro ao criar agendamento recorrente']);
+      }
+    } else {
+      // Agendamento único (modo normal)
+      const submitData = {
+        ...formData,
+        patient_id: parseInt(formData.patient_id),
+        therapist_id: parseInt(formData.therapist_id),
+        discipline_id: formData.discipline_id ? parseInt(formData.discipline_id) : null,
+        duration_minutes: parseInt(formData.duration_minutes),
+        scheduled_date: ensureYYYYMMDD(formData.scheduled_date)
+      };
+
+      onSubmit(submitData);
+    }
   };
 
   // Gerar opções de horário (7:00 às 20:00, intervalos de 30min)
@@ -433,6 +574,216 @@ const AppointmentForm = ({
             </div>
           </div>
 
+          {/* Seção de Recorrência - NOVA */}
+          {!editingAppointment && (
+            <div className="mb-6 border-t pt-6">
+              <div className="flex items-center mb-4">
+                <input
+                  type="checkbox"
+                  id="recurrence-enabled"
+                  checked={recurrenceEnabled}
+                  onChange={(e) => setRecurrenceEnabled(e.target.checked)}
+                  disabled={isLoading}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="recurrence-enabled" className="ml-2 font-medium text-gray-700">
+                  <FontAwesomeIcon icon={faRedoAlt} className="mr-2 text-blue-600" />
+                  Criar agendamento recorrente
+                </label>
+              </div>
+
+              {recurrenceEnabled && (
+                <div className="bg-blue-50 p-4 rounded-lg space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Tipo de recorrência */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Frequência
+                      </label>
+                      <select
+                        name="type"
+                        value={recurrenceConfig.type}
+                        onChange={handleRecurrenceConfigChange}
+                        disabled={isLoading}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      >
+                        <option value="weekly">📅 Toda semana</option>
+                        <option value="biweekly">📅 A cada 2 semanas</option>
+                        <option value="monthly">📅 Todo mês</option>
+                      </select>
+                    </div>
+
+                    {/* Semanas à frente para gerar */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Gerar para próximas
+                      </label>
+                      <select
+                        name="generateWeeks"
+                        value={recurrenceConfig.generateWeeks}
+                        onChange={handleRecurrenceConfigChange}
+                        disabled={isLoading}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      >
+                        <option value={4}>4 semanas</option>
+                        <option value={6}>6 semanas</option>
+                        <option value={8}>8 semanas</option>
+                        <option value={12}>12 semanas</option>
+                        <option value={16}>16 semanas</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Data de término (opcional) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Terminar em (opcional)
+                    </label>
+                    <input
+                      type="date"
+                      name="endDate"
+                      value={recurrenceConfig.endDate}
+                      onChange={handleRecurrenceConfigChange}
+                      min={formData.scheduled_date}
+                      disabled={isLoading}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                    />
+                    <div className="mt-1 text-xs text-gray-500">
+                      Deixe em branco para gerar indefinidamente
+                    </div>
+                  </div>
+
+                  {/* Opções avançadas */}
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="skip-holidays"
+                      name="skipHolidays"
+                      checked={recurrenceConfig.skipHolidays}
+                      onChange={handleRecurrenceConfigChange}
+                      disabled={isLoading}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <label htmlFor="skip-holidays" className="ml-2 text-sm text-gray-700">
+                      Pular feriados automaticamente
+                    </label>
+                  </div>
+
+                  {/* Observações da recorrência */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Observações da recorrência
+                    </label>
+                    <textarea
+                      name="notes"
+                      value={recurrenceConfig.notes}
+                      onChange={handleRecurrenceConfigChange}
+                      rows={2}
+                      maxLength={200}
+                      placeholder="Observações específicas da série recorrente..."
+                      disabled={isLoading}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 resize-none"
+                    />
+                    <div className="mt-1 text-xs text-gray-500">
+                      {recurrenceConfig.notes.length}/200 caracteres
+                    </div>
+                  </div>
+
+                  {/* Botões de ação */}
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowPreview(!showPreview)}
+                      disabled={isLoading || !formData.scheduled_date || !formData.scheduled_time}
+                      className="px-3 py-2 text-sm font-medium text-blue-700 bg-blue-100 border border-blue-300 rounded-md shadow-sm hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    >
+                      <FontAwesomeIcon icon={faEye} className="mr-1 w-3 h-3" />
+                      {showPreview ? 'Ocultar Preview' : 'Ver Preview'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={checkConflicts}
+                      disabled={isLoading || checkingConflicts || !formData.patient_id || !formData.therapist_id || !formData.scheduled_date || !formData.scheduled_time}
+                      className="px-3 py-2 text-sm font-medium text-orange-700 bg-orange-100 border border-orange-300 rounded-md shadow-sm hover:bg-orange-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    >
+                      {checkingConflicts ? (
+                        <FontAwesomeIcon icon={faSpinner} className="mr-1 w-3 h-3 animate-spin" />
+                      ) : (
+                        <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1 w-3 h-3" />
+                      )}
+                      Verificar Conflitos
+                    </button>
+                  </div>
+
+                  {/* Preview dos agendamentos */}
+                  {showPreview && recurrencePreview.length > 0 && (
+                    <div className="bg-white p-3 rounded border">
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">
+                        Preview dos Agendamentos ({recurrencePreview.length} agendamentos)
+                      </h4>
+                      <div className="max-h-32 overflow-y-auto space-y-1">
+                        {recurrencePreview.slice(0, 10).map((appointment, index) => (
+                          <div key={index} className="text-xs text-gray-600 flex justify-between">
+                            <span>{appointment.formatted_date} ({appointment.day_name})</span>
+                            <span>{appointment.time}</span>
+                          </div>
+                        ))}
+                        {recurrencePreview.length > 10 && (
+                          <div className="text-xs text-gray-500 text-center pt-1">
+                            ... e mais {recurrencePreview.length - 10} agendamentos
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Conflitos encontrados */}
+                  {conflicts.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                      <div className="flex items-center mb-2">
+                        <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-500 mr-2" />
+                        <h4 className="text-sm font-medium text-red-800">
+                          Conflitos Detectados ({conflicts.length})
+                        </h4>
+                      </div>
+                      <div className="max-h-24 overflow-y-auto space-y-1">
+                        {conflicts.slice(0, 3).map((conflict, index) => (
+                          <div key={index} className="text-xs text-red-700">
+                            {conflict.scheduled_date} às {conflict.scheduled_time} - {conflict.patient_name}
+                          </div>
+                        ))}
+                        {conflicts.length > 3 && (
+                          <div className="text-xs text-red-600">
+                            ... e mais {conflicts.length - 3} conflitos
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-2 text-xs text-red-600">
+                        ⚠️ Agendamentos com conflito não serão criados automaticamente
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Resumo */}
+                  {formData.scheduled_date && formData.scheduled_time && (
+                    <div className="bg-white p-3 rounded border">
+                      <div className="text-sm text-gray-600">
+                        <strong>Resumo:</strong> {recurringAppointmentApi.formatRecurrenceDescription({
+                          recurrence_type: recurrenceConfig.type,
+                          day_of_week: new Date(formData.scheduled_date).getDay(),
+                          scheduled_time: formData.scheduled_time,
+                          duration_minutes: formData.duration_minutes,
+                          discipline_name: formData.discipline_id ? disciplines.find(d => d.id === parseInt(formData.discipline_id))?.name : null
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Botões */}
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
             <button
@@ -454,7 +805,12 @@ const AppointmentForm = ({
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               )}
-              {editingAppointment ? 'Atualizar' : 'Agendar'}
+              {editingAppointment
+                ? 'Atualizar'
+                : recurrenceEnabled
+                  ? 'Criar Série Recorrente'
+                  : 'Agendar'
+              }
             </button>
           </div>
         </form>

@@ -6,7 +6,7 @@ import { fetchAllUsers, createUser, updateUser, deleteUser, fetchAllAdminPatient
 import { updateAssignmentStatus } from '../api/programApi';
 import { removeProgramAssignment } from '../api/patientApi';
 import UserFormModal from '../components/admin/UserFormModal';
-import PatientForm from '../components/patient/PatientForm';
+import ExpandedPatientForm from '../components/patient/ExpandedPatientForm';
 import AssignmentModal from '../components/admin/AssignmentModal';
 import TransferAssignmentsModal from '../components/admin/TransferAssignmentsModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -103,7 +103,7 @@ const UserList = ({ users, onEditClick, onDeleteClick }) => {
 };
 
 // Componente PatientList com melhorias estéticas sutis mantendo funcionalidade
-const PatientList = ({ patients, onManageClick, onDeleteClick }) => {
+const PatientList = ({ patients, onManageClick, onEditClick, onDeleteClick }) => {
     const formatDate = (dateString) => {
         if (!dateString) return '-';
         return new Date(dateString).toLocaleDateString('pt-BR');
@@ -169,6 +169,12 @@ const PatientList = ({ patients, onManageClick, onDeleteClick }) => {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div className="flex items-center justify-end space-x-2">
+                                        <button
+                                            onClick={() => onEditClick(patient)}
+                                            className="text-green-600 hover:text-green-900 hover:bg-green-50 px-2 py-1 rounded-md transition-colors duration-200"
+                                        >
+                                            <FontAwesomeIcon icon={faEdit} className="mr-1 h-3 w-3" /> Editar
+                                        </button>
                                         <button
                                             onClick={() => onManageClick(patient)}
                                             className="text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 px-2 py-1 rounded-md transition-colors duration-200"
@@ -383,6 +389,7 @@ const AdminPage = () => {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [therapistToDelete, setTherapistToDelete] = useState(null);
   const [patientToManage, setPatientToManage] = useState(null);
+  const [patientToEdit, setPatientToEdit] = useState(null);
   const [userToEdit, setUserToEdit] = useState(null);
 
   const loadData = useCallback(async () => {
@@ -444,6 +451,11 @@ const AdminPage = () => {
   const handleSavePatient = useCallback(async (patientData) => {
     try { await createPatient(patientData, token); await loadData(); } catch(err) { throw err; }
   }, [token, loadData]);
+
+  const handleEditPatient = useCallback((patient) => {
+    setPatientToEdit(patient);
+    setIsPatientModalOpen(true);
+  }, []);
   
   const handleDeleteUser = useCallback(async (userToDelete) => {
     // Para pais, exclusão direta
@@ -669,7 +681,7 @@ const AdminPage = () => {
         ) : (
             <div className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
                 {activeTab === 'users' && <UserList users={filteredUsers} onEditClick={handleOpenEditUserModal} onDeleteClick={handleDeleteUser} />}
-                {activeTab === 'patients' && <PatientList patients={filteredPatients} onManageClick={handleOpenAssignmentModal} onDeleteClick={handleDeletePatient} />}
+                {activeTab === 'patients' && <PatientList patients={filteredPatients} onManageClick={handleOpenAssignmentModal} onEditClick={handleEditPatient} onDeleteClick={handleDeletePatient} />}
                 {activeTab === 'assignments' && (
                     <AssignmentList
                         assignments={filteredAssignments}
@@ -692,7 +704,14 @@ const AdminPage = () => {
         userToEdit={userToEdit}
         patients={patients} 
       />
-      <PatientForm isOpen={isPatientModalOpen} onClose={() => setIsPatientModalOpen(false)} onSave={handleSavePatient} patientToEdit={null} />
+      <ExpandedPatientForm
+        isOpen={isPatientModalOpen}
+        onClose={() => {
+          setIsPatientModalOpen(false);
+          setPatientToEdit(null);
+        }}
+        patient={patientToEdit}
+      />
       <AssignmentModal isOpen={isAssignmentModalOpen} onClose={() => setIsAssignmentModalOpen(false)} patient={patientToManage} allTherapists={allTherapists} />
 
       {/* <<< NOVO MODAL DE TRANSFERÊNCIA >>> */}

@@ -570,8 +570,18 @@ export class AppointmentReportGenerator {
         lineWidth: 0.5
       },
       columnStyles: {
-        0: { cellWidth: 90, halign: 'left' },
-        1: { cellWidth: 60, halign: 'center' }
+        0: {
+          cellWidth: 110,
+          halign: 'left',
+          fontStyle: 'normal',
+          textColor: [70, 70, 70]
+        },
+        1: {
+          cellWidth: 70,
+          halign: 'center',
+          fontStyle: 'bold',
+          textColor: [25, 118, 210] // Azul nos números
+        }
       },
       margin: { left: margin, right: margin }
     });
@@ -626,8 +636,18 @@ export class AppointmentReportGenerator {
         lineWidth: 0.5
       },
       columnStyles: {
-        0: { cellWidth: 90, halign: 'left' },
-        1: { cellWidth: 60, halign: 'center' }
+        0: {
+          cellWidth: 110,
+          halign: 'left',
+          fontStyle: 'normal',
+          textColor: [70, 70, 70]
+        },
+        1: {
+          cellWidth: 70,
+          halign: 'center',
+          fontStyle: 'bold',
+          textColor: [21, 128, 61] // Verde nos números
+        }
       },
       margin: { left: margin, right: margin }
     });
@@ -744,8 +764,18 @@ export class AppointmentReportGenerator {
         lineWidth: 0.5
       },
       columnStyles: {
-        0: { cellWidth: 100, halign: 'left', fontStyle: 'bold' }, // Item em negrito
-        1: { cellWidth: 50, halign: 'center' }
+        0: {
+          cellWidth: 110,
+          halign: 'left',
+          fontStyle: 'normal',
+          textColor: [70, 70, 70]
+        },
+        1: {
+          cellWidth: 70,
+          halign: 'center',
+          fontStyle: 'bold',
+          textColor: [194, 65, 12] // Laranja nos números
+        }
       },
       margin: { left: margin, right: margin }
     });

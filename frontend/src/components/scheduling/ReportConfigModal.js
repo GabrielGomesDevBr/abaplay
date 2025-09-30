@@ -38,8 +38,6 @@ const ReportConfigModal = ({
   });
 
   const [errors, setErrors] = useState({});
-  const [step, setStep] = useState(1); // 1: Configuração, 2: Preview
-  const [reportConfig, setReportConfig] = useState(null);
 
   // Calcular datas pré-definidas
   useEffect(() => {
@@ -79,9 +77,7 @@ const ReportConfigModal = ({
   // Reset states quando modal abre
   useEffect(() => {
     if (isOpen) {
-      setStep(1);
       setErrors({});
-      setReportConfig(null);
       setPeriod({
         type: 'week',
         startDate: '',
@@ -120,92 +116,64 @@ const ReportConfigModal = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  // Avançar para próximo step ou gerar relatório
+  // Gerar relatório diretamente (sem step 2 de confirmação)
   const handleNextStep = async () => {
-    if (step === 1) {
-      if (!validateForm()) return;
+    if (!validateForm()) return;
 
-      // Garantir que as datas estão corretas mesmo para períodos pré-definidos
-      let finalStartDate = period.startDate;
-      let finalEndDate = period.endDate;
+    // Garantir que as datas estão corretas mesmo para períodos pré-definidos
+    let finalStartDate = period.startDate;
+    let finalEndDate = period.endDate;
 
-      // Se as datas não estão definidas para períodos pré-definidos, calcular agora
-      if (!finalStartDate || !finalEndDate) {
-        const today = new Date();
-        let startDate, endDate;
+    // Se as datas não estão definidas para períodos pré-definidos, calcular agora
+    if (!finalStartDate || !finalEndDate) {
+      const today = new Date();
+      let startDate, endDate;
 
-        switch (period.type) {
-          case 'week':
-            startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-            endDate = today;
-            break;
-          case '2weeks':
-            startDate = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
-            endDate = today;
-            break;
-          case 'month':
-            startDate = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-            endDate = today;
-            break;
-          case 'quarter':
-            startDate = new Date(today.getFullYear(), today.getMonth() - 3, today.getDate());
-            endDate = today;
-            break;
-          default:
-            startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-            endDate = today;
-        }
-
-        finalStartDate = startDate.toISOString().split('T')[0];
-        finalEndDate = endDate.toISOString().split('T')[0];
+      switch (period.type) {
+        case 'week':
+          startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+          endDate = today;
+          break;
+        case '2weeks':
+          startDate = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
+          endDate = today;
+          break;
+        case 'month':
+          startDate = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+          endDate = today;
+          break;
+        case 'quarter':
+          startDate = new Date(today.getFullYear(), today.getMonth() - 3, today.getDate());
+          endDate = today;
+          break;
+        default:
+          startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+          endDate = today;
       }
 
-      // Preparar dados e ir para preview
-      const config = {
-        period: {
-          type: period.type,
-          startDate: finalStartDate,
-          endDate: finalEndDate
-        },
-        scope: {
-          type: scope.type,
-          therapistId: scope.therapistId
-        }
-      };
+      finalStartDate = startDate.toISOString().split('T')[0];
+      finalEndDate = endDate.toISOString().split('T')[0];
+    }
 
-      setReportConfig(config);
-      setStep(2);
-    } else {
-      // Gerar relatório final
-      if (reportConfig) {
-        onGenerate(reportConfig);
+    // Preparar dados e gerar relatório diretamente
+    const config = {
+      period: {
+        type: period.type,
+        startDate: finalStartDate,
+        endDate: finalEndDate
+      },
+      scope: {
+        type: scope.type,
+        therapistId: scope.therapistId
       }
-    }
-  };
+    };
 
-  const handlePrevStep = () => {
-    if (step === 2) {
-      setStep(1);
-    }
-  };
-
-  // Obter nome do terapeuta selecionado
-  const getSelectedTherapistName = () => {
-    if (scope.type === 'all') return 'Todos os Terapeutas';
-    const therapist = therapists.find(t => t.id == scope.therapistId);
-    return therapist ? therapist.full_name : 'Terapeuta não encontrado';
+    // Gerar relatório diretamente
+    onGenerate(config);
   };
 
   // Formatar período selecionado
   const getFormattedPeriod = () => {
-    // Se estamos no step 2, usar os dados do reportConfig
-    if (step === 2 && reportConfig) {
-      const start = new Date(reportConfig.period.startDate).toLocaleDateString('pt-BR');
-      const end = new Date(reportConfig.period.endDate).toLocaleDateString('pt-BR');
-      return `${start} a ${end}`;
-    }
-
-    // Se estamos no step 1, usar os dados do period
     if (!period.startDate || !period.endDate) return 'Período será calculado automaticamente';
 
     try {
@@ -215,18 +183,6 @@ const ReportConfigModal = ({
     } catch (error) {
       return 'Período será calculado automaticamente';
     }
-  };
-
-  // Obter tipo de período em texto
-  const getPeriodTypeText = () => {
-    const types = {
-      'week': 'Última Semana + Próximo Mês',
-      '2weeks': 'Últimas 2 Semanas + Próximos 45 Dias',
-      'month': 'Último Mês + Próximos 2 Meses',
-      'quarter': 'Último Trimestre + Próximos 3 Meses',
-      'custom': 'Período Customizado'
-    };
-    return types[period.type] || 'Período não definido';
   };
 
   if (!isOpen) return null;
@@ -243,7 +199,7 @@ const ReportConfigModal = ({
                 Relatório de Agendamentos
               </h2>
               <p className="text-red-100 text-sm">
-                {step === 1 ? 'Configuração do Relatório' : 'Confirmar e Gerar PDF'}
+                Configuração do Relatório
               </p>
             </div>
             <button
@@ -256,31 +212,9 @@ const ReportConfigModal = ({
           </div>
         </div>
 
-        {/* Progress Indicator */}
-        <div className="px-6 py-3 border-b border-gray-200">
-          <div className="flex items-center space-x-4">
-            <div className={`flex items-center space-x-2 ${step >= 1 ? 'text-red-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-red-600 text-white' : 'bg-gray-200'}`}>
-                <FontAwesomeIcon icon={faCalendarAlt} className="text-sm" />
-              </div>
-              <span className="font-medium">Configuração</span>
-            </div>
-
-            <div className={`flex-1 h-1 ${step >= 2 ? 'bg-red-600' : 'bg-gray-200'} rounded`}></div>
-
-            <div className={`flex items-center space-x-2 ${step >= 2 ? 'text-red-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-red-600 text-white' : 'bg-gray-200'}`}>
-                <FontAwesomeIcon icon={faFilePdf} className="text-sm" />
-              </div>
-              <span className="font-medium">Gerar PDF</span>
-            </div>
-          </div>
-        </div>
-
         {/* Content */}
         <div className="p-6">
-          {step === 1 && (
-            <div className="space-y-6">
+          <div className="space-y-6">
               <div className="text-center mb-6">
                 <div className="bg-gradient-to-br from-red-100 to-pink-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
                   <FontAwesomeIcon icon={faFilePdf} className="text-2xl text-red-600" />
@@ -447,82 +381,10 @@ const ReportConfigModal = ({
                 </div>
               </div>
             </div>
-          )}
-
-          {step === 2 && reportConfig && (
-            <div className="space-y-6">
-              <div className="text-center mb-6">
-                <div className="bg-gradient-to-br from-green-100 to-emerald-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <FontAwesomeIcon icon={faCheck} className="text-2xl text-green-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Configuração Confirmada
-                </h3>
-                <p className="text-gray-600 text-sm">
-                  Revise as configurações e gere o relatório PDF
-                </p>
-              </div>
-
-              {/* Resumo da Configuração */}
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6">
-                <h4 className="font-semibold text-gray-800 mb-4 flex items-center">
-                  <FontAwesomeIcon icon={faCheck} className="mr-2 text-green-600" />
-                  Resumo da Configuração
-                </h4>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <div className="flex items-center mb-2">
-                      <FontAwesomeIcon icon={faCalendarAlt} className="mr-2 text-red-500" />
-                      <span className="font-medium text-gray-700">Período</span>
-                    </div>
-                    <p className="text-sm text-gray-600">{getPeriodTypeText()}</p>
-                    <p className="text-sm text-gray-800 font-medium">{getFormattedPeriod()}</p>
-                  </div>
-
-                  <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <div className="flex items-center mb-2">
-                      <FontAwesomeIcon icon={scope.type === 'all' ? faUsers : faUser} className="mr-2 text-red-500" />
-                      <span className="font-medium text-gray-700">Escopo</span>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      {scope.type === 'all' ? 'Relatório Geral' : 'Relatório Individual'}
-                    </p>
-                    <p className="text-sm text-gray-800 font-medium">{getSelectedTherapistName()}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <FontAwesomeIcon icon={faFilePdf} className="text-green-600 mt-1" />
-                  <div>
-                    <h4 className="font-medium text-green-800">Pronto para Gerar</h4>
-                    <p className="text-green-700 text-sm">
-                      O relatório será gerado em formato PDF profissional com estatísticas completas,
-                      gráficos e tabelas detalhadas. O download iniciará automaticamente.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-between">
-          <div>
-            {step === 2 && (
-              <button
-                onClick={handlePrevStep}
-                disabled={isGenerating}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50"
-              >
-                Voltar
-              </button>
-            )}
-          </div>
-
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
           <div className="flex space-x-3">
             <button
               onClick={onClose}
@@ -543,7 +405,7 @@ const ReportConfigModal = ({
                   <span>Gerando...</span>
                 </>
               ) : (
-                <span>{step === 2 ? 'Gerar Relatório PDF' : 'Continuar'}</span>
+                <span>Gerar Relatório PDF</span>
               )}
             </button>
           </div>

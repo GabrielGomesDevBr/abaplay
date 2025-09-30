@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { usePatients } from '../../context/PatientContext';
-import { generateProgramGradePDF, generateWeeklyRecordSheetPDF } from '../../utils/pdfGenerator'; 
+import { useAuth } from '../../context/AuthContext';
+import { generateProgramGradePDF, generateWeeklyRecordSheetPDF } from '../../utils/pdfGenerator';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-    faEdit, faTrashAlt, faFilePdf, faClipboardList, faChartPie, 
-    faCalendarAlt, faNotesMedical, faComments, faUsers, faStethoscope 
+import {
+    faEdit, faTrashAlt, faFilePdf, faClipboardList, faChartPie,
+    faCalendarAlt, faNotesMedical, faComments, faUsers, faStethoscope, faUserPlus
 } from '@fortawesome/free-solid-svg-icons';
 import ParentTherapistChat from '../chat/ParentTherapistChat';
 import CaseDiscussionChat from '../chat/CaseDiscussionChat';
 import ReportEvolutionModal from '../reports/ReportEvolutionModal';
+import ExpandedPatientForm from './ExpandedPatientForm';
 
 const formatDate = (dateString) => {
   if (!dateString) return 'Não informado';
@@ -74,9 +76,11 @@ const ActionCard = ({ icon, title, description, onClick, disabled, colorClass = 
 
 const PatientDetails = () => {
   const { selectedPatient, openPatientForm, removePatient, openReportModal } = usePatients();
+  const { user } = useAuth();
   const [isParentChatVisible, setIsParentChatVisible] = useState(false);
   const [isDiscussionChatVisible, setIsDiscussionChatVisible] = useState(false);
   const [isEvolutionReportVisible, setIsEvolutionReportVisible] = useState(false);
+  const [isExpandedFormVisible, setIsExpandedFormVisible] = useState(false);
 
   if (!selectedPatient) {
     return (
@@ -93,6 +97,8 @@ const PatientDetails = () => {
   const handleGenerateRecordSheet = () => generateWeeklyRecordSheetPDF(selectedPatient);
   const handleOpenEvolutionReport = () => setIsEvolutionReportVisible(true);
   const handleCloseEvolutionReport = () => setIsEvolutionReportVisible(false);
+  const handleOpenExpandedForm = () => setIsExpandedFormVisible(true);
+  const handleCloseExpandedForm = () => setIsExpandedFormVisible(false);
   
   const handleToggleParentChat = () => {
     setIsDiscussionChatVisible(false);
@@ -216,6 +222,28 @@ const PatientDetails = () => {
               </div>
           )}
 
+              {/* Seção Admin - Dados Expandidos */}
+              {user?.is_admin && (
+                <div className="mb-6">
+                  <div className="flex items-center mb-4 pb-2 border-b border-gray-200">
+                    <div className="w-2 h-2 bg-red-500 rounded-full mr-3"></div>
+                    <h3 className="text-lg font-semibold text-gray-800">👑 Administração</h3>
+                  </div>
+                  <div className="bg-gradient-to-br from-red-50 to-pink-50 border-2 border-red-200 p-4 rounded-lg">
+                    <button
+                      onClick={handleOpenExpandedForm}
+                      className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-lg shadow-sm hover:from-red-700 hover:to-pink-700 transition-all transform hover:scale-105"
+                    >
+                      <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
+                      <span className="font-medium text-sm">Editar Dados Expandidos</span>
+                    </button>
+                    <p className="text-xs text-gray-600 mt-2 text-center leading-relaxed">
+                      Acesso completo aos dados expandidos (responsáveis, escola, médicos, contatos de emergência)
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Seção de Documentos redesenhada */}
               <div className="border-t border-gray-200 pt-6">
                   <div className="flex items-center mb-4 pb-2 border-b border-gray-200">
@@ -262,6 +290,15 @@ const PatientDetails = () => {
         isOpen={isEvolutionReportVisible}
         onClose={handleCloseEvolutionReport}
       />
+
+      {/* Modal de Dados Expandidos (apenas para Admin) */}
+      {user?.is_admin && (
+        <ExpandedPatientForm
+          patient={selectedPatient}
+          isOpen={isExpandedFormVisible}
+          onClose={handleCloseExpandedForm}
+        />
+      )}
     </>
   );
 };

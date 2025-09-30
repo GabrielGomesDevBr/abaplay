@@ -1240,3 +1240,440 @@ export const generateEvolutionReportPDF = async (data) => {
         alert('Erro ao gerar o Relatório de Evolução Terapêutica. Tente novamente.');
     }
 };
+
+/**
+ * Gera PDF do Cadastro Completo do Paciente
+ * Apenas administradores podem gerar este relatório
+ * @param {object} patientData - Dados completos do paciente (básicos + expandidos)
+ * @param {object} clinicData - Dados da clínica
+ */
+export const generatePatientRegistrationPDF = async (patientData, clinicData = null) => {
+    if (!patientData) {
+        alert("Nenhum paciente selecionado.");
+        return;
+    }
+
+    try {
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const margin = 15;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const contentWidth = pageWidth - margin * 2;
+        let y = margin + 10;
+        let pageCount = 1;
+
+        // Cores e configurações
+        const colors = {
+            primary: [79, 70, 229],
+            lightGray: [240, 240, 240],
+            darkGray: [100, 100, 100],
+            black: [0, 0, 0],
+            warning: [245, 158, 11]
+        };
+
+        const addFooter = (currentPage) => {
+            doc.setFontSize(8);
+            doc.setTextColor(colors.darkGray[0], colors.darkGray[1], colors.darkGray[2]);
+
+            // Texto de confidencialidade
+            const confidentialText = 'DOCUMENTO CONFIDENCIAL - INFORMAÇÕES PROTEGIDAS PELA LGPD';
+            doc.text(confidentialText, pageWidth / 2, doc.internal.pageSize.getHeight() - margin / 2 - 3, { align: 'center' });
+
+            const footerText = `Página ${currentPage}`;
+            doc.text(footerText, pageWidth / 2, doc.internal.pageSize.getHeight() - margin / 2, { align: 'center' });
+            doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, margin, doc.internal.pageSize.getHeight() - margin / 2);
+            doc.setTextColor(0, 0, 0);
+        };
+
+        const checkAndAddPage = (currentY, requiredHeight = 20, preserveFormatting = true) => {
+            if (currentY > doc.internal.pageSize.getHeight() - margin - requiredHeight - 15) {
+                const currentFontSize = doc.internal.getFontSize();
+                const currentFont = doc.internal.getFont();
+                const currentTextColor = doc.internal.getTextColor();
+
+                addFooter(pageCount);
+                doc.addPage();
+                pageCount++;
+
+                if (preserveFormatting) {
+                    doc.setFontSize(currentFontSize);
+                    doc.setFont(currentFont.fontName, currentFont.fontStyle);
+                    doc.setTextColor(currentTextColor);
+                }
+
+                return margin + 10;
+            }
+            return currentY;
+        };
+
+        const addTextBlock = (text, x, startY, maxWidth, lineHeight = 5) => {
+            if (!text || text === 'Não informado') return startY;
+            const lines = doc.splitTextToSize(text, maxWidth);
+            let currentY = startY;
+
+            for (let i = 0; i < lines.length; i++) {
+                currentY = checkAndAddPage(currentY, lineHeight + 5, true);
+                doc.text(lines[i], x, currentY);
+                currentY += lineHeight;
+            }
+
+            return currentY;
+        };
+
+        const addSectionHeader = (title, currentY) => {
+            currentY = checkAndAddPage(currentY, 15);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setFillColor(colors.lightGray[0], colors.lightGray[1], colors.lightGray[2]);
+            doc.rect(margin, currentY - 4, contentWidth, 7, 'F');
+            doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+            doc.text(title, margin + 2, currentY);
+            doc.setTextColor(0, 0, 0);
+            return currentY + 8;
+        };
+
+        const addField = (label, value, currentY) => {
+            if (!value || value === '') return currentY;
+            currentY = checkAndAddPage(currentY);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${label}:`, margin, currentY);
+            doc.setFont('helvetica', 'normal');
+            currentY = addTextBlock(String(value), margin + 50, currentY, contentWidth - 50);
+            return currentY + 2;
+        };
+
+        // CABEÇALHO
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('CADASTRO COMPLETO DO PACIENTE', pageWidth / 2, y, { align: 'center' });
+        y += 6;
+        doc.setFontSize(14);
+        doc.text('DOCUMENTAÇÃO CONFIDENCIAL', pageWidth / 2, y, { align: 'center' });
+        y += 10;
+
+        if (clinicData?.name) {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Clínica: ${clinicData.name}`, pageWidth / 2, y, { align: 'center' });
+            y += 6;
+        }
+
+        y += 3;
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 10;
+
+        // 1. DADOS BÁSICOS DO PACIENTE
+        y = addSectionHeader('1. DADOS BÁSICOS DO PACIENTE', y);
+        y = addField('Nome Completo', patientData.name, y);
+        y = addField('Data de Nascimento', formatDate(patientData.dob), y);
+
+        if (patientData.dob) {
+            const age = Math.floor((new Date() - new Date(patientData.dob)) / (365.25 * 24 * 60 * 60 * 1000));
+            y = addField('Idade', `${age} anos`, y);
+        }
+
+        y = addField('Diagnóstico', patientData.diagnosis, y);
+        y += 5;
+
+        // 2. DADOS DOS RESPONSÁVEIS
+        y = addSectionHeader('2. DADOS DOS RESPONSÁVEIS', y);
+
+        // Responsável Principal
+        if (patientData.guardian_name || patientData.guardian_relationship) {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            y = checkAndAddPage(y);
+            doc.text('Responsável Principal:', margin, y);
+            y += 5;
+            doc.setFont('helvetica', 'normal');
+
+            y = addField('Nome', patientData.guardian_name, y);
+            y = addField('Parentesco', patientData.guardian_relationship, y);
+            y = addField('Telefone', patientData.guardian_phone, y);
+            y = addField('E-mail', patientData.guardian_email, y);
+            y = addField('Profissão', patientData.guardian_occupation, y);
+            y = addField('Escolaridade', patientData.guardian_education, y);
+            y += 3;
+        }
+
+        // Segundo Responsável
+        if (patientData.second_guardian_name) {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            y = checkAndAddPage(y);
+            doc.text('Segundo Responsável:', margin, y);
+            y += 5;
+            doc.setFont('helvetica', 'normal');
+
+            y = addField('Nome', patientData.second_guardian_name, y);
+            y = addField('Parentesco', patientData.second_guardian_relationship, y);
+            y = addField('Telefone', patientData.second_guardian_phone, y);
+            y = addField('E-mail', patientData.second_guardian_email, y);
+            y = addField('Profissão', patientData.second_guardian_occupation, y);
+            y += 3;
+        }
+
+        // 3. ENDEREÇO E CONTATO
+        if (patientData.address_street || patientData.address_city) {
+            y = addSectionHeader('3. ENDEREÇO E CONTATO', y);
+
+            if (patientData.address_street) {
+                const fullAddress = `${patientData.address_street}${patientData.address_number ? ', ' + patientData.address_number : ''}${patientData.address_complement ? ' - ' + patientData.address_complement : ''}`;
+                y = addField('Logradouro', fullAddress, y);
+            }
+
+            y = addField('Bairro', patientData.address_neighborhood, y);
+            y = addField('Cidade', patientData.address_city, y);
+            y = addField('Estado', patientData.address_state, y);
+            y = addField('CEP', patientData.address_zip, y);
+            y += 5;
+        }
+
+        // 4. INFORMAÇÕES EDUCACIONAIS
+        if (patientData.school_name || patientData.school_grade) {
+            y = addSectionHeader('4. INFORMAÇÕES EDUCACIONAIS', y);
+
+            y = addField('Nome da Escola', patientData.school_name, y);
+            y = addField('Série/Ano', patientData.school_grade, y);
+            y = addField('Período', patientData.school_period, y);
+            y = addField('Telefone da Escola', patientData.school_phone, y);
+            y = addField('E-mail da Escola', patientData.school_email, y);
+            y = addField('Professor(a)', patientData.school_teacher, y);
+            y = addField('Telefone do Professor(a)', patientData.school_teacher_phone, y);
+
+            if (patientData.school_special_needs) {
+                y = addField('Necessidades Especiais', 'Sim', y);
+                y = addField('Adaptações Necessárias', patientData.school_adaptations, y);
+            }
+            y += 5;
+        }
+
+        // 5. DESENVOLVIMENTO E NASCIMENTO
+        if (patientData.birth_weight || patientData.gestational_age || patientData.delivery_type) {
+            y = addSectionHeader('5. DESENVOLVIMENTO E NASCIMENTO', y);
+
+            if (patientData.birth_weight) {
+                y = addField('Peso ao Nascer', `${patientData.birth_weight} kg`, y);
+            }
+            if (patientData.birth_height) {
+                y = addField('Altura ao Nascer', `${patientData.birth_height} cm`, y);
+            }
+            if (patientData.gestational_age) {
+                y = addField('Idade Gestacional', `${patientData.gestational_age} semanas`, y);
+            }
+
+            y = addField('Tipo de Parto', patientData.delivery_type, y);
+            y = addField('Complicações no Parto', patientData.birth_complications, y);
+            y = addField('Preocupações com Desenvolvimento', patientData.development_concerns, y);
+
+            if (patientData.early_intervention) {
+                y = addField('Intervenção Precoce', 'Sim', y);
+            }
+            y += 5;
+        }
+
+        // 6. DADOS MÉDICOS
+        if (patientData.pediatrician_name || patientData.health_insurance) {
+            y = addSectionHeader('6. DADOS MÉDICOS', y);
+
+            y = addField('Pediatra', patientData.pediatrician_name, y);
+            y = addField('Telefone do Pediatra', patientData.pediatrician_phone, y);
+            y = addField('E-mail do Pediatra', patientData.pediatrician_email, y);
+            y = addField('Plano de Saúde', patientData.health_insurance, y);
+            y = addField('Número do Plano', patientData.health_insurance_number, y);
+            y += 5;
+        }
+
+        // 7. MEDICAÇÕES ATUAIS
+        if (patientData.medications && patientData.medications.length > 0) {
+            y = addSectionHeader('7. MEDICAÇÕES ATUAIS', y);
+
+            const medicationsTableData = patientData.medications.map(med => [
+                med.name || 'N/A',
+                med.dosage || 'N/A',
+                med.frequency || 'N/A',
+                med.prescribing_doctor || 'N/A'
+            ]);
+
+            autoTable(doc, {
+                startY: y,
+                head: [['Medicamento', 'Dosagem', 'Frequência', 'Médico']],
+                body: medicationsTableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: colors.primary,
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                styles: {
+                    fontSize: 9,
+                    cellPadding: 3
+                },
+                columnStyles: {
+                    0: { cellWidth: 45 },
+                    1: { cellWidth: 35 },
+                    2: { cellWidth: 35 },
+                    3: { cellWidth: 45 }
+                },
+                margin: { left: margin, right: margin }
+            });
+
+            y = doc.lastAutoTable.finalY + 5;
+        }
+
+        // 8. CONTATOS DE EMERGÊNCIA
+        if (patientData.emergencyContacts && patientData.emergencyContacts.length > 0) {
+            y = checkAndAddPage(y, 30);
+            y = addSectionHeader('8. CONTATOS DE EMERGÊNCIA', y);
+
+            const emergencyTableData = patientData.emergencyContacts.map(contact => [
+                contact.name || 'N/A',
+                contact.relationship || 'N/A',
+                contact.phone || 'N/A',
+                contact.is_primary ? 'Sim' : 'Não'
+            ]);
+
+            autoTable(doc, {
+                startY: y,
+                head: [['Nome', 'Parentesco', 'Telefone', 'Contato Principal']],
+                body: emergencyTableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: colors.primary,
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                styles: {
+                    fontSize: 9,
+                    cellPadding: 3
+                },
+                columnStyles: {
+                    0: { cellWidth: 50 },
+                    1: { cellWidth: 35 },
+                    2: { cellWidth: 40 },
+                    3: { cellWidth: 35, halign: 'center' }
+                },
+                margin: { left: margin, right: margin }
+            });
+
+            y = doc.lastAutoTable.finalY + 5;
+        }
+
+        // 9. HISTÓRICO MÉDICO
+        if (patientData.medicalHistory && patientData.medicalHistory.length > 0) {
+            y = checkAndAddPage(y, 30);
+            y = addSectionHeader('9. HISTÓRICO MÉDICO', y);
+
+            const historyTableData = patientData.medicalHistory.map(history => [
+                history.condition || 'N/A',
+                history.diagnosis_date ? formatDate(history.diagnosis_date) : 'N/A',
+                history.treatment || 'N/A',
+                history.status || 'N/A'
+            ]);
+
+            autoTable(doc, {
+                startY: y,
+                head: [['Condição', 'Data Diagnóstico', 'Tratamento', 'Status']],
+                body: historyTableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: colors.primary,
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                styles: {
+                    fontSize: 9,
+                    cellPadding: 3
+                },
+                columnStyles: {
+                    0: { cellWidth: 45 },
+                    1: { cellWidth: 30 },
+                    2: { cellWidth: 50 },
+                    3: { cellWidth: 35 }
+                },
+                margin: { left: margin, right: margin }
+            });
+
+            y = doc.lastAutoTable.finalY + 5;
+        }
+
+        // 10. PROFISSIONAIS DE ACOMPANHAMENTO
+        if (patientData.professionalContacts && patientData.professionalContacts.length > 0) {
+            y = checkAndAddPage(y, 30);
+            y = addSectionHeader('10. PROFISSIONAIS DE ACOMPANHAMENTO', y);
+
+            const professionalsTableData = patientData.professionalContacts.map(prof => [
+                prof.name || 'N/A',
+                prof.specialty || 'N/A',
+                prof.phone || 'N/A',
+                prof.email || 'N/A'
+            ]);
+
+            autoTable(doc, {
+                startY: y,
+                head: [['Nome', 'Especialidade', 'Telefone', 'E-mail']],
+                body: professionalsTableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: colors.primary,
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                styles: {
+                    fontSize: 9,
+                    cellPadding: 3
+                },
+                columnStyles: {
+                    0: { cellWidth: 45 },
+                    1: { cellWidth: 40 },
+                    2: { cellWidth: 35 },
+                    3: { cellWidth: 40 }
+                },
+                margin: { left: margin, right: margin }
+            });
+
+            y = doc.lastAutoTable.finalY + 5;
+        }
+
+        // 11. OBSERVAÇÕES ESPECIAIS
+        if (patientData.allergies || patientData.dietary_restrictions || patientData.behavioral_notes || patientData.communication_preferences) {
+            y = checkAndAddPage(y, 30);
+            y = addSectionHeader('11. OBSERVAÇÕES ESPECIAIS', y);
+
+            y = addField('Alergias', patientData.allergies, y);
+            y = addField('Restrições Alimentares', patientData.dietary_restrictions, y);
+            y = addField('Observações Comportamentais', patientData.behavioral_notes, y);
+            y = addField('Preferências de Comunicação', patientData.communication_preferences, y);
+            y += 5;
+        }
+
+        // AVISO LGPD
+        y = checkAndAddPage(y, 25);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(colors.warning[0], colors.warning[1], colors.warning[2]);
+        doc.text('AVISO DE CONFIDENCIALIDADE', pageWidth / 2, y, { align: 'center' });
+        y += 5;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(8);
+
+        const lgpdText = 'Este documento contém informações confidenciais e protegidas pela Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018). O acesso, uso, divulgação ou reprodução não autorizada das informações contidas neste documento são estritamente proibidos e podem resultar em sanções legais. Este documento deve ser mantido em local seguro e acessado apenas por profissionais autorizados envolvidos no tratamento do paciente.';
+
+        y = addTextBlock(lgpdText, margin, y, contentWidth, 4);
+
+        addFooter(pageCount);
+
+        const filename = `Cadastro_Completo_${patientData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
+        doc.save(filename);
+
+    } catch (error) {
+        console.error('Erro ao gerar PDF de cadastro completo:', error);
+        alert('Erro ao gerar o PDF de cadastro completo. Tente novamente.');
+    }
+};
