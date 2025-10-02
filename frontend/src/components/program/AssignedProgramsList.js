@@ -184,8 +184,8 @@ const AssignedProgramsList = ({ onProgramSelect, selectedProgramId }) => {
                                 : ''
                               }
                             `}>
-                          <div className="flex justify-between items-center">
-                            <div className={`flex-1 mr-4 ${isArchived ? 'italic text-gray-500' : ''}`}>
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <div className={`flex-1 w-full sm:w-auto sm:mr-4 ${isArchived ? 'italic text-gray-500' : ''}`}>
                               <p className="text-sm font-semibold text-gray-800 mb-1" title={program.program_name}>
                                 {program.program_name}
                               </p>
@@ -206,41 +206,41 @@ const AssignedProgramsList = ({ onProgramSelect, selectedProgramId }) => {
                                 </div>
                               )}
                             </div>
-                            <div className="flex space-x-2 flex-shrink-0">
-                              <Link 
-                                to={`/session/${program.assignment_id}`} 
-                                title="Iniciar Sessão" 
+                            <div className="flex sm:flex-col lg:flex-row gap-2 w-full sm:w-auto justify-end sm:justify-start flex-shrink-0">
+                              <Link
+                                to={`/session/${program.assignment_id}`}
+                                title="Iniciar Sessão"
                                 onClick={(e) => e.stopPropagation()}
                                 className={`
-                                  p-2 rounded-full w-10 h-10 flex items-center justify-center transition-all transform hover:scale-110
-                                  ${isArchived 
-                                    ? 'text-gray-400 bg-gray-100 cursor-not-allowed pointer-events-none' 
+                                  p-2 rounded-full w-12 h-12 sm:w-10 sm:h-10 flex items-center justify-center transition-all transform hover:scale-110
+                                  ${isArchived
+                                    ? 'text-gray-400 bg-gray-100 cursor-not-allowed pointer-events-none'
                                     : 'text-indigo-600 bg-indigo-100 hover:bg-indigo-200'
                                   }
                                 `}>
                                 <FontAwesomeIcon icon={faChartLine} className="fa-fw" />
                               </Link>
-                              
-                              <button 
-                                title={isArchived ? "Reativar Programa" : "Arquivar Programa"} 
-                                onClick={(e) => { e.stopPropagation(); handleToggleStatus(program.assignment_id, program.status); }} 
-                                disabled={togglingId === program.assignment_id} 
-                                className="p-2 rounded-full w-10 h-10 flex items-center justify-center transition-all text-yellow-600 bg-yellow-100 hover:bg-yellow-200 disabled:opacity-50 transform hover:scale-110"
+
+                              <button
+                                title={isArchived ? "Reativar Programa" : "Arquivar Programa"}
+                                onClick={(e) => { e.stopPropagation(); handleToggleStatus(program.assignment_id, program.status); }}
+                                disabled={togglingId === program.assignment_id}
+                                className="p-2 rounded-full w-12 h-12 sm:w-10 sm:h-10 flex items-center justify-center transition-all text-yellow-600 bg-yellow-100 hover:bg-yellow-200 disabled:opacity-50 transform hover:scale-110"
                               >
-                                {togglingId === program.assignment_id 
-                                  ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> 
+                                {togglingId === program.assignment_id
+                                  ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" />
                                   : <FontAwesomeIcon icon={isArchived ? faEye : faEyeSlash} className="fa-fw" />
                                 }
                               </button>
 
-                              <button 
-                                title="Remover Programa Permanentemente" 
-                                onClick={(e) => { e.stopPropagation(); handleRemove(program.program_id); }} 
-                                disabled={removingId === program.program_id} 
-                                className="p-2 rounded-full w-10 h-10 flex items-center justify-center transition-all text-red-500 bg-red-100 hover:bg-red-200 disabled:opacity-50 transform hover:scale-110"
+                              <button
+                                title="Remover Programa Permanentemente"
+                                onClick={(e) => { e.stopPropagation(); handleRemove(program.program_id); }}
+                                disabled={removingId === program.program_id}
+                                className="p-2 rounded-full w-12 h-12 sm:w-10 sm:h-10 flex items-center justify-center transition-all text-red-500 bg-red-100 hover:bg-red-200 disabled:opacity-50 transform hover:scale-110"
                               >
-                                {removingId === program.program_id 
-                                  ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" /> 
+                                {removingId === program.program_id
+                                  ? <FontAwesomeIcon icon={faSpinner} className="fa-spin fa-fw" />
                                   : <FontAwesomeIcon icon={faTrashAlt} className="fa-fw" />
                                 }
                               </button>

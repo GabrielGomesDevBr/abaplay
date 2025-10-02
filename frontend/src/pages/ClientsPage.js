@@ -78,7 +78,7 @@ const ClientsPage = () => {
       {selectedPatient ? (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
           {/* Container principal com espaçamento adequado */}
-          <div className="space-y-8 p-6">
+          <div className="space-y-6 sm:space-y-8 p-2 sm:p-4 lg:p-6">
             {/* Seção de detalhes do paciente */}
             <div className="animate-fade-in">
               <PatientDetails />
@@ -96,15 +96,15 @@ const ClientsPage = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
                 {/* Lista de programas - 2 colunas */}
                 <div className="lg:col-span-2">
-                  <AssignedProgramsList 
+                  <AssignedProgramsList
                     onProgramSelect={handleProgramSelect}
                     selectedProgramId={selectedProgram?.assignment_id}
                   />
                 </div>
-                
+
                 {/* Progresso do programa selecionado - 3 colunas */}
                 <div className="lg:col-span-3">
                   <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden min-h-[600px]">
