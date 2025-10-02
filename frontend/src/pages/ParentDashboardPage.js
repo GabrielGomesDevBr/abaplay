@@ -21,6 +21,10 @@ import {
 import annotationPlugin from 'chartjs-plugin-annotation';
 // 2. Importar o nosso novo componente de chat
 import ParentTherapistChat from '../components/chat/ParentTherapistChat';
+// 3. Importar componentes para modal mobile
+import ChatModal from '../components/chat/ChatModal';
+import ChatTrigger from '../components/chat/ChatTrigger';
+import useMediaQuery from '../hooks/useMediaQuery';
 
 
 // Regista os componentes do Chart.js que vamos usar
@@ -272,8 +276,11 @@ const ParentDashboardPage = () => {
     const navigate = useNavigate();
     const { selectedPatient, isLoading, error } = usePatients();
     const { getProgramById, isLoading: programsAreLoading } = usePrograms();
-    
-    
+
+    // Detectar se está em mobile
+    const isMobile = useMediaQuery('(max-width: 768px)');
+    const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
@@ -358,56 +365,79 @@ const ParentDashboardPage = () => {
 
             {/* Chat com design moderno e elegante */}
             <div className="mb-6 sm:mb-8 max-w-5xl mx-auto">
-                <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-2xl overflow-hidden border border-gray-100">
-                    {/* Cabeçalho com gradiente e design sofisticado */}
-                    <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative overflow-hidden">
-                        {/* Elementos decorativos de fundo */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-white/5 to-transparent rounded-full -translate-y-32 translate-x-32"></div>
-                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-white/5 to-transparent rounded-full translate-y-24 -translate-x-24"></div>
-                        
-                        {/* Conteúdo do cabeçalho */}
-                        <div className="relative z-10 text-center">
-                            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-xl sm:rounded-2xl mb-3 sm:mb-4">
-                                <FontAwesomeIcon icon={faComments} className="text-2xl sm:text-3xl text-white" />
-                            </div>
+                {isMobile ? (
+                    /* MOBILE: Botão trigger para abrir modal fullscreen */
+                    <>
+                        <ChatTrigger
+                            onClick={() => setIsChatModalOpen(true)}
+                            patientName={selectedPatient.name}
+                            unreadCount={0} // TODO: Implementar contador de não lidas
+                        />
 
-                            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-2 sm:mb-3 tracking-wide px-2">
-                                Comunicação com a Equipe Terapêutica
-                            </h3>
+                        <ChatModal
+                            isOpen={isChatModalOpen}
+                            onClose={() => setIsChatModalOpen(false)}
+                            title={`Conversa sobre ${selectedPatient.name}`}
+                        >
+                            <ParentTherapistChat
+                                patientId={selectedPatient.id}
+                                patientName={selectedPatient.name}
+                            />
+                        </ChatModal>
+                    </>
+                ) : (
+                    /* DESKTOP: Chat embed normal */
+                    <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-2xl overflow-hidden border border-gray-100">
+                        {/* Cabeçalho com gradiente e design sofisticado */}
+                        <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative overflow-hidden">
+                            {/* Elementos decorativos de fundo */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-white/5 to-transparent rounded-full -translate-y-32 translate-x-32"></div>
+                            <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-white/5 to-transparent rounded-full translate-y-24 -translate-x-24"></div>
 
-                            <div className="max-w-2xl mx-auto space-y-2 sm:space-y-3">
-                                <p className="text-blue-100 font-medium text-sm sm:text-base lg:text-lg leading-relaxed px-2">
-                                    💬 Converse diretamente com todos os terapeutas do seu filho
-                                </p>
-
-                                <div className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl px-3 sm:px-4 lg:px-6 py-3 sm:py-4 border border-white/20 mx-2">
-                                    <p className="text-white text-xs sm:text-sm leading-relaxed">
-                                        ✨ Use <span className="bg-white/20 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-md sm:rounded-lg font-mono font-semibold mx-1 border border-white/30 text-xs sm:text-sm">@nome</span> para mencionar um terapeuta específico
-                                    </p>
+                            {/* Conteúdo do cabeçalho */}
+                            <div className="relative z-10 text-center">
+                                <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-xl sm:rounded-2xl mb-3 sm:mb-4">
+                                    <FontAwesomeIcon icon={faComments} className="text-2xl sm:text-3xl text-white" />
                                 </div>
 
-                                <div className="flex items-center justify-center space-x-3 sm:space-x-6 text-blue-100 text-xs sm:text-sm flex-wrap gap-y-2">
-                                    <div className="flex items-center space-x-1.5 sm:space-x-2">
-                                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse flex-shrink-0"></span>
-                                        <span className="font-medium">📱 Tempo Real</span>
+                                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-2 sm:mb-3 tracking-wide px-2">
+                                    Comunicação com a Equipe Terapêutica
+                                </h3>
+
+                                <div className="max-w-2xl mx-auto space-y-2 sm:space-y-3">
+                                    <p className="text-blue-100 font-medium text-sm sm:text-base lg:text-lg leading-relaxed px-2">
+                                        💬 Converse diretamente com todos os terapeutas do seu filho
+                                    </p>
+
+                                    <div className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl px-3 sm:px-4 lg:px-6 py-3 sm:py-4 border border-white/20 mx-2">
+                                        <p className="text-white text-xs sm:text-sm leading-relaxed">
+                                            ✨ Use <span className="bg-white/20 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-md sm:rounded-lg font-mono font-semibold mx-1 border border-white/30 text-xs sm:text-sm">@nome</span> para mencionar um terapeuta específico
+                                        </p>
                                     </div>
-                                    <div className="w-px h-3 sm:h-4 bg-white/30 hidden sm:block"></div>
-                                    <div className="flex items-center space-x-1.5 sm:space-x-2">
-                                        <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse flex-shrink-0"></span>
-                                        <span className="font-medium">🔔 Notificações</span>
+
+                                    <div className="flex items-center justify-center space-x-3 sm:space-x-6 text-blue-100 text-xs sm:text-sm flex-wrap gap-y-2">
+                                        <div className="flex items-center space-x-1.5 sm:space-x-2">
+                                            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse flex-shrink-0"></span>
+                                            <span className="font-medium">📱 Tempo Real</span>
+                                        </div>
+                                        <div className="w-px h-3 sm:h-4 bg-white/30 hidden sm:block"></div>
+                                        <div className="flex items-center space-x-1.5 sm:space-x-2">
+                                            <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse flex-shrink-0"></span>
+                                            <span className="font-medium">🔔 Notificações</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        <div className="p-2 sm:p-3 lg:p-4">
+                            <ParentTherapistChat
+                                patientId={selectedPatient.id}
+                                patientName={selectedPatient.name}
+                            />
+                        </div>
                     </div>
-                    <div className="p-2 sm:p-3 lg:p-4">
-                        <ParentTherapistChat
-                            patientId={selectedPatient.id}
-                            patientName={selectedPatient.name}
-                        />
-                    </div>
-                </div>
+                )}
             </div>
 
             {/* Seletor de Período - Posicionado entre chat e gráficos */}

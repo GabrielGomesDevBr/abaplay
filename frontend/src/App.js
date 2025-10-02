@@ -18,6 +18,7 @@ import AdminPage from './pages/AdminPage';
 // --- NOVA IMPORTAÇÃO ---
 import ProgramSessionPage from './pages/ProgramSessionPage';
 import ColleaguesPage from './pages/ColleaguesPage';
+import CaseDiscussionPage from './pages/CaseDiscussionPage';
 import SuperAdminPage from './pages/SuperAdminPage';
 // --- IMPORTAÇÕES DO SISTEMA DE AGENDAMENTO ---
 import SchedulingPage from './pages/SchedulingPage';
@@ -75,6 +76,7 @@ function App() {
                   <Route path="clients" element={<ClientsPage />} />
                   <Route path="parent-dashboard" element={<ParentDashboardPage />} />
                   <Route path="colleagues" element={<ColleaguesPage />} />
+                  <Route path="case-discussion" element={<CaseDiscussionPage />} />
                   <Route 
                     path="admin" 
                     element={

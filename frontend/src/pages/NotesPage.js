@@ -239,7 +239,7 @@ Exemplos do que incluir:
               </div>
             </div>
           ) : (
-            /* Estado vazio melhorado */}
+            /* Estado vazio melhorado */
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
               <div className="flex items-center justify-center min-h-[300px] sm:min-h-[400px] text-center p-4 sm:p-6 lg:p-8">
                 <div>
