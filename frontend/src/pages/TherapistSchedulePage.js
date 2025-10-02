@@ -267,6 +267,12 @@ const TherapistSchedulePage = () => {
                   Atrasado
                 </span>
               )}
+              {appointment.status === 'completed' && !appointment.progress_session_id && (
+                <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full flex items-center gap-1">
+                  <FontAwesomeIcon icon={faExclamationTriangle} className="w-3 h-3" />
+                  Sem registro
+                </span>
+              )}
             </div>
             <div className="flex items-center mb-1.5 sm:mb-1">
               <FontAwesomeIcon icon={faUser} className="text-green-500 mr-1.5 sm:mr-2 w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />

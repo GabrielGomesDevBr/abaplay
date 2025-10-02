@@ -133,3 +133,17 @@ export const updateProgramStatusForPatient = async (patientId, programId, status
         throw new Error(error.response?.data?.errors?.[0]?.msg || 'Não foi possível atualizar o status do programa.');
     }
 };
+
+export const fetchAssignmentsWithoutProgress = async (daysWithoutProgress = 7) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${API_URL}/assignments/without-progress`, {
+      params: { days: daysWithoutProgress },
+      ...getAuthHeaders(token)
+    });
+    return response.data.assignments || [];
+  } catch (error) {
+    console.error('Erro ao buscar programas sem progresso:', error);
+    return [];
+  }
+};

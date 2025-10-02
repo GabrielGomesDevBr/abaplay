@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTachometerAlt, faUsers, faClipboardList, faTasks, faPercentage, faChartLine, faFolderOpen, faSpinner, faInfoCircle, faExclamationTriangle, faCheckCircle, faBullseye, faClock, faBalanceScale, faLightbulb } from '@fortawesome/free-solid-svg-icons';
 import DateRangeSelector from '../components/shared/DateRangeSelector';
+import TodayPriorities from '../components/dashboard/TodayPriorities';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -1023,6 +1024,13 @@ const DashboardPage = () => {
     <div>
       {selectedPatient ? (
         <>
+          {/* Prioridades do Dia - Apenas para Terapeutas */}
+          {user?.role === 'terapeuta' && (
+            <div className="mb-8">
+              <TodayPriorities />
+            </div>
+          )}
+
           <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
             <h1 className="text-2xl font-semibold text-gray-800">Dashboard: {selectedPatient.name}</h1>
             <div className="flex items-center gap-3">

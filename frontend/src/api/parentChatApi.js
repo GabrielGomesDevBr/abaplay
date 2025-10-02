@@ -34,3 +34,19 @@ export const postChatMessage = async (messageData) => {
     throw error;
   }
 };
+
+export const getUnreadMessagesCount = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${PARENT_CHAT_API_URL}/unread-count`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    });
+    return response.data.count || 0;
+  } catch (error) {
+    console.error('Erro ao buscar mensagens não lidas:', error);
+    return 0;
+  }
+};

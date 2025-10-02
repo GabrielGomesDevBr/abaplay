@@ -142,8 +142,95 @@ const AppointmentsList = ({
       status: '',
       startDate: '',
       endDate: '',
-      therapistId: ''
+      therapistId: '',
+      recurringOnly: false
     });
+  };
+
+  // Contar filtros ativos
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (filters.search) count++;
+    if (filters.status) count++;
+    if (filters.startDate) count++;
+    if (filters.endDate) count++;
+    if (filters.therapistId) count++;
+    if (filters.recurringOnly) count++;
+    return count;
+  };
+
+  // Filtros rápidos (pills)
+  const applyQuickFilter = (filterType) => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    switch (filterType) {
+      case 'today':
+        setFilters(prev => ({ ...prev, startDate: todayStr, endDate: todayStr }));
+        break;
+      case 'week':
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay()); // Domingo
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6); // Sábado
+        setFilters(prev => ({
+          ...prev,
+          startDate: weekStart.toISOString().split('T')[0],
+          endDate: weekEnd.toISOString().split('T')[0]
+        }));
+        break;
+      case 'month':
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        setFilters(prev => ({
+          ...prev,
+          startDate: monthStart.toISOString().split('T')[0],
+          endDate: monthEnd.toISOString().split('T')[0]
+        }));
+        break;
+      case 'pending':
+        // Toggle: se já está em 'scheduled', remove; senão, aplica
+        setFilters(prev => ({
+          ...prev,
+          status: prev.status === 'scheduled' ? '' : 'scheduled'
+        }));
+        break;
+      case 'recurring':
+        // Toggle: se já está ativo, desativa; senão, ativa
+        setFilters(prev => ({ ...prev, recurringOnly: !prev.recurringOnly }));
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Verificar se filtro rápido está ativo
+  const isQuickFilterActive = (filterType) => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    switch (filterType) {
+      case 'today':
+        return filters.startDate === todayStr && filters.endDate === todayStr;
+      case 'week':
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        return filters.startDate === weekStart.toISOString().split('T')[0] &&
+               filters.endDate === weekEnd.toISOString().split('T')[0];
+      case 'month':
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        return filters.startDate === monthStart.toISOString().split('T')[0] &&
+               filters.endDate === monthEnd.toISOString().split('T')[0];
+      case 'pending':
+        return filters.status === 'scheduled';
+      case 'recurring':
+        return filters.recurringOnly;
+      default:
+        return false;
+    }
   };
 
   const getAppointmentRowClass = (appointment) => {
@@ -174,6 +261,8 @@ const AppointmentsList = ({
     );
   }
 
+  const activeFiltersCount = getActiveFiltersCount();
+
   return (
     <div className="bg-white rounded-lg shadow">
       {/* Filtros */}
@@ -183,6 +272,11 @@ const AppointmentsList = ({
             <h3 className="text-lg font-medium text-gray-900 flex items-center">
               <FontAwesomeIcon icon={faFilter} className="mr-2 text-gray-400" />
               Filtros
+              {activeFiltersCount > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full">
+                  {activeFiltersCount}
+                </span>
+              )}
             </h3>
             <button
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
@@ -193,6 +287,60 @@ const AppointmentsList = ({
                 icon={showAdvancedFilters ? faChevronUp : faChevronDown}
                 className="ml-1 w-3 h-3"
               />
+            </button>
+          </div>
+
+          {/* Pills de Filtros Rápidos */}
+          <div className="mb-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => applyQuickFilter('today')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
+                isQuickFilterActive('today')
+                  ? 'bg-blue-500 text-white border-blue-600 shadow-sm'
+                  : 'text-gray-700 bg-gray-100 border border-gray-300 hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300'
+              }`}
+            >
+              📅 Hoje
+            </button>
+            <button
+              onClick={() => applyQuickFilter('week')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
+                isQuickFilterActive('week')
+                  ? 'bg-blue-500 text-white border-blue-600 shadow-sm'
+                  : 'text-gray-700 bg-gray-100 border border-gray-300 hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300'
+              }`}
+            >
+              📆 Esta Semana
+            </button>
+            <button
+              onClick={() => applyQuickFilter('month')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
+                isQuickFilterActive('month')
+                  ? 'bg-blue-500 text-white border-blue-600 shadow-sm'
+                  : 'text-gray-700 bg-gray-100 border border-gray-300 hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300'
+              }`}
+            >
+              🗓️ Este Mês
+            </button>
+            <button
+              onClick={() => applyQuickFilter('pending')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
+                isQuickFilterActive('pending')
+                  ? 'bg-yellow-500 text-white border-yellow-600 shadow-sm'
+                  : 'text-gray-700 bg-gray-100 border border-gray-300 hover:bg-yellow-100 hover:text-yellow-700 hover:border-yellow-300'
+              }`}
+            >
+              ⏳ Pendentes
+            </button>
+            <button
+              onClick={() => applyQuickFilter('recurring')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
+                isQuickFilterActive('recurring')
+                  ? 'bg-purple-500 text-white border-purple-600 shadow-sm'
+                  : 'text-gray-700 bg-gray-100 border border-gray-300 hover:bg-purple-100 hover:text-purple-700 hover:border-purple-300'
+              }`}
+            >
+              🔄 Recorrentes
             </button>
           </div>
 
@@ -288,6 +436,27 @@ const AppointmentsList = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Contador de Resultados */}
+      {appointments.length > 0 && (
+        <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-700 font-medium">
+              📊 Mostrando{' '}
+              <span className="text-blue-600 font-semibold">{sortedAppointments.length}</span>
+              {sortedAppointments.length !== appointments.length && (
+                <span className="text-gray-500"> de {appointments.length}</span>
+              )}
+              {' '}agendamento{sortedAppointments.length !== 1 ? 's' : ''}
+            </span>
+            {activeFiltersCount > 0 && (
+              <span className="text-gray-500 text-xs">
+                {activeFiltersCount} filtro{activeFiltersCount > 1 ? 's' : ''} ativo{activeFiltersCount > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
         </div>
       )}
 
