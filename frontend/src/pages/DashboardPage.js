@@ -37,16 +37,16 @@ const StatCard = ({ title, value, icon, colorClass, interpretation }) => {
   const interpStyle = interpretation ? getInterpretationStyle(interpretation) : null;
 
   return (
-    <div className={`bg-white p-4 rounded-lg shadow border ${interpStyle ? interpStyle.border : 'border-gray-200'} flex items-start space-x-4 relative`}>
-      <div className={`text-xl p-3 rounded-full ${colorClass.bg} ${colorClass.text}`}>
+    <div className={`bg-white p-3 sm:p-4 rounded-lg shadow border ${interpStyle ? interpStyle.border : 'border-gray-200'} flex items-start space-x-3 sm:space-x-4 relative`}>
+      <div className={`text-lg sm:text-xl p-2 sm:p-3 rounded-full ${colorClass.bg} ${colorClass.text}`}>
         <FontAwesomeIcon icon={icon} className="fa-fw" />
       </div>
-      <div className="flex-1">
-        <h3 className="text-sm font-medium text-gray-500 mb-1">{title}</h3>
-        <p className={`text-3xl font-semibold ${colorClass.text}`}>{value}</p>
+      <div className="flex-1 min-w-0">
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-1 truncate">{title}</h3>
+        <p className={`text-2xl sm:text-3xl font-semibold ${colorClass.text} break-words`}>{value}</p>
       </div>
       {interpStyle && (
-        <div className={`absolute top-2 right-2 w-6 h-6 rounded-full ${interpStyle.bg} flex items-center justify-center`}>
+        <div className={`absolute top-2 right-2 w-5 h-5 sm:w-6 sm:h-6 rounded-full ${interpStyle.bg} flex items-center justify-center flex-shrink-0`}>
           <FontAwesomeIcon icon={interpStyle.icon} className={`text-xs ${interpStyle.color}`} />
         </div>
       )}
@@ -56,90 +56,90 @@ const StatCard = ({ title, value, icon, colorClass, interpretation }) => {
 
 // Componente para guia de métricas com melhor organização visual
 const MetricsGuide = () => (
-  <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-8 overflow-hidden">
+  <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-6 sm:mb-8 overflow-hidden">
     {/* Cabeçalho principal */}
-    <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
-      <h3 className="text-xl font-bold text-white flex items-center">
-        <FontAwesomeIcon icon={faInfoCircle} className="mr-3" />
-        Guia de Métricas ABA
+    <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+      <h3 className="text-lg sm:text-xl font-bold text-white flex items-center">
+        <FontAwesomeIcon icon={faInfoCircle} className="mr-2 sm:mr-3" />
+        <span className="truncate">Guia de Métricas ABA</span>
       </h3>
-      <p className="text-blue-100 text-sm mt-1">Compreenda os indicadores e interpretações utilizados</p>
+      <p className="text-blue-100 text-xs sm:text-sm mt-1">Compreenda os indicadores e interpretações utilizados</p>
     </div>
 
-    <div className="p-6">
+    <div className="p-3 sm:p-4 lg:p-6">
       {/* Seção 1: Definições das Métricas */}
-      <div className="mb-8">
-        <div className="flex items-center mb-4 pb-2 border-b border-gray-200">
-          <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-          <h4 className="text-lg font-semibold text-gray-800">📊 Definições das Métricas</h4>
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center mb-3 sm:mb-4 pb-2 border-b border-gray-200">
+          <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 sm:mr-3"></div>
+          <h4 className="text-base sm:text-lg font-semibold text-gray-800">📊 Definições das Métricas</h4>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border-l-4 border-blue-500">
-            <h5 className="font-semibold text-gray-800 mb-2 flex items-center">
-              <span className="text-blue-600 mr-2">📊</span> Progresso Médio
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 sm:p-4 rounded-lg border-l-4 border-blue-500">
+            <h5 className="font-semibold text-gray-800 mb-2 flex items-center text-sm sm:text-base">
+              <span className="text-blue-600 mr-2 flex-shrink-0">📊</span> <span className="break-words">Progresso Médio</span>
             </h5>
-            <p className="text-gray-700 text-sm leading-relaxed">
+            <p className="text-gray-700 text-xs sm:text-sm leading-relaxed">
               Média de todas as sessões de intervenção no período selecionado.
             </p>
             <div className="mt-2 text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded-full inline-block">
               Meta: ≥70%
             </div>
           </div>
-          
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border-l-4 border-purple-500">
-            <h5 className="font-semibold text-gray-800 mb-2 flex items-center">
-              <span className="text-purple-600 mr-2">🎯</span> Taxa de Aquisição
+
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 sm:p-4 rounded-lg border-l-4 border-purple-500">
+            <h5 className="font-semibold text-gray-800 mb-2 flex items-center text-sm sm:text-base">
+              <span className="text-purple-600 mr-2 flex-shrink-0">🎯</span> <span className="break-words">Taxa de Aquisição</span>
             </h5>
-            <p className="text-gray-700 text-sm leading-relaxed">
+            <p className="text-gray-700 text-xs sm:text-sm leading-relaxed">
               Percentual de programas que atingiram critério (≥80%) recentemente.
             </p>
             <div className="mt-2 text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded-full inline-block">
               Meta: ≥30%
             </div>
           </div>
-          
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-4 rounded-lg border-l-4 border-amber-500">
-            <h5 className="font-semibold text-gray-800 mb-2 flex items-center">
-              <span className="text-amber-600 mr-2">⏱️</span> Frequência Semanal
+
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-3 sm:p-4 rounded-lg border-l-4 border-amber-500">
+            <h5 className="font-semibold text-gray-800 mb-2 flex items-center text-sm sm:text-base">
+              <span className="text-amber-600 mr-2 flex-shrink-0">⏱️</span> <span className="break-words">Frequência Semanal</span>
             </h5>
-            <p className="text-gray-700 text-sm leading-relaxed">
+            <p className="text-gray-700 text-xs sm:text-sm leading-relaxed">
               Número de dias únicos com sessões por semana em média.
             </p>
             <div className="mt-2 text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded-full inline-block">
               Ideal ABA: 3-5 dias/semana
             </div>
           </div>
-          
-          <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border-l-4 border-green-500">
-            <h5 className="font-semibold text-gray-800 mb-2 flex items-center">
-              <span className="text-green-600 mr-2">📈</span> Estabilidade
+
+          <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 sm:p-4 rounded-lg border-l-4 border-green-500">
+            <h5 className="font-semibold text-gray-800 mb-2 flex items-center text-sm sm:text-base">
+              <span className="text-green-600 mr-2 flex-shrink-0">📈</span> <span className="break-words">Estabilidade</span>
             </h5>
-            <p className="text-gray-700 text-sm leading-relaxed">
+            <p className="text-gray-700 text-xs sm:text-sm leading-relaxed">
               Consistência da performance (0-100). Alta estabilidade indica manutenção.
             </p>
             <div className="mt-2 text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full inline-block">
               Alta: ≥80%
             </div>
           </div>
-          
-          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-lg border-l-4 border-emerald-500">
-            <h5 className="font-semibold text-gray-800 mb-2 flex items-center">
-              <span className="text-emerald-600 mr-2">🏆</span> Programas na Meta
+
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-3 sm:p-4 rounded-lg border-l-4 border-emerald-500">
+            <h5 className="font-semibold text-gray-800 mb-2 flex items-center text-sm sm:text-base">
+              <span className="text-emerald-600 mr-2 flex-shrink-0">🏆</span> <span className="break-words">Programas na Meta</span>
             </h5>
-            <p className="text-gray-700 text-sm leading-relaxed">
+            <p className="text-gray-700 text-xs sm:text-sm leading-relaxed">
               Quantidade de programas que atingiram ≥80% de desempenho médio.
             </p>
             <div className="mt-2 text-xs text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full inline-block">
               Objetivo: Maioria
             </div>
           </div>
-          
-          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 rounded-lg border-l-4 border-indigo-500">
-            <h5 className="font-semibold text-gray-800 mb-2 flex items-center">
-              <span className="text-indigo-600 mr-2">📅</span> Dias até Critério
+
+          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-3 sm:p-4 rounded-lg border-l-4 border-indigo-500">
+            <h5 className="font-semibold text-gray-800 mb-2 flex items-center text-sm sm:text-base">
+              <span className="text-indigo-600 mr-2 flex-shrink-0">📅</span> <span className="break-words">Dias até Critério</span>
             </h5>
-            <p className="text-gray-700 text-sm leading-relaxed">
+            <p className="text-gray-700 text-xs sm:text-sm leading-relaxed">
               Tempo médio para dominar habilidades. Varia por complexidade da tarefa.
             </p>
             <div className="mt-2 text-xs text-indigo-700 bg-indigo-100 px-2 py-1 rounded-full inline-block">
@@ -151,41 +151,41 @@ const MetricsGuide = () => (
 
       {/* Seção 2: Sistema de Interpretação */}
       <div className="mb-6">
-        <div className="flex items-center mb-4 pb-2 border-b border-gray-200">
-          <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-          <h4 className="text-lg font-semibold text-gray-800">🎨 Sistema de Interpretação</h4>
+        <div className="flex items-center mb-3 sm:mb-4 pb-2 border-b border-gray-200">
+          <div className="w-2 h-2 bg-green-500 rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
+          <h4 className="text-base sm:text-lg font-semibold text-gray-800">🎨 Sistema de Interpretação</h4>
         </div>
-        
-        <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg">
-          <p className="text-gray-600 text-sm mb-4">Os indicadores visuais nas métricas seguem este sistema de cores:</p>
-          <div className="flex flex-wrap gap-6">
-            <div className="flex items-center space-x-3 bg-white px-4 py-2 rounded-lg shadow-sm">
-              <div className="w-4 h-4 bg-green-500 rounded-full shadow-sm"></div>
-              <span className="text-green-700 font-medium">Bom desempenho</span>
-              <span className="text-gray-500 text-sm">- Dentro das metas</span>
+
+        <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-3 sm:p-4 rounded-lg">
+          <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4">Os indicadores visuais nas métricas seguem este sistema de cores:</p>
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 lg:gap-6">
+            <div className="flex items-center space-x-2 sm:space-x-3 bg-white px-3 sm:px-4 py-2 rounded-lg shadow-sm">
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full shadow-sm flex-shrink-0"></div>
+              <span className="text-green-700 font-medium text-xs sm:text-sm">Bom desempenho</span>
+              <span className="text-gray-500 text-xs hidden lg:inline">- Dentro das metas</span>
             </div>
-            <div className="flex items-center space-x-3 bg-white px-4 py-2 rounded-lg shadow-sm">
-              <div className="w-4 h-4 bg-yellow-500 rounded-full shadow-sm"></div>
-              <span className="text-yellow-700 font-medium">Requer atenção</span>
-              <span className="text-gray-500 text-sm">- Monitoramento necessário</span>
+            <div className="flex items-center space-x-2 sm:space-x-3 bg-white px-3 sm:px-4 py-2 rounded-lg shadow-sm">
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-500 rounded-full shadow-sm flex-shrink-0"></div>
+              <span className="text-yellow-700 font-medium text-xs sm:text-sm">Requer atenção</span>
+              <span className="text-gray-500 text-xs hidden lg:inline">- Monitoramento necessário</span>
             </div>
-            <div className="flex items-center space-x-3 bg-white px-4 py-2 rounded-lg shadow-sm">
-              <div className="w-4 h-4 bg-red-500 rounded-full shadow-sm"></div>
-              <span className="text-red-700 font-medium">Crítico</span>
-              <span className="text-gray-500 text-sm">- Ação imediata necessária</span>
+            <div className="flex items-center space-x-2 sm:space-x-3 bg-white px-3 sm:px-4 py-2 rounded-lg shadow-sm">
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded-full shadow-sm flex-shrink-0"></div>
+              <span className="text-red-700 font-medium text-xs sm:text-sm">Crítico</span>
+              <span className="text-gray-500 text-xs hidden lg:inline">- Ação imediata necessária</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Nota de rodapé */}
-      <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
-        <div className="flex items-start">
-          <FontAwesomeIcon icon={faLightbulb} className="text-blue-600 mt-1 mr-3" />
-          <div>
-            <p className="text-blue-800 font-medium mb-1">Dica Profissional</p>
-            <p className="text-blue-700 text-sm leading-relaxed">
-              Use estas métricas em conjunto para uma análise completa do progresso. 
+      <div className="bg-blue-50 border-l-4 border-blue-400 p-3 sm:p-4 rounded-r-lg">
+        <div className="flex items-start space-x-2 sm:space-x-3">
+          <FontAwesomeIcon icon={faLightbulb} className="text-blue-600 mt-1 flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-blue-800 font-medium mb-1 text-sm sm:text-base">Dica Profissional</p>
+            <p className="text-blue-700 text-xs sm:text-sm leading-relaxed">
+              Use estas métricas em conjunto para uma análise completa do progresso.
               Métricas isoladas podem não refletir o quadro completo do desenvolvimento.
             </p>
           </div>
@@ -200,23 +200,23 @@ const RecommendationPanel = ({ recommendations, regressionAlerts }) => {
   if (recommendations.length === 0 && regressionAlerts === 0) return null;
 
   return (
-    <div className="bg-white border border-orange-200 rounded-xl shadow-sm mb-8 overflow-hidden">
+    <div className="bg-white border border-orange-200 rounded-xl shadow-sm mb-6 sm:mb-8 overflow-hidden">
       {/* Cabeçalho */}
-      <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-4">
-        <h3 className="text-xl font-bold text-white flex items-center">
-          <FontAwesomeIcon icon={faLightbulb} className="mr-3" />
-          Recomendações Clínicas
+      <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+        <h3 className="text-lg sm:text-xl font-bold text-white flex items-center">
+          <FontAwesomeIcon icon={faLightbulb} className="mr-2 sm:mr-3" />
+          <span className="truncate">Recomendações Clínicas</span>
         </h3>
-        <p className="text-orange-100 text-sm mt-1">Sugestões baseadas na análise dos dados</p>
+        <p className="text-orange-100 text-xs sm:text-sm mt-1">Sugestões baseadas na análise dos dados</p>
       </div>
-      
-      <div className="p-6">
-        <div className="space-y-4">
+
+      <div className="p-3 sm:p-4 lg:p-6">
+        <div className="space-y-3 sm:space-y-4">
           {regressionAlerts > 0 && (
-            <div className="bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-500 p-4 rounded-r-lg">
-              <div className="flex items-start space-x-3">
-                <div className="bg-red-100 p-2 rounded-full">
-                  <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-600" />
+            <div className="bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-500 p-3 sm:p-4 rounded-r-lg">
+              <div className="flex items-start space-x-2 sm:space-x-3">
+                <div className="bg-red-100 p-1.5 sm:p-2 rounded-full flex-shrink-0">
+                  <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-600 text-sm" />
                 </div>
                 <div>
                   <p className="font-semibold text-red-800 mb-1">⚠️ Alerta de Regressão</p>
@@ -230,15 +230,15 @@ const RecommendationPanel = ({ recommendations, regressionAlerts }) => {
           )}
           
           {recommendations.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {recommendations.map((rec, index) => (
-                <div key={index} className="bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
-                  <div className="flex items-start space-x-3">
-                    <div className="bg-amber-100 p-2 rounded-full flex-shrink-0">
-                      <FontAwesomeIcon icon={faLightbulb} className="text-amber-600" />
+                <div key={index} className="bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-400 p-3 sm:p-4 rounded-r-lg">
+                  <div className="flex items-start space-x-2 sm:space-x-3">
+                    <div className="bg-amber-100 p-1.5 sm:p-2 rounded-full flex-shrink-0">
+                      <FontAwesomeIcon icon={faLightbulb} className="text-amber-600 text-sm" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-gray-800 text-sm leading-relaxed">{rec}</p>
+                      <p className="text-gray-800 text-xs sm:text-sm leading-relaxed">{rec}</p>
                     </div>
                   </div>
                 </div>
@@ -248,13 +248,13 @@ const RecommendationPanel = ({ recommendations, regressionAlerts }) => {
         </div>
 
         {(recommendations.length > 0 || regressionAlerts > 0) && (
-          <div className="mt-6 bg-orange-50 border border-orange-200 p-4 rounded-lg">
-            <div className="flex items-start">
-              <FontAwesomeIcon icon={faInfoCircle} className="text-orange-600 mt-1 mr-3" />
-              <div>
-                <p className="text-orange-800 font-medium mb-1">💡 Dica</p>
-                <p className="text-orange-700 text-sm leading-relaxed">
-                  Estas recomendações são geradas automaticamente com base nas métricas atuais. 
+          <div className="mt-4 sm:mt-6 bg-orange-50 border border-orange-200 p-3 sm:p-4 rounded-lg">
+            <div className="flex items-start space-x-2 sm:space-x-3">
+              <FontAwesomeIcon icon={faInfoCircle} className="text-orange-600 mt-1 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-orange-800 font-medium mb-1 text-sm">💡 Dica</p>
+                <p className="text-orange-700 text-xs sm:text-sm leading-relaxed">
+                  Estas recomendações são geradas automaticamente com base nas métricas atuais.
                   Considere o contexto clínico individual ao implementar mudanças.
                 </p>
               </div>
@@ -393,16 +393,16 @@ const ProgressByDisciplineChart = ({ sessionData, activePrograms, analytics }) =
   return (
     <div className="space-y-4">
       {/* Resumo geral */}
-      <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg border border-indigo-200">
-        <div>
-          <h3 className="font-semibold text-gray-800">Resumo Geral</h3>
-          <p className="text-sm text-gray-600">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg border border-indigo-200 gap-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-gray-800 text-sm sm:text-base">Resumo Geral</h3>
+          <p className="text-xs sm:text-sm text-gray-600 break-words">
             {disciplineData.length} disciplina{disciplineData.length !== 1 ? 's' : ''} • {' '}
             Média geral: {Math.round(disciplineData.reduce((sum, d) => sum + d.average, 0) / disciplineData.length * 10) / 10}%
           </p>
         </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold text-indigo-600">
+        <div className="text-left sm:text-right w-full sm:w-auto">
+          <div className="text-xl sm:text-2xl font-bold text-indigo-600">
             {analytics.overallAverage}%
           </div>
           <div className="text-xs text-gray-500">Progresso médio geral</div>
@@ -410,30 +410,30 @@ const ProgressByDisciplineChart = ({ sessionData, activePrograms, analytics }) =
       </div>
 
       {/* Barras por disciplina */}
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {disciplineData.map((discipline) => {
           const colors = getColorByName(discipline.name);
           const trendInfo = getTrendIcon(discipline.trend);
           const percentage = Math.min(discipline.average, 100);
 
           return (
-            <div key={discipline.name} className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+            <div key={discipline.name} className="p-3 sm:p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
               {/* Header da disciplina */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-4 h-4 rounded ${colors.bg}`}></div>
-                  <h4 className="font-medium text-gray-800">{discipline.name}</h4>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-2 sm:gap-3">
+                <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap gap-y-1">
+                  <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded ${colors.bg} flex-shrink-0`}></div>
+                  <h4 className="font-medium text-gray-800 text-sm sm:text-base break-words">{discipline.name}</h4>
                   <span className={`px-2 py-1 rounded-full text-xs ${colors.light} ${colors.text}`}>
                     {discipline.programCount} programa{discipline.programCount !== 1 ? 's' : ''}
                   </span>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <span className={`text-sm ${trendInfo.color} flex items-center space-x-1`}>
+                <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-between sm:justify-end">
+                  <span className={`text-xs sm:text-sm ${trendInfo.color} flex items-center space-x-1`}>
                     <span>{trendInfo.icon}</span>
-                    <span>{trendInfo.text}</span>
+                    <span className="hidden sm:inline">{trendInfo.text}</span>
                   </span>
-                  <div className="text-right">
-                    <div className="text-xl font-bold text-gray-800">{discipline.average}%</div>
+                  <div className="text-left sm:text-right">
+                    <div className="text-lg sm:text-xl font-bold text-gray-800">{discipline.average}%</div>
                     <div className="text-xs text-gray-500">{discipline.sessionCount} sessões</div>
                   </div>
                 </div>
@@ -460,8 +460,8 @@ const ProgressByDisciplineChart = ({ sessionData, activePrograms, analytics }) =
       </div>
 
       {/* Rodapé informativo */}
-      <div className="text-xs text-gray-500 p-3 bg-gray-50 rounded-lg">
-        💡 <strong>Dica:</strong> A linha verde nas barras indica a meta de 80%. 
+      <div className="text-xs text-gray-500 p-2 sm:p-3 bg-gray-50 rounded-lg">
+        💡 <strong>Dica:</strong> A linha verde nas barras indica a meta de 80%.
         Tendências são calculadas comparando primeira e segunda metade das sessões.
       </div>
     </div>
@@ -492,12 +492,12 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
         
         if (programSessionData.length === 0) {
             return (
-                <div className="flex items-center justify-center h-48 text-center bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg border-2 border-dashed border-gray-300">
+                <div className="flex items-center justify-center h-40 sm:h-48 text-center bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg border-2 border-dashed border-gray-300">
                     <div>
-                        <div className="bg-gradient-to-br from-gray-100 to-slate-100 p-4 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
-                            <FontAwesomeIcon icon={faChartLine} className="text-2xl text-gray-400" />
+                        <div className="bg-gradient-to-br from-gray-100 to-slate-100 p-3 sm:p-4 rounded-full w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-3 flex items-center justify-center">
+                            <FontAwesomeIcon icon={faChartLine} className="text-xl sm:text-2xl text-gray-400" />
                         </div>
-                        <p className="text-xs text-gray-500">Sem dados neste período</p>
+                        <p className="text-xs text-gray-500 px-2">Sem dados neste período</p>
                     </div>
                 </div>
             );
@@ -730,12 +730,12 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
 
         return (
             <div className="w-full">
-                <div className="h-48 w-full">
+                <div className="h-40 sm:h-48 w-full">
                     <Line options={chartOptions} data={chartData} />
                 </div>
-                
+
                 {/* Legenda de cores dos níveis de prompting */}
-                <div className="mt-3 bg-gray-50 rounded-lg p-2 border border-gray-200">
+                <div className="mt-2 sm:mt-3 bg-gray-50 rounded-lg p-2 border border-gray-200">
                     <div className="mb-2">
                         <h6 className="text-xs font-medium text-gray-700 mb-1">Níveis de Prompting:</h6>
                         <div className="flex flex-wrap gap-2 text-xs">
@@ -780,28 +780,28 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
     };
 
     return (
-        <div className="mt-8">
+        <div className="mt-6 sm:mt-8">
             {sortedDisciplines.map(discipline => {
                 if (!programsByDiscipline[discipline] || programsByDiscipline[discipline].length === 0) return null;
 
                 return (
-                    <div key={discipline} className="mb-8">
-                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-l-4 border-indigo-500 p-4 rounded-r-lg mb-6">
-                            <h2 className="text-xl font-semibold text-gray-800 flex items-center">
-                                <div className="bg-indigo-100 p-2 rounded-full mr-3">
-                                    <FontAwesomeIcon icon={faFolderOpen} className="text-indigo-600" />
+                    <div key={discipline} className="mb-6 sm:mb-8">
+                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-l-4 border-indigo-500 p-3 sm:p-4 rounded-r-lg mb-4 sm:mb-6">
+                            <h2 className="text-lg sm:text-xl font-semibold text-gray-800 flex items-center">
+                                <div className="bg-indigo-100 p-1.5 sm:p-2 rounded-full mr-2 sm:mr-3 flex-shrink-0">
+                                    <FontAwesomeIcon icon={faFolderOpen} className="text-indigo-600 text-sm sm:text-base" />
                                 </div>
-                                {discipline}
+                                <span className="break-words">{discipline}</span>
                             </h2>
-                            <p className="text-sm text-indigo-700 mt-1">
+                            <p className="text-xs sm:text-sm text-indigo-700 mt-1">
                                 Gráficos de progresso individual por programa
                             </p>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                             {programsByDiscipline[discipline].map(program => (
                                 <div key={program.program_id} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-                                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-200 px-4 py-3">
-                                        <p className="text-sm font-semibold text-gray-800 truncate" title={program.program_name}>{program.program_name}</p>
+                                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-200 px-3 sm:px-4 py-2 sm:py-3">
+                                        <p className="text-xs sm:text-sm font-semibold text-gray-800 truncate" title={program.program_name}>{program.program_name}</p>
                                         <p className="text-xs text-indigo-600 mt-1">
                                           Tentativas: {program.trials || 'N/A'}
                                           {program.custom_trials !== null && program.custom_trials !== undefined && (
@@ -811,7 +811,7 @@ const AllProgramsChartsGrid = ({ activePrograms, sessionData }) => {
                                           )}
                                         </p>
                                     </div>
-                                    <div className="p-4">
+                                    <div className="p-2 sm:p-3 lg:p-4">
                                         <div className="bg-gradient-to-br from-gray-50 to-indigo-50 rounded-lg p-2">
                                             <MiniChart program={program} />
                                         </div>
@@ -1031,17 +1031,18 @@ const DashboardPage = () => {
             </div>
           )}
 
-          <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-            <h1 className="text-2xl font-semibold text-gray-800">Dashboard: {selectedPatient.name}</h1>
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3 sm:gap-4">
+            <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 break-words">Dashboard: {selectedPatient.name}</h1>
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
               {/* Botão Verificar Progresso - Sempre visível para terapeutas */}
               {!user?.is_admin && (
                 <button
                   onClick={() => window.dispatchEvent(new CustomEvent('checkProgressAlerts'))}
-                  className="bg-amber-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors flex items-center space-x-1"
+                  className="bg-amber-600 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium hover:bg-amber-700 transition-colors flex items-center justify-center space-x-1 sm:space-x-2 min-h-[44px] flex-1 sm:flex-initial"
                   title="Verificar se há programas prontos para serem marcados como dominados"
                 >
                   <FontAwesomeIcon icon={faBullseye} />
+                  <span className="sm:hidden">Progresso</span>
                   <span className="hidden sm:inline">Verificar Progresso</span>
                 </button>
               )}
@@ -1055,7 +1056,7 @@ const DashboardPage = () => {
           <RecommendationPanel recommendations={analytics.recommendations} regressionAlerts={analytics.regressionAlerts} />
           
           {/* Cards principais expandidos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
             <StatCard 
               title="Programas Ativos" 
               value={analytics.assignedProgramsCount} 
@@ -1079,7 +1080,7 @@ const DashboardPage = () => {
           </div>
 
           {/* Cards ABA avançados */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <StatCard 
               title="Taxa de Aquisição (%)" 
               value={`${analytics.acquisitionRate}%`} 
@@ -1102,10 +1103,10 @@ const DashboardPage = () => {
             />
           </div>
 
-          <div className="mt-8 bg-white p-6 rounded-lg shadow border border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
-                <FontAwesomeIcon icon={faChartLine} className="mr-3 text-emerald-500" />
-                Progresso por Área de Intervenção
+          <div className="mt-6 sm:mt-8 bg-white p-3 sm:p-4 lg:p-6 rounded-lg shadow border border-gray-200">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-700 mb-3 sm:mb-4 flex items-center">
+                <FontAwesomeIcon icon={faChartLine} className="mr-2 sm:mr-3 text-emerald-500 flex-shrink-0" />
+                <span className="break-words">Progresso por Área de Intervenção</span>
             </h2>
             <div className="relative">
                 <ProgressByDisciplineChart sessionData={filteredSessionData} activePrograms={allAssignedPrograms} analytics={analytics} />
@@ -1113,7 +1114,7 @@ const DashboardPage = () => {
           </div>
 
           {/* Seletor de Período - Posicionado acima dos gráficos de evolução */}
-          <div className="mt-6">
+          <div className="mt-4 sm:mt-6">
             <DateRangeSelector
               startDate={startDate}
               endDate={endDate}
@@ -1130,22 +1131,23 @@ const DashboardPage = () => {
         </>
       ) : (
         <>
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-semibold text-gray-800">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
+            <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">
               {user?.is_admin ? 'Dashboard da Clínica' : 'Dashboard Geral'}
             </h1>
             {!user?.is_admin && (
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent('checkProgressAlerts'))}
-                className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors flex items-center space-x-2"
+                className="bg-amber-600 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium hover:bg-amber-700 transition-colors flex items-center justify-center space-x-1 sm:space-x-2 min-h-[44px] w-full sm:w-auto"
                 title="Verificar se há programas prontos para serem marcados como dominados"
               >
                 <FontAwesomeIcon icon={faBullseye} />
-                <span>Verificar Progresso</span>
+                <span className="sm:hidden">Progresso</span>
+                <span className="hidden sm:inline">Verificar Progresso</span>
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {user?.is_admin ? (
               <>
                 <StatCard 
@@ -1189,13 +1191,13 @@ const DashboardPage = () => {
               </>
             )}
           </div>
-          
+
           {user?.is_admin && (
-            <div className="mt-6 bg-white p-6 rounded-lg shadow border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                  <FontAwesomeIcon icon={faUsers} className="mr-3 text-indigo-500" />
-                  Status da Assinatura
+            <div className="mt-4 sm:mt-6 bg-white p-3 sm:p-4 lg:p-6 rounded-lg shadow border border-gray-200">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center">
+                  <FontAwesomeIcon icon={faUsers} className="mr-2 sm:mr-3 text-indigo-500 flex-shrink-0" />
+                  <span className="break-words">Status da Assinatura</span>
                 </h3>
                 <div className={`px-3 py-1 rounded-full text-sm font-medium ${
                   totalPatients >= patientLimit 
@@ -1232,12 +1234,12 @@ const DashboardPage = () => {
                   <span>{patientLimit} pacientes (limite)</span>
                 </div>
               </div>
-              
+
               {totalPatients >= patientLimit * 0.8 && (
-                <div className="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg">
-                  <p className="text-yellow-800 text-sm">
+                <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg">
+                  <p className="text-yellow-800 text-xs sm:text-sm">
                     <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
-                    {totalPatients >= patientLimit 
+                    {totalPatients >= patientLimit
                       ? 'Você atingiu o limite de pacientes da sua assinatura. Entre em contato para atualizar seu plano.'
                       : 'Você está próximo do limite de pacientes. Considere atualizar sua assinatura.'
                     }
@@ -1246,9 +1248,9 @@ const DashboardPage = () => {
               )}
             </div>
           )}
-          <div className="mt-8 text-center text-gray-500 p-8 border-2 border-dashed rounded-lg bg-gray-50">
-            <FontAwesomeIcon icon={faTachometerAlt} className="text-4xl text-gray-300 mb-3" />
-            <p>Selecione um cliente para ver um dashboard mais detalhado.</p>
+          <div className="mt-6 sm:mt-8 text-center text-gray-500 p-6 sm:p-8 border-2 border-dashed rounded-lg bg-gray-50">
+            <FontAwesomeIcon icon={faTachometerAlt} className="text-3xl sm:text-4xl text-gray-300 mb-2 sm:mb-3" />
+            <p className="text-sm sm:text-base">Selecione um cliente para ver um dashboard mais detalhado.</p>
           </div>
         </>
       )}

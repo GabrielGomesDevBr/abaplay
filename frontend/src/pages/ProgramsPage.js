@@ -68,13 +68,13 @@ const ProgramsPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-50 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="bg-gradient-to-br from-purple-100 to-indigo-100 p-8 rounded-full w-32 h-32 mx-auto mb-8 flex items-center justify-center shadow-lg">
-            <FontAwesomeIcon icon={faSpinner} className="fa-spin text-4xl text-purple-600" />
+          <div className="bg-gradient-to-br from-purple-100 to-indigo-100 p-6 sm:p-8 rounded-full w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 sm:mb-8 flex items-center justify-center shadow-lg">
+            <FontAwesomeIcon icon={faSpinner} className="fa-spin text-3xl sm:text-4xl text-purple-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Carregando Biblioteca</h2>
-          <p className="text-gray-600">Preparando os programas de intervenção...</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Carregando Biblioteca</h2>
+          <p className="text-sm sm:text-base text-gray-600 px-4">Preparando os programas de intervenção...</p>
         </div>
       </div>
     );
@@ -82,22 +82,22 @@ const ProgramsPage = () => {
 
   if (contextError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-red-50 flex items-center justify-center p-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-red-50 flex items-center justify-center p-4 sm:p-6 lg:p-8">
         <div className="bg-white border border-red-200 rounded-xl shadow-sm overflow-hidden max-w-lg w-full">
-          <div className="bg-gradient-to-r from-red-500 to-pink-600 px-6 py-4">
-            <h3 className="text-xl font-bold text-white flex items-center">
-              <FontAwesomeIcon icon={faExclamationTriangle} className="mr-3" />
-              Erro ao Carregar
+          <div className="bg-gradient-to-r from-red-500 to-pink-600 px-4 sm:px-6 py-3 sm:py-4">
+            <h3 className="text-lg sm:text-xl font-bold text-white flex items-center">
+              <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2 sm:mr-3 flex-shrink-0" />
+              <span className="break-words">Erro ao Carregar</span>
             </h3>
-            <p className="text-red-100 text-sm mt-1">Não foi possível acessar a biblioteca de programas</p>
+            <p className="text-red-100 text-xs sm:text-sm mt-1">Não foi possível acessar a biblioteca de programas</p>
           </div>
-          <div className="p-6">
-            <p className="text-red-800 mb-4">
+          <div className="p-4 sm:p-6">
+            <p className="text-red-800 mb-4 text-sm sm:text-base">
               {contextError || 'Não foi possível carregar os programas.'}
             </p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors text-sm sm:text-base min-h-[44px] w-full sm:w-auto"
             >
               Tentar Novamente
             </button>
@@ -109,53 +109,53 @@ const ProgramsPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-50">
-      <div className="p-6">
+      <div className="p-2 sm:p-4 lg:p-6">
         {/* Cabeçalho da página */}
-        <div className="animate-fade-in mb-8">
+        <div className="animate-fade-in mb-4 sm:mb-6 lg:mb-8">
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-700 px-8 py-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold text-white flex items-center">
-                    <FontAwesomeIcon icon={faBook} className="mr-4" />
-                    Biblioteca de Programas
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-700 px-3 sm:px-4 lg:px-8 py-4 sm:py-5 lg:py-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="w-full sm:w-auto">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white flex items-center">
+                    <FontAwesomeIcon icon={faBook} className="mr-2 sm:mr-3 lg:mr-4 flex-shrink-0" />
+                    <span className="break-words">Biblioteca de Programas</span>
                   </h1>
-                  <p className="text-purple-100 text-lg mt-2">
+                  <p className="text-purple-100 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">
                     Explore e atribua programas de intervenção especializados
                   </p>
                 </div>
                 {selectedPatient && (
-                  <div className="bg-white bg-opacity-20 rounded-lg p-4 text-center">
-                    <FontAwesomeIcon icon={faUserCircle} className="text-white text-2xl mb-2" />
-                    <p className="text-white text-sm font-medium">{selectedPatient.name}</p>
+                  <div className="bg-white bg-opacity-20 rounded-lg p-3 sm:p-4 text-center w-full sm:w-auto">
+                    <FontAwesomeIcon icon={faUserCircle} className="text-white text-xl sm:text-2xl mb-1 sm:mb-2" />
+                    <p className="text-white text-xs sm:text-sm font-medium break-words">{selectedPatient.name}</p>
                     <p className="text-purple-100 text-xs">Cliente selecionado</p>
                   </div>
                 )}
               </div>
             </div>
-            
+
             {/* Alertas e notificações */}
-            <div className="p-6">
+            <div className="p-3 sm:p-4 lg:p-6">
               {actionError && (
-                <div className="bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-500 p-4 mb-4 rounded-r-lg">
-                  <div className="flex items-start">
-                    <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-600 mt-1 mr-3" />
-                    <div>
-                      <p className="text-red-800 font-medium mb-1">Erro na Operação</p>
-                      <p className="text-red-700 text-sm">{actionError}</p>
+                <div className="bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-500 p-3 sm:p-4 mb-3 sm:mb-4 rounded-r-lg">
+                  <div className="flex items-start space-x-2 sm:space-x-3">
+                    <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-600 mt-1 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-red-800 font-medium mb-1 text-sm sm:text-base">Erro na Operação</p>
+                      <p className="text-red-700 text-xs sm:text-sm">{actionError}</p>
                     </div>
                   </div>
                 </div>
               )}
 
               {!selectedPatient && (
-                <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
-                  <div className="flex items-start">
-                    <FontAwesomeIcon icon={faInfoCircle} className="text-amber-600 mt-1 mr-3" />
-                    <div>
-                      <p className="text-amber-800 font-medium mb-1">👥 Selecione um Cliente</p>
-                      <p className="text-amber-700 text-sm leading-relaxed">
-                        Para visualizar os programas e realizar atribuições, 
+                <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-400 p-3 sm:p-4 rounded-r-lg">
+                  <div className="flex items-start space-x-2 sm:space-x-3">
+                    <FontAwesomeIcon icon={faInfoCircle} className="text-amber-600 mt-1 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-amber-800 font-medium mb-1 text-sm sm:text-base">👥 Selecione um Cliente</p>
+                      <p className="text-amber-700 text-xs sm:text-sm leading-relaxed">
+                        Para visualizar os programas e realizar atribuições,
                         é necessário primeiro selecionar um cliente na barra lateral.
                       </p>
                     </div>
@@ -178,20 +178,20 @@ const ProgramsPage = () => {
           ) : (
             /* Estado vazio quando nenhum cliente está selecionado */
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-              <div className="flex items-center justify-center h-96 text-center p-8">
+              <div className="flex items-center justify-center min-h-[300px] sm:min-h-[400px] text-center p-4 sm:p-6 lg:p-8">
                 <div>
-                  <div className="bg-gradient-to-br from-indigo-100 to-purple-100 p-8 rounded-full w-32 h-32 mx-auto mb-8 flex items-center justify-center">
-                    <FontAwesomeIcon icon={faBook} className="text-5xl text-indigo-600" />
+                  <div className="bg-gradient-to-br from-indigo-100 to-purple-100 p-6 sm:p-8 rounded-full w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 sm:mb-8 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faBook} className="text-4xl sm:text-5xl text-indigo-600" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-4">Biblioteca Pronta para Uso</h3>
-                  <p className="text-gray-600 leading-relaxed max-w-md mx-auto mb-6">
-                    Nossa biblioteca contém centenas de programas organizados por disciplinas e áreas de intervenção. 
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Biblioteca Pronta para Uso</h3>
+                  <p className="text-sm sm:text-base text-gray-600 leading-relaxed max-w-md mx-auto mb-4 sm:mb-6 px-2">
+                    Nossa biblioteca contém centenas de programas organizados por disciplinas e áreas de intervenção.
                     Selecione um cliente para começar a explorar.
                   </p>
-                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-lg p-4 max-w-sm mx-auto">
-                    <div className="flex items-center justify-center space-x-3 text-indigo-600">
-                      <div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
-                      <span className="font-medium">Aguardando seleção de cliente</span>
+                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-lg p-3 sm:p-4 max-w-sm mx-auto">
+                    <div className="flex items-center justify-center space-x-2 sm:space-x-3 text-indigo-600">
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-indigo-500 rounded-full animate-pulse flex-shrink-0"></div>
+                      <span className="font-medium text-xs sm:text-sm">Aguardando seleção de cliente</span>
                     </div>
                   </div>
                 </div>

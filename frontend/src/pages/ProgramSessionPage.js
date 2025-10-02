@@ -119,34 +119,36 @@ const ProgramSessionPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Cabeçalho Moderno */}
       <div className="bg-white shadow-xl border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
-              <Link 
-                to={`/clients/${patient?.id}`} 
-                className="inline-flex items-center space-x-2 text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl font-medium transition-all duration-200"
+        <div className="px-2 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 w-full sm:w-auto">
+              <Link
+                to={`/clients/${patient?.id}`}
+                className="inline-flex items-center space-x-2 text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 sm:px-4 py-2 rounded-xl font-medium transition-all duration-200 text-sm sm:text-base min-h-[44px]"
               >
                 <FontAwesomeIcon icon={faArrowLeft} />
-                <span>Voltar ao Paciente</span>
+                <span className="hidden sm:inline">Voltar ao Paciente</span>
+                <span className="sm:hidden">Voltar</span>
               </Link>
-              
-              <div className="h-8 w-px bg-gray-300"></div>
-              
-              <div>
-                <h1 className="text-3xl font-bold text-gray-800 mb-1">
+
+              <div className="hidden sm:block h-8 w-px bg-gray-300"></div>
+
+              <div className="w-full sm:w-auto">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-1 break-words">
                   {program?.name || 'Carregando programa...'}
                 </h1>
-                <div className="flex items-center space-x-3 text-gray-600">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm sm:text-base text-gray-600">
                   <FontAwesomeIcon icon={faUserMd} className="text-indigo-500" />
-                  <span className="font-medium">Sessão de Terapia para:</span>
+                  <span className="font-medium hidden sm:inline">Sessão de Terapia para:</span>
+                  <span className="font-medium sm:hidden">Paciente:</span>
                   <span className="font-bold text-gray-800">{patient?.name}</span>
                 </div>
               </div>
             </div>
-            
+
             {/* Badge de Status */}
-            <div className="bg-gradient-to-r from-green-100 to-emerald-100 px-6 py-3 rounded-2xl border border-green-200">
-              <div className="flex items-center space-x-2">
+            <div className="bg-gradient-to-r from-green-100 to-emerald-100 px-4 sm:px-6 py-2 sm:py-3 rounded-2xl border border-green-200 w-full sm:w-auto">
+              <div className="flex items-center justify-center sm:justify-start space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-green-800 font-semibold text-sm">Sessão Ativa</span>
               </div>
@@ -156,7 +158,7 @@ const ProgramSessionPage = () => {
       </div>
 
       {/* Conteúdo Principal */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="px-2 sm:px-4 lg:px-6 py-6 sm:py-8 lg:py-12">
         <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
           {program && sessionData ? (
             <SessionProgress program={program} assignment={sessionData} />

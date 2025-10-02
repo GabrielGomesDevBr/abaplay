@@ -687,19 +687,19 @@ const SessionProgress = ({ program, assignment }) => {
 
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-8">
-        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-200 px-6 py-4">
-          <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-            <div className="bg-indigo-100 p-2 rounded-full mr-3">
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center">
+            <div className="bg-indigo-100 p-2 rounded-full mr-2 sm:mr-3">
               <FontAwesomeIcon icon={faSave} className="text-indigo-600" />
             </div>
             Registrar Nova Sessão
           </h3>
-          <p className="text-sm text-gray-600 mt-1">Insira os dados da sessão para acompanhar o progresso</p>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">Insira os dados da sessão para acompanhar o progresso</p>
         </div>
-        
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+
+        <form onSubmit={handleSubmit} className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
           {/* Informações Básicas - Modernizado */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-3 sm:p-4 lg:p-6">
             <h4 className="text-sm font-semibold text-blue-700 mb-4 flex items-center">
               <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full mr-2"></div>
               Informações da Sessão
@@ -741,7 +741,7 @@ const SessionProgress = ({ program, assignment }) => {
           </div>
 
           {/* Dados Quantitativos - Modernizado */}
-          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-6">
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-3 sm:p-4 lg:p-6">
             <h4 className="text-sm font-semibold text-emerald-700 mb-4 flex items-center">
               <div className="w-2 h-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full mr-2"></div>
               Dados da Sessão
@@ -778,7 +778,7 @@ const SessionProgress = ({ program, assignment }) => {
             </div>
           </div>
           {/* Observações - Modernizado */}
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6">
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 sm:p-4 lg:p-6">
             <label htmlFor="session-notes" className="block text-sm font-medium text-amber-700 mb-3 flex items-center">
               <div className="w-2 h-2 bg-gradient-to-r from-amber-500 to-orange-600 rounded-full mr-2"></div>
               Observações da Sessão
@@ -794,12 +794,12 @@ const SessionProgress = ({ program, assignment }) => {
           </div>
           
           {/* Nível de Prompting e Linha de Base - Modernizado */}
-          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6">
-            <h4 className="text-sm font-semibold text-purple-700 mb-4 flex items-center">
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-3 sm:p-4 lg:p-6">
+            <h4 className="text-sm font-semibold text-purple-700 mb-3 sm:mb-4 flex items-center">
               <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full mr-2"></div>
               Nível de Suporte e Configurações
             </h4>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 {isLoadingPromptLevel ? (
                   <div className="space-y-2">
