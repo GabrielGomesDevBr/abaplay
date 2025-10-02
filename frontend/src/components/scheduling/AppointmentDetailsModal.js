@@ -13,7 +13,9 @@ import {
   faEdit,
   faTrash,
   faCheckCircle,
-  faTimesCircle
+  faTimesCircle,
+  faHistory,
+  faUserShield
 } from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatTime, getStatusBadgeClass, getStatusText } from '../../api/schedulingApi';
 
@@ -84,7 +86,7 @@ const AppointmentDetailsModal = ({
     if (isMissed && appointment.missed_at) {
       const missedAt = new Date(appointment.missed_at);
       return {
-        label: 'Marcado como perdido em:',
+        label: 'Marcado como não realizado em:',
         value: missedAt.toLocaleString('pt-BR'),
         icon: faTimesCircle,
         color: 'text-red-600'
@@ -165,7 +167,7 @@ const AppointmentDetailsModal = ({
           <div className="mb-6 flex items-center justify-between">
             <div>
               <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusBadgeClass(appointment.status)}`}>
-                {getStatusText(appointment.status)}
+                {getStatusText(appointment.status, appointment.justified_at)}
               </span>
               {isOverdue && (
                 <span className="ml-3 inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
@@ -336,6 +338,97 @@ const AppointmentDetailsModal = ({
                     <span className="ml-2 text-red-600">{appointment.cancellation_reason}</span>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* ✅ NOVO: Histórico de Auditoria - Quem justificou e quando */}
+          {appointment.justified_at && appointment.justified_by_name && (
+            <div className="bg-blue-50 border-2 border-blue-200 p-4 rounded-lg mb-6">
+              <h3 className="text-sm font-medium text-blue-800 mb-3 flex items-center">
+                <FontAwesomeIcon icon={faHistory} className="mr-2" />
+                Histórico de Justificativa (Auditoria)
+              </h3>
+              <div className="space-y-3">
+                {/* Quem justificou */}
+                <div className="flex items-start">
+                  <FontAwesomeIcon icon={faUserShield} className="text-blue-600 mt-1 mr-3 w-4 h-4" />
+                  <div className="flex-1">
+                    <div className="text-sm">
+                      <span className="font-medium text-blue-700">Justificado por:</span>
+                      <span className="ml-2 text-blue-900 font-semibold">{appointment.justified_by_name}</span>
+                      {appointment.justified_by === appointment.therapist_id ? (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                          Terapeuta Responsável
+                        </span>
+                      ) : (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                          Administrador (Override)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quando justificou */}
+                <div className="flex items-start">
+                  <FontAwesomeIcon icon={faClock} className="text-blue-600 mt-1 mr-3 w-4 h-4" />
+                  <div className="flex-1">
+                    <div className="text-sm">
+                      <span className="font-medium text-blue-700">Data/Hora da Justificativa:</span>
+                      <span className="ml-2 text-blue-900">
+                        {new Date(appointment.justified_at).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    {/* Calcular tempo desde justificativa */}
+                    <div className="text-xs text-blue-600 mt-1">
+                      {(() => {
+                        const justifiedDate = new Date(appointment.justified_at);
+                        const now = new Date();
+                        const diffMs = now - justifiedDate;
+                        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                        const diffDays = Math.floor(diffHours / 24);
+
+                        if (diffDays > 0) {
+                          return `Justificado há ${diffDays} dia(s)`;
+                        } else if (diffHours > 0) {
+                          return `Justificado há ${diffHours} hora(s)`;
+                        } else {
+                          return 'Justificado recentemente';
+                        }
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ID do usuário (para rastreabilidade técnica) */}
+                <div className="pt-2 border-t border-blue-200">
+                  <div className="text-xs text-blue-600">
+                    <span className="font-medium">ID do Responsável:</span>
+                    <span className="ml-2 font-mono">#{appointment.justified_by}</span>
+                    <span className="ml-4 font-medium">ID do Agendamento:</span>
+                    <span className="ml-2 font-mono">#{appointment.id}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Nota informativa */}
+              <div className="mt-3 p-2 bg-blue-100 border border-blue-300 rounded text-xs text-blue-800 flex items-start">
+                <FontAwesomeIcon icon={faInfoCircle} className="mr-2 mt-0.5 flex-shrink-0" />
+                <span>
+                  <strong>Nota de Auditoria:</strong> Todas as justificativas são rastreadas no sistema para fins de auditoria e controle de qualidade.
+                  {appointment.justified_by !== appointment.therapist_id && (
+                    <span className="block mt-1">
+                      Esta justificativa foi realizada por um administrador usando override administrativo.
+                    </span>
+                  )}
+                </span>
               </div>
             </div>
           )}

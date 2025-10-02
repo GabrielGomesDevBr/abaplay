@@ -220,7 +220,7 @@ const ScheduledSession = {
      * @returns {Promise<Object>} O agendamento atualizado
      */
     async update(id, updateData, clinic_id) {
-        const allowedFields = ['scheduled_date', 'scheduled_time', 'duration_minutes', 'status', 'notes', 'missed_reason_type', 'missed_reason_description', 'discipline_id', 'justified_by', 'justified_at'];
+        const allowedFields = ['scheduled_date', 'scheduled_time', 'duration_minutes', 'status', 'notes', 'missed_reason_type', 'missed_reason_description', 'discipline_id', 'justified_by', 'justified_at', 'cancelled_by', 'cancelled_at', 'cancellation_reason_type', 'cancellation_reason_description'];
         const updates = [];
         const values = [];
         let paramCount = 0;
@@ -301,37 +301,36 @@ const ScheduledSession = {
     },
 
     /**
-     * Marca um agendamento como cancelado
+     * Marca um agendamento como cancelado com auditoria completa
      * @param {number} id - ID do agendamento
-     * @param {string} reason_type - Tipo do motivo do cancelamento
-     * @param {string} reason_description - Descrição do motivo
+     * @param {Object} cancellationData - Dados do cancelamento
+     * @param {string} cancellationData.reason_type - Tipo do motivo (cancelado_paciente, cancelado_clinica, etc)
+     * @param {string} cancellationData.reason_description - Descrição detalhada
+     * @param {number} cancellationData.cancelled_by - ID do usuário que cancelou
      * @param {number} clinic_id - ID da clínica (para segurança)
      * @returns {Promise<Object>} O agendamento cancelado
      */
-    async cancel(id, reason_type, reason_description, clinic_id) {
+    async cancel(id, cancellationData, clinic_id) {
+        const { reason_type, reason_description, cancelled_by } = cancellationData;
+
         return await this.update(id, {
             status: 'cancelled',
-            missed_reason_type: reason_type,
-            missed_reason_description: reason_description
+            cancellation_reason_type: reason_type,
+            cancellation_reason_description: reason_description,
+            cancelled_by: cancelled_by,
+            cancelled_at: new Date()
         }, clinic_id);
     },
 
     /**
      * Adiciona justificativa para agendamento perdido
      * @param {number} id - ID do agendamento
-     * @param {string} reason_type - Tipo da justificativa
-     * @param {string} reason_description - Descrição da justificativa
-     * @param {number} justified_by - ID de quem justificou
+     * @param {Object} justificationData - Dados da justificativa
      * @param {number} clinic_id - ID da clínica (para segurança)
      * @returns {Promise<Object>} O agendamento justificado
      */
-    async addJustification(id, reason_type, reason_description, justified_by, clinic_id) {
-        return await this.update(id, {
-            missed_reason_type: reason_type,
-            missed_reason_description: reason_description,
-            justified_by: justified_by,
-            justified_at: new Date().toISOString()
-        }, clinic_id);
+    async addJustification(id, justificationData, clinic_id) {
+        return await this.update(id, justificationData, clinic_id);
     },
 
     /**
@@ -795,6 +794,213 @@ const ScheduledSession = {
 
         } catch (error) {
             console.error('[SCHEDULING-ERROR] Erro na detecção inteligente:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Atualiza toda uma série de agendamentos recorrentes futuros
+     * @param {number} recurring_template_id - ID do template recorrente
+     * @param {Object} updateData - Dados para atualizar
+     * @param {number} clinic_id - ID da clínica (para segurança)
+     * @param {number} from_appointment_id - ID do agendamento a partir do qual atualizar (incluindo ele)
+     * @returns {Promise<Array>} Lista de agendamentos atualizados
+     */
+    async updateRecurringSeries(recurring_template_id, updateData, clinic_id, from_appointment_id) {
+        const allowedFields = ['scheduled_time', 'duration_minutes', 'notes'];
+        const updates = [];
+        const values = [];
+        let paramCount = 1;
+
+        // Construir SET dinâmico apenas com campos permitidos
+        for (const field of allowedFields) {
+            if (updateData[field] !== undefined) {
+                updates.push(`${field} = $${paramCount}`);
+                values.push(updateData[field]);
+                paramCount++;
+            }
+        }
+
+        if (updates.length === 0) {
+            throw new Error('Nenhum campo válido para atualizar');
+        }
+
+        // Adicionar updated_at
+        updates.push(`updated_at = NOW()`);
+
+        // Buscar a data do agendamento de referência
+        const refQuery = `
+            SELECT scheduled_date
+            FROM scheduled_sessions ss
+            JOIN patients p ON ss.patient_id = p.id
+            WHERE ss.id = $1 AND p.clinic_id = $2
+        `;
+        const refResult = await pool.query(refQuery, [from_appointment_id, clinic_id]);
+
+        if (refResult.rows.length === 0) {
+            throw new Error('Agendamento de referência não encontrado');
+        }
+
+        const referenceDate = refResult.rows[0].scheduled_date;
+
+        // Atualizar todos os agendamentos futuros da série (incluindo o atual)
+        const query = `
+            UPDATE scheduled_sessions ss
+            SET ${updates.join(', ')}
+            FROM patients p
+            WHERE ss.patient_id = p.id
+              AND p.clinic_id = $${paramCount}
+              AND ss.recurring_template_id = $${paramCount + 1}
+              AND ss.scheduled_date >= $${paramCount + 2}
+              AND ss.status IN ('scheduled')
+            RETURNING ss.*
+        `;
+
+        values.push(clinic_id, recurring_template_id, referenceDate);
+
+        try {
+            const { rows } = await pool.query(query, values);
+            console.log(`[SCHEDULING] Série recorrente atualizada: ${rows.length} agendamentos modificados (Template ${recurring_template_id})`);
+            return rows;
+        } catch (error) {
+            console.error('[SCHEDULING-ERROR] Erro ao atualizar série recorrente:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Exclui toda uma série de agendamentos recorrentes futuros
+     * @param {number} recurring_template_id - ID do template recorrente
+     * @param {number} clinic_id - ID da clínica (para segurança)
+     * @param {number} from_appointment_id - ID do agendamento a partir do qual excluir (incluindo ele)
+     * @returns {Promise<number>} Número de agendamentos excluídos
+     */
+    async deleteRecurringSeries(recurring_template_id, clinic_id, from_appointment_id) {
+        // Buscar a data do agendamento de referência
+        const refQuery = `
+            SELECT scheduled_date
+            FROM scheduled_sessions ss
+            JOIN patients p ON ss.patient_id = p.id
+            WHERE ss.id = $1 AND p.clinic_id = $2
+        `;
+        const refResult = await pool.query(refQuery, [from_appointment_id, clinic_id]);
+
+        if (refResult.rows.length === 0) {
+            throw new Error('Agendamento de referência não encontrado');
+        }
+
+        const referenceDate = refResult.rows[0].scheduled_date;
+
+        // Excluir todos os agendamentos futuros da série (incluindo o atual)
+        // Apenas agendamentos que não foram completados
+        const query = `
+            DELETE FROM scheduled_sessions ss
+            USING patients p
+            WHERE ss.patient_id = p.id
+              AND p.clinic_id = $1
+              AND ss.recurring_template_id = $2
+              AND ss.scheduled_date >= $3
+              AND ss.status IN ('scheduled', 'missed')
+            RETURNING ss.id
+        `;
+
+        try {
+            const { rows } = await pool.query(query, [clinic_id, recurring_template_id, referenceDate]);
+            console.log(`[SCHEDULING] Série recorrente excluída: ${rows.length} agendamentos removidos (Template ${recurring_template_id})`);
+            return rows.length;
+        } catch (error) {
+            console.error('[SCHEDULING-ERROR] Erro ao excluir série recorrente:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Busca próximas ocorrências de uma série recorrente
+     * @param {number} recurring_template_id - ID do template recorrente
+     * @param {number} clinic_id - ID da clínica
+     * @param {number} limit - Limite de resultados (padrão: 10)
+     * @returns {Promise<Array>} Lista de próximos agendamentos
+     */
+    async findNextOccurrences(recurring_template_id, clinic_id, limit = 10) {
+        const query = `
+            SELECT ss.*,
+                   p.name as patient_name,
+                   u.full_name as therapist_name
+            FROM scheduled_sessions ss
+            JOIN patients p ON ss.patient_id = p.id
+            JOIN users u ON ss.therapist_id = u.id
+            WHERE ss.recurring_template_id = $1
+              AND p.clinic_id = $2
+              AND ss.scheduled_date >= CURRENT_DATE
+              AND ss.status IN ('scheduled')
+            ORDER BY ss.scheduled_date ASC, ss.scheduled_time ASC
+            LIMIT $3
+        `;
+
+        try {
+            const { rows } = await pool.query(query, [recurring_template_id, clinic_id, limit]);
+            return rows;
+        } catch (error) {
+            console.error('[SCHEDULING-ERROR] Erro ao buscar próximas ocorrências:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Valida se existe assignment válido entre paciente e terapeuta
+     * @param {number} patient_id - ID do paciente
+     * @param {number} therapist_id - ID do terapeuta
+     * @param {number} clinic_id - ID da clínica
+     * @returns {Promise<Object>} { isValid: boolean, assignment: Object|null, message: string }
+     */
+    async validatePatientTherapistAssignment(patient_id, therapist_id, clinic_id) {
+        try {
+            const query = `
+                SELECT
+                    tpa.id,
+                    tpa.patient_id,
+                    tpa.therapist_id,
+                    p.name as patient_name,
+                    u.full_name as therapist_name
+                FROM therapist_patient_assignments tpa
+                INNER JOIN patients p ON tpa.patient_id = p.id
+                INNER JOIN users u ON tpa.therapist_id = u.id
+                WHERE tpa.patient_id = $1
+                  AND tpa.therapist_id = $2
+                  AND p.clinic_id = $3
+                  AND tpa.status = 'active'
+                LIMIT 1
+            `;
+
+            const { rows } = await pool.query(query, [patient_id, therapist_id, clinic_id]);
+
+            if (rows.length > 0) {
+                return {
+                    isValid: true,
+                    assignment: rows[0],
+                    message: 'Assignment válido encontrado'
+                };
+            } else {
+                // Buscar nome do paciente e terapeuta para mensagem de erro
+                const patientQuery = 'SELECT name FROM patients WHERE id = $1 AND clinic_id = $2';
+                const therapistQuery = 'SELECT full_name FROM users WHERE id = $1';
+
+                const [patientResult, therapistResult] = await Promise.all([
+                    pool.query(patientQuery, [patient_id, clinic_id]),
+                    pool.query(therapistQuery, [therapist_id])
+                ]);
+
+                const patientName = patientResult.rows[0]?.name || 'Paciente';
+                const therapistName = therapistResult.rows[0]?.full_name || 'Terapeuta';
+
+                return {
+                    isValid: false,
+                    assignment: null,
+                    message: `${therapistName} não está atribuído(a) ao paciente ${patientName}. Verifique os atribuições na página de administração.`
+                };
+            }
+        } catch (error) {
+            console.error('[SCHEDULING-ERROR] Erro ao validar assignment:', error);
             throw error;
         }
     }

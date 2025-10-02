@@ -127,15 +127,17 @@ export const updateAppointment = async (appointmentId, updateData) => {
 };
 
 /**
- * Cancelar agendamento
+ * Cancelar agendamento com auditoria
  * @param {number} appointmentId - ID do agendamento
- * @param {string} reason - Motivo do cancelamento
+ * @param {Object} cancellationData - Dados do cancelamento
+ * @param {string} cancellationData.reason_type - Tipo do motivo (cancelado_paciente, cancelado_clinica, etc)
+ * @param {string} cancellationData.reason_description - Descrição do motivo
  * @returns {Promise<Object>} Agendamento cancelado
  */
-export const cancelAppointment = async (appointmentId, reason) => {
+export const cancelAppointment = async (appointmentId, cancellationData) => {
   try {
     const response = await apiClient.delete(`/admin/scheduling/appointments/${appointmentId}`, {
-      data: { reason }
+      data: cancellationData
     });
     return response.data;
   } catch (error) {
@@ -255,13 +257,14 @@ export const getStatusBadgeClass = (status) => {
 /**
  * Obter texto do status em português
  * @param {string} status - Status em inglês
+ * @param {string|null} justifiedAt - Timestamp de quando foi justificado (para diferenciar missed de missed/justificado)
  * @returns {string} Status em português
  */
-export const getStatusText = (status) => {
+export const getStatusText = (status, justifiedAt = null) => {
   const statusTexts = {
     scheduled: 'Agendado',
     completed: 'Realizado',
-    missed: 'Não realizado',
+    missed: justifiedAt ? 'Não Realizado / Justificado' : 'Não Realizado',
     cancelled: 'Cancelado'
   };
 
@@ -559,6 +562,156 @@ export const getMissedReasonLabel = (category) => {
   return found ? found.label : category;
 };
 
+// === NOVAS FUNCIONALIDADES - REFATORAÇÃO FASE 1 ===
+
+/**
+ * Buscar ações pendentes (órfãs + perdidos + detectados)
+ * GET /api/scheduling/pending-actions
+ * @returns {Promise<Object>} Ações pendentes da clínica
+ */
+export const getPendingActions = async () => {
+  try {
+    const response = await apiClient.get('/scheduling/pending-actions');
+    return response.data;
+  } catch (error) {
+    console.error('[SCHEDULING-API] Erro ao buscar ações pendentes');
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao buscar ações pendentes');
+  }
+};
+
+/**
+ * Criar agendamentos retroativos em lote
+ * POST /api/scheduling/retroactive/batch
+ * @param {Array<number>} sessionIds - IDs das sessões órfãs
+ * @param {Object} commonData - Dados comuns para todos os agendamentos
+ * @returns {Promise<Object>} Resultado da criação em lote
+ */
+export const createBatchRetroactive = async (sessionIds, commonData = {}) => {
+  try {
+    const response = await apiClient.post('/scheduling/retroactive/batch', {
+      session_ids: sessionIds,
+      common_data: commonData
+    });
+    return response.data;
+  } catch (error) {
+    console.error('[SCHEDULING-API] Erro ao criar retroativos em lote');
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao criar retroativos em lote');
+  }
+};
+
+/**
+ * Notificar terapeuta sobre agendamento não realizado
+ * POST /api/admin/scheduling/notify-therapist
+ * ✅ INTEGRADO: Usa sistema de notificações existente
+ * @param {number} therapistId - ID do terapeuta
+ * @param {number} appointmentId - ID do agendamento
+ * @returns {Promise<Object>} Resultado da notificação
+ */
+export const notifyTherapist = async (therapistId, appointmentId) => {
+  try {
+    const response = await apiClient.post('/admin/scheduling/notify-therapist', {
+      therapist_id: therapistId,
+      appointment_id: appointmentId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('[SCHEDULING-API] Erro ao notificar terapeuta');
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao enviar notificação');
+  }
+};
+
+// === FASE 3: GESTÃO DE SÉRIES RECORRENTES ===
+
+/**
+ * Atualizar toda uma série de agendamentos recorrentes futuros
+ * @param {number} templateId - ID do template recorrente
+ * @param {number} appointmentId - ID do agendamento de referência
+ * @param {Object} updateData - Dados para atualizar
+ * @returns {Promise<Object>} Resultado da atualização
+ */
+export const updateRecurringSeries = async (templateId, appointmentId, updateData) => {
+  try {
+    const response = await apiClient.put(`/admin/scheduling/recurring-series/${templateId}`, {
+      appointment_id: appointmentId,
+      ...updateData
+    });
+    return response.data;
+  } catch (error) {
+    console.error('[SCHEDULING-API] Erro ao atualizar série recorrente');
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao atualizar série recorrente');
+  }
+};
+
+/**
+ * Excluir toda uma série de agendamentos recorrentes futuros
+ * @param {number} templateId - ID do template recorrente
+ * @param {number} appointmentId - ID do agendamento de referência
+ * @returns {Promise<Object>} Resultado da exclusão
+ */
+export const deleteRecurringSeries = async (templateId, appointmentId) => {
+  try {
+    const response = await apiClient.delete(`/admin/scheduling/recurring-series/${templateId}`, {
+      data: { appointment_id: appointmentId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('[SCHEDULING-API] Erro ao excluir série recorrente');
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao excluir série recorrente');
+  }
+};
+
+/**
+ * Buscar próximas ocorrências de uma série recorrente
+ * @param {number} templateId - ID do template recorrente
+ * @param {number} limit - Limite de resultados (padrão: 10)
+ * @returns {Promise<Object>} Lista de próximas ocorrências
+ */
+export const getNextOccurrences = async (templateId, limit = 10) => {
+  try {
+    const response = await apiClient.get(`/admin/scheduling/recurring-series/${templateId}/next`, {
+      params: { limit }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('[SCHEDULING-API] Erro ao buscar próximas ocorrências');
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao buscar próximas ocorrências');
+  }
+};
+
+/**
+ * Valida conflitos de horário antes de criar agendamento
+ * @param {Object} appointmentData - Dados do agendamento
+ * @returns {Promise<Object>} Resultado da validação
+ */
+export const validateConflicts = async (appointmentData) => {
+  try {
+    const response = await apiClient.post('/admin/scheduling/validate-conflicts', appointmentData);
+    return response.data;
+  } catch (error) {
+    console.error('[SCHEDULING-API] Erro ao validar conflitos');
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao validar conflitos de horário');
+  }
+};
+
+/**
+ * Valida se existe assignment entre paciente e terapeuta
+ * @param {number} patient_id - ID do paciente
+ * @param {number} therapist_id - ID do terapeuta
+ * @returns {Promise<Object>} Resultado da validação
+ */
+export const validateAssignment = async (patient_id, therapist_id) => {
+  try {
+    const response = await apiClient.post('/admin/scheduling/validate-assignment', {
+      patient_id,
+      therapist_id
+    });
+    return response.data;
+  } catch (error) {
+    console.error('[SCHEDULING-API] Erro ao validar assignment');
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao validar assignment');
+  }
+};
+
 const schedulingApi = {
   createAppointment,
   getAppointments,
@@ -575,6 +728,17 @@ const schedulingApi = {
   createRetroactiveAppointment,
   getMissedReasonCategories,
   getMissedReasonLabel,
+  // Refatoração Fase 1
+  getPendingActions,
+  createBatchRetroactive,
+  notifyTherapist,
+  // Fase 3: Séries recorrentes
+  updateRecurringSeries,
+  deleteRecurringSeries,
+  getNextOccurrences,
+  // Validações críticas
+  validateConflicts,
+  validateAssignment,
   // Utilitários
   formatDate,
   formatTime,

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faCalendarAlt, faClock, faUser, faStethoscope, faStickyNote, faSpinner, faRedoAlt, faEye, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
-import { validateAppointmentData, validateAppointmentDateTime } from '../../api/schedulingApi';
+import { validateAppointmentData, validateAppointmentDateTime, validateConflicts, validateAssignment } from '../../api/schedulingApi';
 import { fetchTherapists, fetchAllAdminPatients } from '../../api/adminApi';
 import { getDisciplineHierarchy } from '../../api/programApi';
 import { recurringAppointmentApi } from '../../api/recurringAppointmentApi';
@@ -59,6 +59,12 @@ const AppointmentForm = ({
 
   const [errors, setErrors] = useState([]);
   const [dateTimeWarning, setDateTimeWarning] = useState(null);
+
+  // Novos estados para validações críticas
+  const [validatingConflicts, setValidatingConflicts] = useState(false);
+  const [conflictWarning, setConflictWarning] = useState(null);
+  const [validatingAssignment, setValidatingAssignment] = useState(false);
+  const [assignmentWarning, setAssignmentWarning] = useState(null);
 
   // Carregar dados quando modal abre
   useEffect(() => {
@@ -278,8 +284,123 @@ const AppointmentForm = ({
     }
   }, [formData.scheduled_date, formData.scheduled_time, recurrenceEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ✅ VALIDAÇÃO CRÍTICA 1: Verificar conflitos de horário
+  const checkScheduleConflicts = async () => {
+    // Só validar se todos os campos necessários estiverem preenchidos
+    if (!formData.patient_id || !formData.therapist_id || !formData.scheduled_date || !formData.scheduled_time) {
+      setConflictWarning(null);
+      return;
+    }
+
+    try {
+      setValidatingConflicts(true);
+      setConflictWarning(null);
+
+      const conflictData = {
+        patient_id: parseInt(formData.patient_id),
+        therapist_id: parseInt(formData.therapist_id),
+        scheduled_date: formData.scheduled_date,
+        scheduled_time: formData.scheduled_time,
+        duration_minutes: parseInt(formData.duration_minutes) || 60,
+        exclude_id: editingAppointment?.id || null
+      };
+
+      const result = await validateConflicts(conflictData);
+
+      if (result.hasConflict) {
+        setConflictWarning({
+          type: 'error',
+          message: result.message || 'Conflito de horário detectado. Já existe um agendamento neste horário.'
+        });
+      } else {
+        setConflictWarning({
+          type: 'success',
+          message: 'Horário disponível! Nenhum conflito detectado.'
+        });
+        // Limpar aviso de sucesso após 3 segundos
+        setTimeout(() => {
+          setConflictWarning(null);
+        }, 3000);
+      }
+    } catch (error) {
+      setConflictWarning({
+        type: 'warning',
+        message: 'Não foi possível verificar conflitos. Prossiga com cautela.'
+      });
+    } finally {
+      setValidatingConflicts(false);
+    }
+  };
+
+  // ✅ VALIDAÇÃO CRÍTICA 2: Verificar assignment paciente-terapeuta
+  const checkPatientTherapistAssignment = async () => {
+    // Só validar se paciente e terapeuta estiverem selecionados
+    if (!formData.patient_id || !formData.therapist_id) {
+      setAssignmentWarning(null);
+      return;
+    }
+
+    try {
+      setValidatingAssignment(true);
+      setAssignmentWarning(null);
+
+      const result = await validateAssignment(
+        parseInt(formData.patient_id),
+        parseInt(formData.therapist_id)
+      );
+
+      if (!result.isValid) {
+        setAssignmentWarning({
+          type: 'error',
+          message: result.message || 'Este terapeuta não está atribuído a este paciente.'
+        });
+      } else {
+        setAssignmentWarning({
+          type: 'success',
+          message: `✓ Assignment válido: ${result.assignment.therapist_name} atende ${result.assignment.patient_name}`
+        });
+        // Limpar aviso de sucesso após 3 segundos
+        setTimeout(() => {
+          setAssignmentWarning(null);
+        }, 3000);
+      }
+    } catch (error) {
+      setAssignmentWarning({
+        type: 'warning',
+        message: 'Não foi possível verificar assignment. Prossiga com cautela.'
+      });
+    } finally {
+      setValidatingAssignment(false);
+    }
+  };
+
+  // Validar assignment quando paciente ou terapeuta mudar
+  useEffect(() => {
+    if (formData.patient_id && formData.therapist_id) {
+      checkPatientTherapistAssignment();
+    }
+  }, [formData.patient_id, formData.therapist_id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Validar conflitos quando dados de agendamento mudarem
+  useEffect(() => {
+    if (formData.patient_id && formData.therapist_id && formData.scheduled_date && formData.scheduled_time) {
+      checkScheduleConflicts();
+    }
+  }, [formData.patient_id, formData.therapist_id, formData.scheduled_date, formData.scheduled_time, formData.duration_minutes]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ✅ BLOQUEAR SUBMIT se houver erros críticos
+    if (assignmentWarning && assignmentWarning.type === 'error') {
+      setErrors(['Corrija o problema de assignment antes de continuar. Este terapeuta não está atribuído a este paciente.']);
+      return;
+    }
+
+    if (conflictWarning && conflictWarning.type === 'error') {
+      setErrors(['Há um conflito de horário. Escolha outro horário ou resolva o conflito antes de continuar.']);
+      return;
+    }
 
     // Validar dados básicos
     const validationErrors = validateAppointmentData(formData);
@@ -528,6 +649,80 @@ const AppointmentForm = ({
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"></path>
                 </svg>
                 <span className="text-orange-800 text-sm">{dateTimeWarning}</span>
+              </div>
+            </div>
+          )}
+
+          {/* ✅ VALIDAÇÃO CRÍTICA: Assignment Paciente-Terapeuta */}
+          {(validatingAssignment || assignmentWarning) && (
+            <div className={`mb-6 p-3 rounded-md border ${
+              validatingAssignment ? 'bg-blue-50 border-blue-200' :
+              assignmentWarning.type === 'error' ? 'bg-red-50 border-red-300' :
+              assignmentWarning.type === 'success' ? 'bg-green-50 border-green-300' :
+              'bg-yellow-50 border-yellow-300'
+            }`}>
+              <div className="flex items-center">
+                {validatingAssignment ? (
+                  <>
+                    <FontAwesomeIcon icon={faSpinner} className="fa-spin text-blue-500 mr-2" />
+                    <span className="text-blue-800 text-sm">Verificando assignment...</span>
+                  </>
+                ) : (
+                  <>
+                    <FontAwesomeIcon
+                      icon={assignmentWarning.type === 'error' ? faExclamationTriangle : faExclamationTriangle}
+                      className={`mr-2 ${
+                        assignmentWarning.type === 'error' ? 'text-red-500' :
+                        assignmentWarning.type === 'success' ? 'text-green-500' :
+                        'text-yellow-500'
+                      }`}
+                    />
+                    <span className={`text-sm ${
+                      assignmentWarning.type === 'error' ? 'text-red-800 font-semibold' :
+                      assignmentWarning.type === 'success' ? 'text-green-800' :
+                      'text-yellow-800'
+                    }`}>
+                      {assignmentWarning.message}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ✅ VALIDAÇÃO CRÍTICA: Conflitos de Horário */}
+          {(validatingConflicts || conflictWarning) && (
+            <div className={`mb-6 p-3 rounded-md border ${
+              validatingConflicts ? 'bg-blue-50 border-blue-200' :
+              conflictWarning.type === 'error' ? 'bg-red-50 border-red-300' :
+              conflictWarning.type === 'success' ? 'bg-green-50 border-green-300' :
+              'bg-yellow-50 border-yellow-300'
+            }`}>
+              <div className="flex items-center">
+                {validatingConflicts ? (
+                  <>
+                    <FontAwesomeIcon icon={faSpinner} className="fa-spin text-blue-500 mr-2" />
+                    <span className="text-blue-800 text-sm">Verificando conflitos de horário...</span>
+                  </>
+                ) : (
+                  <>
+                    <FontAwesomeIcon
+                      icon={conflictWarning.type === 'error' ? faExclamationTriangle : faExclamationTriangle}
+                      className={`mr-2 ${
+                        conflictWarning.type === 'error' ? 'text-red-500' :
+                        conflictWarning.type === 'success' ? 'text-green-500' :
+                        'text-yellow-500'
+                      }`}
+                    />
+                    <span className={`text-sm ${
+                      conflictWarning.type === 'error' ? 'text-red-800 font-semibold' :
+                      conflictWarning.type === 'success' ? 'text-green-800' :
+                      'text-yellow-800'
+                    }`}>
+                      {conflictWarning.message}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           )}

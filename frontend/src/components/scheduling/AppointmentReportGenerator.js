@@ -104,7 +104,7 @@ export class AppointmentReportGenerator {
 
     // Resumo Executivo
     yPosition = checkAndAddPage(yPosition);
-    yPosition = this.addExecutiveSummary(doc, statistics, yPosition);
+    yPosition = this.addExecutiveSummary(doc, statistics, appointments, yPosition);
 
     // Previsto vs Realizado
     yPosition = checkAndAddPage(yPosition);
@@ -216,7 +216,7 @@ export class AppointmentReportGenerator {
   /**
    * Adiciona resumo executivo seguindo padrão dos relatórios existentes
    */
-  addExecutiveSummary(doc, statistics, yPosition) {
+  addExecutiveSummary(doc, statistics, appointments, yPosition) {
     const margin = 15;
     const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -231,10 +231,15 @@ export class AppointmentReportGenerator {
 
     yPosition += 12;
 
+    // ✅ NOVO: Separar faltas justificadas vs não justificadas
+    const missedJustified = appointments.filter(a => a.status === 'missed' && a.justified_at).length;
+    const missedNotJustified = (statistics.missed_appointments || 0) - missedJustified;
+
     const summaryData = [
       ['Total de Agendamentos', `${statistics.total_appointments || 0}`],
       ['Sessões Realizadas', `${statistics.completed_appointments || 0} (${this.calculatePercentage(statistics.completed_appointments, statistics.total_appointments)}%)`],
-      ['Faltas Registradas', `${statistics.missed_appointments || 0} (${this.calculatePercentage(statistics.missed_appointments, statistics.total_appointments)}%)`],
+      ['Faltas Não Justificadas', `${missedNotJustified} (${this.calculatePercentage(missedNotJustified, statistics.total_appointments)}%)`],
+      ['Faltas Justificadas', `${missedJustified} (${this.calculatePercentage(missedJustified, statistics.total_appointments)}%)`],
       ['Cancelamentos', `${statistics.cancelled_appointments || 0} (${this.calculatePercentage(statistics.cancelled_appointments, statistics.total_appointments)}%)`],
       ['Taxa de Comparecimento', `${statistics.attendance_rate || 0}%`]
     ];
@@ -274,7 +279,18 @@ export class AppointmentReportGenerator {
       margin: { left: margin, right: margin }
     });
 
-    return doc.lastAutoTable.finalY + 20;
+    // ✅ NOVO: Nota explicativa sobre taxa de comparecimento
+    let finalY = doc.lastAutoTable.finalY + 5;
+    const totalNonCancelled = statistics.total_appointments - (statistics.cancelled_appointments || 0);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(100, 100, 100);
+    doc.text('* Taxa de Comparecimento calculada sobre agendamentos não cancelados', margin, finalY);
+    doc.text(`  (${statistics.completed_appointments || 0} realizadas ÷ ${totalNonCancelled} não canceladas = ${statistics.attendance_rate || 0}%)`, margin, finalY + 4);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+
+    return finalY + 20;
   }
 
   /**
@@ -453,7 +469,7 @@ export class AppointmentReportGenerator {
       appointment.scheduled_time || '',
       appointment.patient_name || 'N/A',
       appointment.therapist_name || 'N/A',
-      this.formatStatus(appointment.status)
+      this.formatStatus(appointment.status, appointment.justified_at)
     ]);
 
     doc.autoTable({
@@ -490,7 +506,14 @@ export class AppointmentReportGenerator {
               data.cell.styles.textColor = [21, 128, 61]; // Verde escuro
               data.cell.styles.fontStyle = 'bold';
               break;
+            case 'Falta / Just.':
+              // ✅ NOVO: Faltas justificadas em azul (normal, não urgente)
+              data.cell.styles.fillColor = [219, 234, 254]; // Azul claro
+              data.cell.styles.textColor = [30, 64, 175]; // Azul escuro
+              data.cell.styles.fontStyle = 'normal';
+              break;
             case 'Falta':
+              // ❌ Faltas não justificadas em vermelho (urgente)
               data.cell.styles.fillColor = [254, 226, 226]; // Vermelho claro
               data.cell.styles.textColor = [185, 28, 28]; // Vermelho escuro
               data.cell.styles.fontStyle = 'bold';
@@ -543,10 +566,15 @@ export class AppointmentReportGenerator {
 
     const stats = this.calculateIndividualStats(appointments);
 
+    // ✅ NOVO: Separar faltas justificadas vs não justificadas
+    const missedJustified = appointments.filter(a => a.status === 'missed' && a.justified_at).length;
+    const missedNotJustified = stats.missed - missedJustified;
+
     const performanceData = [
       ['Total de Agendamentos', `${stats.total}`],
       ['Sessões Realizadas', `${stats.completed} (${stats.completedRate}%)`],
-      ['Faltas Registradas', `${stats.missed} (${stats.missedRate}%)`],
+      ['Faltas Não Justificadas', `${missedNotJustified} (${this.calculatePercentage(missedNotJustified, stats.total)}%)`],
+      ['Faltas Justificadas', `${missedJustified} (${this.calculatePercentage(missedJustified, stats.total)}%)`],
       ['Cancelamentos', `${stats.cancelled} (${stats.cancelledRate}%)`],
       ['Taxa de Comparecimento', `${stats.attendanceRate}%`]
     ];
@@ -586,7 +614,17 @@ export class AppointmentReportGenerator {
       margin: { left: margin, right: margin }
     });
 
-    return doc.lastAutoTable.finalY + 15;
+    // ✅ NOVO: Nota explicativa sobre taxa de comparecimento
+    let finalY = doc.lastAutoTable.finalY + 5;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(100, 100, 100);
+    doc.text('* Taxa de Comparecimento calculada sobre agendamentos não cancelados', margin, finalY);
+    doc.text(`  (${stats.completed} realizadas ÷ ${stats.total - stats.cancelled} não canceladas = ${stats.attendanceRate}%)`, margin, finalY + 4);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+
+    return finalY + 15;
   }
 
   /**
@@ -684,7 +722,7 @@ export class AppointmentReportGenerator {
       appointment.scheduled_time,
       appointment.patient_name || 'N/A',
       appointment.discipline_name || 'Sessão Geral',
-      this.formatStatus(appointment.status)
+      this.formatStatus(appointment.status, appointment.justified_at)
     ]);
 
     doc.autoTable({
@@ -706,11 +744,11 @@ export class AppointmentReportGenerator {
         lineWidth: 0.5
       },
       columnStyles: {
-        0: { cellWidth: 22, halign: 'center' },
-        1: { cellWidth: 18, halign: 'center' },
-        2: { cellWidth: 48, halign: 'left' },
-        3: { cellWidth: 48, halign: 'left' },
-        4: { cellWidth: 22, halign: 'center' }
+        0: { cellWidth: 24, halign: 'center' },  // Data
+        1: { cellWidth: 18, halign: 'center' },  // Hora
+        2: { cellWidth: 52, halign: 'left' },    // Paciente (aumentado)
+        3: { cellWidth: 52, halign: 'left' },    // Área/Disciplina (aumentado)
+        4: { cellWidth: 34, halign: 'center' }   // Status (aumentado para "Falta / Just.")
       }
     });
 
@@ -821,10 +859,10 @@ export class AppointmentReportGenerator {
     }
   }
 
-  formatStatus(status) {
+  formatStatus(status, justifiedAt = null) {
     const statusMap = {
       'completed': 'Realizada',
-      'missed': 'Falta',
+      'missed': justifiedAt ? 'Falta / Just.' : 'Falta',
       'cancelled': 'Cancelada',
       'scheduled': 'Agendada'
     };
@@ -907,6 +945,10 @@ export class AppointmentReportGenerator {
     const missed = appointments.filter(a => a.status === 'missed').length;
     const cancelled = appointments.filter(a => a.status === 'cancelled').length;
 
+    // ✅ CORREÇÃO: Taxa de comparecimento exclui cancelamentos do denominador
+    // Fórmula: completed / (total - cancelled)
+    const totalNonCancelled = total - cancelled;
+
     return {
       total,
       completed,
@@ -915,7 +957,7 @@ export class AppointmentReportGenerator {
       completedRate: this.calculatePercentage(completed, total),
       missedRate: this.calculatePercentage(missed, total),
       cancelledRate: this.calculatePercentage(cancelled, total),
-      attendanceRate: this.calculatePercentage(completed, total)
+      attendanceRate: this.calculatePercentage(completed, totalNonCancelled)
     };
   }
 

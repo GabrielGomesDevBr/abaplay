@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faComments, faUsers, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faComments, faUsers, faTimes, faCalendarTimes, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 
-const PatientNotificationBadge = ({ 
-  patientId, 
-  patientName, 
+const PatientNotificationBadge = ({
+  patientId,
+  patientName,
   onNavigateToChat,
-  notifications = { parentChat: 0, caseDiscussion: 0, total: 0 },
+  notifications = { parentChat: 0, caseDiscussion: 0, schedulingReminder: 0, appointmentCancelled: 0, total: 0 },
   className = ""
 }) => {
   const [showModal, setShowModal] = useState(false);
@@ -120,6 +120,48 @@ const PatientNotificationBadge = ({
                   </div>
                   <div className="bg-green-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-xs font-bold">
                     {notifications.caseDiscussion}
+                  </div>
+                </button>
+              )}
+
+              {/* ✅ NOVO: Notificações de agendamento não realizado */}
+              {notifications.schedulingReminder > 0 && (
+                <button
+                  onClick={() => handleNavigate('scheduling_reminder')}
+                  className="w-full flex items-center justify-between p-3 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center">
+                      <FontAwesomeIcon icon={faExclamationTriangle} className="text-white" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-800">Sessão Não Realizada</p>
+                      <p className="text-sm text-gray-600">Pendente de justificativa</p>
+                    </div>
+                  </div>
+                  <div className="bg-yellow-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-xs font-bold">
+                    {notifications.schedulingReminder}
+                  </div>
+                </button>
+              )}
+
+              {/* ✅ NOVO: Notificações de cancelamento */}
+              {notifications.appointmentCancelled > 0 && (
+                <button
+                  onClick={() => handleNavigate('appointment_cancelled')}
+                  className="w-full flex items-center justify-between p-3 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                      <FontAwesomeIcon icon={faCalendarTimes} className="text-white" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-800">Agendamento Cancelado</p>
+                      <p className="text-sm text-gray-600">Cancelado pela administração</p>
+                    </div>
+                  </div>
+                  <div className="bg-orange-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-xs font-bold">
+                    {notifications.appointmentCancelled}
                   </div>
                 </button>
               )}

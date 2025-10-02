@@ -117,7 +117,8 @@ router.delete(
     verifyAdminRole,
     [
         param('id', 'ID do agendamento deve ser um número válido.').isInt(),
-        body('reason', 'Motivo do cancelamento deve ter no máximo 255 caracteres.').optional().isLength({ max: 255 })
+        body('reason_type', 'Tipo de motivo deve ser válido.').optional().isIn(['cancelado_paciente', 'cancelado_clinica', 'terapeuta_indisponivel', 'feriado', 'remarcacao', 'outro']),
+        body('reason_description', 'Descrição do motivo deve ter no máximo 500 caracteres.').optional().isLength({ max: 500 })
     ],
     schedulingController.cancelAppointment
 );
@@ -223,6 +224,131 @@ router.post(
         ...justificationValidation
     ],
     schedulingController.justifyAbsence
+);
+
+// === NOVAS ROTAS - REFATORAÇÃO FASE 1 ===
+
+/**
+ * Buscar ações pendentes (órfãs + perdidos + detectados hoje)
+ * GET /api/scheduling/pending-actions
+ */
+router.get(
+    '/pending-actions',
+    verifyToken,
+    schedulingController.getPendingActions
+);
+
+/**
+ * Criar retroativos em lote
+ * POST /api/scheduling/retroactive/batch
+ */
+router.post(
+    '/retroactive/batch',
+    verifyToken,
+    schedulingController.createBatchRetroactive
+);
+
+/**
+ * Executar manutenção manual (admin)
+ * POST /api/scheduling/run-maintenance
+ */
+router.post(
+    '/run-maintenance',
+    verifyToken,
+    schedulingController.runMaintenanceManually
+);
+
+/**
+ * Notificar terapeuta sobre agendamento não realizado (admin)
+ * POST /api/admin/scheduling/notify-therapist
+ */
+router.post(
+    '/notify-therapist',
+    verifyAdminRole,
+    [
+        body('therapist_id', 'ID do terapeuta é obrigatório.').isInt(),
+        body('appointment_id', 'ID do agendamento é obrigatório.').isInt()
+    ],
+    schedulingController.notifyTherapist
+);
+
+// === NOVAS ROTAS - FASE 3: GESTÃO DE SÉRIES RECORRENTES ===
+
+/**
+ * Atualizar toda uma série de agendamentos recorrentes futuros
+ * PUT /api/admin/scheduling/recurring-series/:templateId
+ */
+router.put(
+    '/recurring-series/:templateId',
+    verifyAdminRole,
+    [
+        param('templateId', 'ID do template recorrente deve ser um número válido.').isInt(),
+        body('appointment_id', 'ID do agendamento de referência é obrigatório.').isInt(),
+        body('scheduled_time', 'Horário do agendamento deve ser válido (HH:MM).').optional().matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
+        body('duration_minutes', 'Duração deve ser um número entre 15 e 240 minutos.').optional().isInt({ min: 15, max: 240 }),
+        body('notes', 'Observações devem ter no máximo 500 caracteres.').optional().isLength({ max: 500 })
+    ],
+    schedulingController.updateRecurringSeries
+);
+
+/**
+ * Excluir toda uma série de agendamentos recorrentes futuros
+ * DELETE /api/admin/scheduling/recurring-series/:templateId
+ */
+router.delete(
+    '/recurring-series/:templateId',
+    verifyAdminRole,
+    [
+        param('templateId', 'ID do template recorrente deve ser um número válido.').isInt(),
+        body('appointment_id', 'ID do agendamento de referência é obrigatório.').isInt()
+    ],
+    schedulingController.deleteRecurringSeries
+);
+
+/**
+ * Buscar próximas ocorrências de uma série recorrente
+ * GET /api/admin/scheduling/recurring-series/:templateId/next
+ */
+router.get(
+    '/recurring-series/:templateId/next',
+    verifyAdminRole,
+    [
+        param('templateId', 'ID do template recorrente deve ser um número válido.').isInt(),
+        query('limit', 'Limite deve ser um número entre 1 e 50.').optional().isInt({ min: 1, max: 50 })
+    ],
+    schedulingController.getNextOccurrences
+);
+
+/**
+ * Validar conflitos de horário
+ * POST /api/admin/scheduling/validate-conflicts
+ */
+router.post(
+    '/validate-conflicts',
+    verifyAdminRole,
+    [
+        body('patient_id', 'ID do paciente é obrigatório.').isInt(),
+        body('therapist_id', 'ID do terapeuta é obrigatório.').isInt(),
+        body('scheduled_date', 'Data deve ser válida (YYYY-MM-DD).').isISO8601(),
+        body('scheduled_time', 'Horário deve ser válido (HH:MM).').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
+        body('duration_minutes', 'Duração deve ser um número positivo.').optional().isInt({ min: 1 }),
+        body('exclude_id', 'ID de exclusão deve ser um número.').optional().isInt()
+    ],
+    schedulingController.validateConflicts
+);
+
+/**
+ * Validar assignment entre paciente e terapeuta
+ * POST /api/admin/scheduling/validate-assignment
+ */
+router.post(
+    '/validate-assignment',
+    verifyAdminRole,
+    [
+        body('patient_id', 'ID do paciente é obrigatório.').isInt(),
+        body('therapist_id', 'ID do terapeuta é obrigatório.').isInt()
+    ],
+    schedulingController.validateAssignment
 );
 
 module.exports = router;

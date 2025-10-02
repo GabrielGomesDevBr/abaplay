@@ -478,7 +478,7 @@ const RecurringTemplatesList = ({ onCreateNew, onViewAppointments }) => {
                     <div>Total: {selectedTemplate.total_appointments || 0}</div>
                     <div>Concluídos: {selectedTemplate.completed_appointments || 0}</div>
                     <div>Agendados: {selectedTemplate.scheduled_appointments || 0}</div>
-                    <div>Perdidos: {selectedTemplate.missed_appointments || 0}</div>
+                    <div>Não Realizados: {selectedTemplate.missed_appointments || 0}</div>
                   </div>
                 </div>
 

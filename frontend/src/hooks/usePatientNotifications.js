@@ -29,13 +29,17 @@ const usePatientNotifications = (patientIds = []) => {
           
           const parentCount = response.data.find(n => n.chatType === 'parent_chat')?.unreadCount || 0;
           const caseCount = response.data.find(n => n.chatType === 'case_discussion')?.unreadCount || 0;
-          
+          const schedulingReminderCount = response.data.find(n => n.chatType === 'scheduling_reminder')?.unreadCount || 0;
+          const appointmentCancelledCount = response.data.find(n => n.chatType === 'appointment_cancelled')?.unreadCount || 0;
+
           return {
             patientId,
             notifications: {
               parentChat: parentCount,
               caseDiscussion: caseCount,
-              total: parentCount + caseCount
+              schedulingReminder: schedulingReminderCount,
+              appointmentCancelled: appointmentCancelledCount,
+              total: parentCount + caseCount + schedulingReminderCount + appointmentCancelledCount
             }
           };
         } catch (error) {
@@ -76,11 +80,15 @@ const usePatientNotifications = (patientIds = []) => {
       
       const parentCount = response.data.find(n => n.chatType === 'parent_chat')?.unreadCount || 0;
       const caseCount = response.data.find(n => n.chatType === 'case_discussion')?.unreadCount || 0;
-      
+      const schedulingReminderCount = response.data.find(n => n.chatType === 'scheduling_reminder')?.unreadCount || 0;
+      const appointmentCancelledCount = response.data.find(n => n.chatType === 'appointment_cancelled')?.unreadCount || 0;
+
       const notifications = {
         parentChat: parentCount,
         caseDiscussion: caseCount,
-        total: parentCount + caseCount
+        schedulingReminder: schedulingReminderCount,
+        appointmentCancelled: appointmentCancelledCount,
+        total: parentCount + caseCount + schedulingReminderCount + appointmentCancelledCount
       };
 
       setPatientNotifications(prev => ({
@@ -112,16 +120,20 @@ const usePatientNotifications = (patientIds = []) => {
 
       // Atualiza o estado local imediatamente
       setPatientNotifications(prev => {
-        const current = prev[patientId] || { parentChat: 0, caseDiscussion: 0, total: 0 };
+        const current = prev[patientId] || { parentChat: 0, caseDiscussion: 0, schedulingReminder: 0, appointmentCancelled: 0, total: 0 };
         const updated = { ...current };
 
         if (chatType === 'parent_chat') {
           updated.parentChat = 0;
         } else if (chatType === 'case_discussion') {
           updated.caseDiscussion = 0;
+        } else if (chatType === 'scheduling_reminder') {
+          updated.schedulingReminder = 0;
+        } else if (chatType === 'appointment_cancelled') {
+          updated.appointmentCancelled = 0;
         }
 
-        updated.total = updated.parentChat + updated.caseDiscussion;
+        updated.total = updated.parentChat + updated.caseDiscussion + updated.schedulingReminder + updated.appointmentCancelled;
 
         return {
           ...prev,
@@ -202,13 +214,17 @@ const usePatientNotifications = (patientIds = []) => {
           
           const parentCount = response.data.find(n => n.chatType === 'parent_chat')?.unreadCount || 0;
           const caseCount = response.data.find(n => n.chatType === 'case_discussion')?.unreadCount || 0;
-          
+          const schedulingReminderCount = response.data.find(n => n.chatType === 'scheduling_reminder')?.unreadCount || 0;
+          const appointmentCancelledCount = response.data.find(n => n.chatType === 'appointment_cancelled')?.unreadCount || 0;
+
           return {
             patientId,
             notifications: {
               parentChat: parentCount,
               caseDiscussion: caseCount,
-              total: parentCount + caseCount
+              schedulingReminder: schedulingReminderCount,
+              appointmentCancelled: appointmentCancelledCount,
+              total: parentCount + caseCount + schedulingReminderCount + appointmentCancelledCount
             }
           };
         } catch (error) {

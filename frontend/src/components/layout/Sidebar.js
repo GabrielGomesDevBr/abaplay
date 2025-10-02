@@ -33,7 +33,7 @@ const Sidebar = () => {
       selectPatient(patient);
       // Marcar como lida as notificações deste tipo
       markAsRead(patientId, chatType);
-      
+
       // Navegar para a página apropriada
       if (chatType === 'parent_chat') {
         if (user?.role === 'parent') {
@@ -43,6 +43,13 @@ const Sidebar = () => {
         }
       } else if (chatType === 'case_discussion') {
         navigate('/notes');
+      } else if (chatType === 'scheduling_reminder' || chatType === 'appointment_cancelled') {
+        // ✅ NOVO: Notificações de agendamento levam para página de agendamentos
+        if (user?.is_admin) {
+          navigate('/scheduling'); // Admin vai para sistema de agendamento
+        } else {
+          navigate('/therapist-schedule'); // Terapeuta vai para sua agenda pessoal
+        }
       }
     }
   };

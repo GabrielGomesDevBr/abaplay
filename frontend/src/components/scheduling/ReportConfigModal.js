@@ -45,21 +45,13 @@ const ReportConfigModal = ({
     let startDate, endDate;
 
     switch (period.type) {
-      case 'week':
-        startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-        endDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000); // +30 dias para agendamentos futuros
-        break;
-      case '2weeks':
-        startDate = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
-        endDate = new Date(today.getTime() + 45 * 24 * 60 * 60 * 1000); // +45 dias para agendamentos futuros
-        break;
       case 'month':
         startDate = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-        endDate = new Date(today.getFullYear(), today.getMonth() + 2, today.getDate()); // +2 meses para agendamentos futuros
+        endDate = today;
         break;
       case 'quarter':
         startDate = new Date(today.getFullYear(), today.getMonth() - 3, today.getDate());
-        endDate = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate()); // +3 meses para agendamentos futuros
+        endDate = today;
         break;
       default:
         return; // Para custom, não alterar as datas
@@ -79,7 +71,7 @@ const ReportConfigModal = ({
     if (isOpen) {
       setErrors({});
       setPeriod({
-        type: 'week',
+        type: 'month',
         startDate: '',
         endDate: ''
       });
@@ -130,14 +122,6 @@ const ReportConfigModal = ({
       let startDate, endDate;
 
       switch (period.type) {
-        case 'week':
-          startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-          endDate = today;
-          break;
-        case '2weeks':
-          startDate = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
-          endDate = today;
-          break;
         case 'month':
           startDate = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
           endDate = today;
@@ -147,7 +131,7 @@ const ReportConfigModal = ({
           endDate = today;
           break;
         default:
-          startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+          startDate = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
           endDate = today;
       }
 
@@ -236,10 +220,8 @@ const ReportConfigModal = ({
 
                 <div className="space-y-2">
                   {[
-                    { value: 'week', label: 'Última Semana + Próximo Mês' },
-                    { value: '2weeks', label: 'Últimas 2 Semanas + Próximos 45 Dias' },
-                    { value: 'month', label: 'Último Mês + Próximos 2 Meses' },
-                    { value: 'quarter', label: 'Último Trimestre + Próximos 3 Meses' },
+                    { value: 'month', label: 'Último Mês' },
+                    { value: 'quarter', label: 'Último Trimestre' },
                     { value: 'custom', label: 'Período Customizado' }
                   ].map(option => (
                     <label key={option.value} className="flex items-center">

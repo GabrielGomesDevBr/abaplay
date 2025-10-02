@@ -13,19 +13,29 @@ import {
   faFilter,
   faSearch,
   faChevronDown,
-  faChevronUp
+  faChevronUp,
+  faSync,
+  faEllipsisV
 } from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatTime, getStatusBadgeClass, getStatusText } from '../../api/schedulingApi';
+import { translateStatus } from '../../utils/statusTranslator';
+import AppointmentActions from './AppointmentActions';
 
 /**
  * Componente para exibir lista de agendamentos
  * Implementação da Fase 1 - MVP do Sistema de Agendamento
+ * ✅ FASE 3: Coluna de recorrência adicionada
  */
 const AppointmentsList = ({
   appointments = [],
   onEdit,
   onDelete,
   onView,
+  onEditSeries,
+  onDeleteSeries,
+  onJustify,
+  onViewNextOccurrences,
+  onCancel, // ✅ NOVO: Handler de cancelamento
   isLoading = false,
   pagination = null,
   onPageChange = null,
@@ -36,7 +46,8 @@ const AppointmentsList = ({
     status: '',
     startDate: '',
     endDate: '',
-    therapistId: ''
+    therapistId: '',
+    recurringOnly: false // ✅ FASE 3: Filtro para mostrar apenas recorrentes
   });
 
   const [sortBy, setSortBy] = useState('scheduled_date');
@@ -45,6 +56,21 @@ const AppointmentsList = ({
 
   // Lista de terapeutas únicos dos agendamentos
   const uniqueTherapists = [...new Set(appointments.map(apt => apt.therapist_name))].sort();
+
+  // ✅ FASE 3: Helper para texto de recorrência
+  const getRecurrenceText = (appointment) => {
+    if (!appointment.recurring_template_id) {
+      return null;
+    }
+
+    const recurrenceTypeMap = {
+      'weekly': 'Semanal',
+      'biweekly': 'Quinzenal',
+      'monthly': 'Mensal'
+    };
+
+    return recurrenceTypeMap[appointment.recurrence_type] || 'Recorrente';
+  };
 
   const handleFilterChange = (filterName, value) => {
     setFilters(prev => ({
@@ -76,7 +102,10 @@ const AppointmentsList = ({
 
     const matchesTherapist = !filters.therapistId || appointment.therapist_name === filters.therapistId;
 
-    return matchesSearch && matchesStatus && matchesDateRange && matchesTherapist;
+    // ✅ FASE 3: Filtro de recorrentes
+    const matchesRecurring = !filters.recurringOnly || !!appointment.recurring_template_id;
+
+    return matchesSearch && matchesStatus && matchesDateRange && matchesTherapist && matchesRecurring;
   });
 
   // Ordenar agendamentos
@@ -208,37 +237,54 @@ const AppointmentsList = ({
 
           {/* Filtros avançados */}
           {showAdvancedFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Data inicial</label>
-                <input
-                  type="date"
-                  value={filters.startDate}
-                  onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                />
+            <div className="pt-4 border-t border-gray-200 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Data inicial</label>
+                  <input
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Data final</label>
+                  <input
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Terapeuta</label>
+                  <select
+                    value={filters.therapistId}
+                    onChange={(e) => handleFilterChange('therapistId', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Todos os terapeutas</option>
+                    {uniqueTherapists.map(therapist => (
+                      <option key={therapist} value={therapist}>{therapist}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Data final</label>
+
+              {/* ✅ FASE 3: Filtro de recorrentes */}
+              <div className="flex items-center">
                 <input
-                  type="date"
-                  value={filters.endDate}
-                  onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  type="checkbox"
+                  id="recurringOnly"
+                  checked={filters.recurringOnly}
+                  onChange={(e) => handleFilterChange('recurringOnly', e.target.checked)}
+                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded cursor-pointer"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Terapeuta</label>
-                <select
-                  value={filters.therapistId}
-                  onChange={(e) => handleFilterChange('therapistId', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Todos os terapeutas</option>
-                  {uniqueTherapists.map(therapist => (
-                    <option key={therapist} value={therapist}>{therapist}</option>
-                  ))}
-                </select>
+                <label htmlFor="recurringOnly" className="ml-2 text-sm font-medium text-gray-700 cursor-pointer flex items-center">
+                  <FontAwesomeIcon icon={faSync} className="mr-2 text-purple-600" />
+                  Mostrar apenas agendamentos recorrentes
+                </label>
               </div>
             </div>
           )}
@@ -300,6 +346,13 @@ const AppointmentsList = ({
                     )}
                   </div>
                 </th>
+                {/* ✅ FASE 3: Nova coluna de Recorrência */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="flex items-center">
+                    <FontAwesomeIcon icon={faSync} className="mr-2" />
+                    Recorrência
+                  </div>
+                </th>
                 <th
                   onClick={() => handleSort('status')}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
@@ -356,42 +409,35 @@ const AppointmentsList = ({
                       {appointment.therapist_name}
                     </div>
                   </td>
+                  {/* ✅ FASE 3: Célula de Recorrência */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(appointment.status)}`}>
-                      {getStatusText(appointment.status)}
-                    </span>
-                    {appointment.missed_reason && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        Justificado
-                      </div>
+                    {getRecurrenceText(appointment) ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                        <FontAwesomeIcon icon={faSync} className="mr-1 w-3 h-3" />
+                        {getRecurrenceText(appointment)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">-</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                    <button
-                      onClick={() => onView(appointment)}
-                      className="text-blue-600 hover:text-blue-900 transition-colors"
-                      title="Visualizar agendamento"
-                    >
-                      <FontAwesomeIcon icon={faEye} className="w-4 h-4" />
-                    </button>
-                    {appointment.status === 'scheduled' && onEdit && (
-                      <button
-                        onClick={() => onEdit(appointment)}
-                        className="text-yellow-600 hover:text-yellow-900 transition-colors"
-                        title="Editar agendamento"
-                      >
-                        <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
-                      </button>
-                    )}
-                    {(appointment.status === 'scheduled' || appointment.status === 'cancelled' || appointment.status === 'missed' || appointment.status === 'completed') && onDelete && (
-                      <button
-                        onClick={() => onDelete(appointment)}
-                        className="text-red-600 hover:text-red-900 transition-colors"
-                        title="Remover agendamento"
-                      >
-                        <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-                      </button>
-                    )}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(appointment.status)}`}>
+                      {translateStatus(appointment.status, appointment.justified_at)}
+                    </span>
+                  </td>
+                  {/* ✅ FASE 3: Menu contextual de ações */}
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <AppointmentActions
+                      appointment={appointment}
+                      onEdit={onEdit}
+                      onEditSeries={onEditSeries}
+                      onDelete={onDelete}
+                      onDeleteSeries={onDeleteSeries}
+                      onViewDetails={onView}
+                      onJustify={onJustify}
+                      onViewNextOccurrences={onViewNextOccurrences}
+                      onCancel={onCancel}  // ✅ NOVO: Passar handler de cancelamento
+                    />
                   </td>
                 </tr>
               ))}

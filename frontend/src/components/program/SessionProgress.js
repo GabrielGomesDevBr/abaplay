@@ -1,6 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faSpinner, faCheck, faBullseye, faChartLine, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import {
+  faSave,
+  faSpinner,
+  faCheck,
+  faBullseye,
+  faChartLine,
+  faInfoCircle,
+  faChevronDown,
+  faChevronUp,
+  faDumbbell,
+  faBox,
+  faListOl,
+  faTrophy
+} from '@fortawesome/free-solid-svg-icons';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -98,6 +111,22 @@ const SessionProgress = ({ program, assignment }) => {
   const [error, setError] = useState('');
   const [evolutionData, setEvolutionData] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+
+  // Estados para controlar expansão das seções do protocolo
+  const [expandedSections, setExpandedSections] = useState({
+    objective: true,      // Objetivo sempre expandido por padrão
+    skill: false,         // Habilidade
+    materials: false,     // Materiais
+    procedure: false,     // Procedimento
+    advancement: false    // Critério de Avanço
+  });
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   const procedureSteps = useMemo(() => {
     if (!program?.procedure) return [];
@@ -488,17 +517,173 @@ const SessionProgress = ({ program, assignment }) => {
 
   return (
     <div>
-      {program?.objective && (
-        <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
-          <h5 className="font-semibold text-blue-800 mb-3 flex items-center">
-              <div className="bg-blue-100 p-2 rounded-full mr-3">
-                <FontAwesomeIcon icon={faBullseye} className="text-blue-600" />
+      {/* 📋 PROTOCOLO DO PROGRAMA - Seções Expansíveis */}
+      <div className="mb-6 space-y-3">
+        {/* 🎯 OBJETIVO */}
+        {program?.objective && (
+          <div className="bg-white border-2 border-blue-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <button
+              onClick={() => toggleSection('objective')}
+              className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-4 flex items-center justify-between transition-colors hover:from-blue-100 hover:to-indigo-100"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-2 rounded-full">
+                  <FontAwesomeIcon icon={faBullseye} className="text-white text-sm" />
+                </div>
+                <h5 className="font-bold text-blue-800 text-sm sm:text-base">Objetivo do Programa</h5>
               </div>
-              Objetivo do Programa
-          </h5>
-          <p className="text-blue-700 leading-relaxed text-base">{program.objective}</p>
-        </div>
-      )}
+              <FontAwesomeIcon
+                icon={expandedSections.objective ? faChevronUp : faChevronDown}
+                className="text-blue-600 text-sm"
+              />
+            </button>
+            {expandedSections.objective && (
+              <div className="px-4 py-4 bg-gradient-to-r from-blue-50/30 to-indigo-50/30 border-t-2 border-blue-100">
+                <p className="text-blue-900 leading-relaxed text-sm sm:text-base">{program.objective}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 💪 HABILIDADE */}
+        {program?.skill && (
+          <div className="bg-white border-2 border-purple-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <button
+              onClick={() => toggleSection('skill')}
+              className="w-full bg-gradient-to-r from-purple-50 to-violet-50 px-4 py-4 flex items-center justify-between transition-colors hover:from-purple-100 hover:to-violet-100"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="bg-gradient-to-r from-purple-500 to-violet-600 p-2 rounded-full">
+                  <FontAwesomeIcon icon={faDumbbell} className="text-white text-sm" />
+                </div>
+                <h5 className="font-bold text-purple-800 text-sm sm:text-base">Habilidade Trabalhada</h5>
+              </div>
+              <FontAwesomeIcon
+                icon={expandedSections.skill ? faChevronUp : faChevronDown}
+                className="text-purple-600 text-sm"
+              />
+            </button>
+            {expandedSections.skill && (
+              <div className="px-4 py-4 bg-gradient-to-r from-purple-50/30 to-violet-50/30 border-t-2 border-purple-100">
+                <p className="text-purple-900 leading-relaxed text-sm sm:text-base whitespace-pre-wrap">{program.skill}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 📦 MATERIAIS */}
+        {program?.materials && program.materials.length > 0 && (
+          <div className="bg-white border-2 border-amber-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <button
+              onClick={() => toggleSection('materials')}
+              className="w-full bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-4 flex items-center justify-between transition-colors hover:from-amber-100 hover:to-orange-100"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-2 rounded-full">
+                  <FontAwesomeIcon icon={faBox} className="text-white text-sm" />
+                </div>
+                <h5 className="font-bold text-amber-800 text-sm sm:text-base">
+                  Materiais Necessários
+                  <span className="ml-2 bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-semibold">
+                    {Array.isArray(program.materials) ? program.materials.length : JSON.parse(program.materials || '[]').length}
+                  </span>
+                </h5>
+              </div>
+              <FontAwesomeIcon
+                icon={expandedSections.materials ? faChevronUp : faChevronDown}
+                className="text-amber-600 text-sm"
+              />
+            </button>
+            {expandedSections.materials && (
+              <div className="px-4 py-4 bg-gradient-to-r from-amber-50/30 to-orange-50/30 border-t-2 border-amber-100">
+                <ul className="space-y-2">
+                  {(Array.isArray(program.materials) ? program.materials : JSON.parse(program.materials || '[]')).map((material, index) => (
+                    <li key={index} className="flex items-start text-sm sm:text-base">
+                      <span className="inline-block w-2 h-2 bg-amber-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                      <span className="text-amber-900 leading-relaxed">{material}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 📋 PROCEDIMENTO */}
+        {procedureSteps && procedureSteps.length > 0 && (
+          <div className="bg-white border-2 border-emerald-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <button
+              onClick={() => toggleSection('procedure')}
+              className="w-full bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-4 flex items-center justify-between transition-colors hover:from-emerald-100 hover:to-teal-100"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-2 rounded-full">
+                  <FontAwesomeIcon icon={faListOl} className="text-white text-sm" />
+                </div>
+                <h5 className="font-bold text-emerald-800 text-sm sm:text-base">
+                  Procedimento
+                  <span className="ml-2 bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-xs font-semibold">
+                    {procedureSteps.length} {procedureSteps.length === 1 ? 'passo' : 'passos'}
+                  </span>
+                </h5>
+              </div>
+              <FontAwesomeIcon
+                icon={expandedSections.procedure ? faChevronUp : faChevronDown}
+                className="text-emerald-600 text-sm"
+              />
+            </button>
+            {expandedSections.procedure && (
+              <div className="px-4 py-4 bg-gradient-to-r from-emerald-50/30 to-teal-50/30 border-t-2 border-emerald-100">
+                <div className="space-y-4">
+                  {procedureSteps.map((step, index) => (
+                    <div key={index} className="bg-white border-l-4 border-emerald-400 rounded-r-lg p-4 shadow-sm">
+                      <div className="flex items-start space-x-3">
+                        <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h6 className="font-bold text-emerald-900 mb-2 text-sm sm:text-base break-words">
+                            {step.name || step.step_name || `Passo ${index + 1}`}
+                          </h6>
+                          <p className="text-emerald-800 leading-relaxed text-sm whitespace-pre-wrap break-words">
+                            {step.description || step.step_description || 'Sem descrição'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ✅ CRITÉRIO DE AVANÇO */}
+        {program?.advancement_criterion && (
+          <div className="bg-white border-2 border-green-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <button
+              onClick={() => toggleSection('advancement')}
+              className="w-full bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-4 flex items-center justify-between transition-colors hover:from-green-100 hover:to-emerald-100"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-2 rounded-full">
+                  <FontAwesomeIcon icon={faTrophy} className="text-white text-sm" />
+                </div>
+                <h5 className="font-bold text-green-800 text-sm sm:text-base">Critério de Avanço</h5>
+              </div>
+              <FontAwesomeIcon
+                icon={expandedSections.advancement ? faChevronUp : faChevronDown}
+                className="text-green-600 text-sm"
+              />
+            </button>
+            {expandedSections.advancement && (
+              <div className="px-4 py-4 bg-gradient-to-r from-green-50/30 to-emerald-50/30 border-t-2 border-green-100">
+                <p className="text-green-900 leading-relaxed text-sm sm:text-base whitespace-pre-wrap">{program.advancement_criterion}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-8">

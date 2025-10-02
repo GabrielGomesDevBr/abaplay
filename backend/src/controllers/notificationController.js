@@ -45,9 +45,10 @@ notificationController.markAsRead = async (req, res) => {
       });
     }
 
-    if (!['case_discussion', 'parent_chat', 'progress_alert'].includes(chatType)) {
-      return res.status(400).json({ 
-        errors: [{ msg: 'chatType deve ser "case_discussion", "parent_chat" ou "progress_alert".' }] 
+    const validChatTypes = ['case_discussion', 'parent_chat', 'progress_alert', 'scheduling_reminder', 'appointment_cancelled'];
+    if (!validChatTypes.includes(chatType)) {
+      return res.status(400).json({
+        errors: [{ msg: 'chatType inválido.' }]
       });
     }
 
@@ -70,9 +71,10 @@ notificationController.getNotificationsByPatientAndType = async (req, res) => {
 
     // Se chatType for fornecido, usar comportamento original
     if (chatType) {
-      if (!['case_discussion', 'parent_chat', 'progress_alert'].includes(chatType)) {
-        return res.status(400).json({ 
-          errors: [{ msg: 'chatType deve ser "case_discussion", "parent_chat" ou "progress_alert".' }] 
+      const validChatTypes = ['case_discussion', 'parent_chat', 'progress_alert', 'scheduling_reminder', 'appointment_cancelled'];
+      if (!validChatTypes.includes(chatType)) {
+        return res.status(400).json({
+          errors: [{ msg: 'chatType inválido.' }]
         });
       }
       const notifications = await NotificationStatus.getByUser(userId, patientId, chatType);
@@ -80,8 +82,7 @@ notificationController.getNotificationsByPatientAndType = async (req, res) => {
     }
 
     // Caso contrário, retornar todas as notificações agrupadas por tipo
-    // Removido 'progress_alert' pois não existe no enum do banco
-    const chatTypes = ['parent_chat', 'case_discussion'];
+    const chatTypes = ['parent_chat', 'case_discussion', 'scheduling_reminder', 'appointment_cancelled'];
     const notificationsSummary = [];
 
     for (const type of chatTypes) {

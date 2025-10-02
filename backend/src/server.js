@@ -24,8 +24,8 @@ const therapistScheduleRoutes = require('./routes/therapistScheduleRoutes');
 // --- Sistema de agendamentos recorrentes ---
 const recurringAppointmentRoutes = require('./routes/recurringAppointmentRoutes');
 
-// --- Job de detecção automática de sessões ---
-const { scheduleMaintenanceJob } = require('./jobs/sessionDetectionJob');
+// --- Job unificado de manutenção de sessões (NOVO) ---
+const SessionMaintenanceJob = require('./jobs/sessionMaintenanceJob');
 // --- Job de agendamentos recorrentes ---
 const { recurringJobInstance } = require('./jobs/recurringAppointmentJob');
 
@@ -123,22 +123,17 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 
-  // Inicializar job de detecção automática apenas em produção ou se explicitamente habilitado
+  // Inicializar job unificado de manutenção de sessões (ATUALIZADO)
   if (process.env.NODE_ENV === 'production' || process.env.ENABLE_AUTO_DETECTION === 'true') {
-    console.log('[SCHEDULING] Iniciando job de detecção automática de sessões...');
+    console.log('[SESSION-MAINTENANCE] Iniciando job unificado de manutenção...');
 
-    scheduleMaintenanceJob({
-      intervalMinutes: parseInt(process.env.DETECTION_INTERVAL_MINUTES) || 30,
-      detectSessions: true,
-      markMissed: true,
-      sendNotifications: true,
-      lookbackHours: parseInt(process.env.DETECTION_LOOKBACK_HOURS) || 24,
-      missedAfterHours: parseInt(process.env.MISSED_AFTER_HOURS) || 2
-    });
+    SessionMaintenanceJob.scheduleJob(
+      parseInt(process.env.DETECTION_INTERVAL_MINUTES) || 30
+    );
 
-    console.log('[SCHEDULING] Job de detecção automática configurado');
+    console.log('[SESSION-MAINTENANCE] Job de manutenção configurado e ativo');
   } else {
-    console.log('[SCHEDULING] Job de detecção automática desabilitado (NODE_ENV != production e ENABLE_AUTO_DETECTION != true)');
+    console.log('[SESSION-MAINTENANCE] Job de manutenção desabilitado (NODE_ENV != production e ENABLE_AUTO_DETECTION != true)');
   }
 
   // Inicializar job de agendamentos recorrentes

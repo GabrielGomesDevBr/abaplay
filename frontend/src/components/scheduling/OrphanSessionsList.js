@@ -17,6 +17,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { getOrphanSessions } from '../../api/schedulingApi';
 import { useAuth } from '../../context/AuthContext';
+import BatchRetroactiveModal from './BatchRetroactiveModal';
 
 /**
  * Componente para listar e gerenciar sessões órfãs
@@ -32,6 +33,10 @@ const OrphanSessionsList = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  // NOVO: Estados para seleção múltipla
+  const [selectedSessions, setSelectedSessions] = useState([]);
+  const [showBatchModal, setShowBatchModal] = useState(false);
 
   const [filters, setFilters] = useState({
     startDate: '',
@@ -85,6 +90,45 @@ const OrphanSessionsList = ({
     });
     // Recarregar sem filtros
     setTimeout(loadOrphanSessions, 100);
+  };
+
+  // NOVO: Handlers de seleção múltipla
+  const getSessionKey = (session) => {
+    return `${session.patient_id}-${session.therapist_id}-${session.session_date}`;
+  };
+
+  const handleSelectSession = (session) => {
+    const sessionKey = getSessionKey(session);
+    setSelectedSessions(prev => {
+      const exists = prev.some(s => getSessionKey(s) === sessionKey);
+      if (exists) {
+        return prev.filter(s => getSessionKey(s) !== sessionKey);
+      } else {
+        return [...prev, session];
+      }
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedSessions.length === filteredSessions.length) {
+      setSelectedSessions([]);
+    } else {
+      setSelectedSessions([...filteredSessions]);
+    }
+  };
+
+  const handleBatchCreate = () => {
+    if (selectedSessions.length === 0) {
+      alert('Selecione pelo menos uma sessão órfã');
+      return;
+    }
+    setShowBatchModal(true);
+  };
+
+  const handleBatchSuccess = () => {
+    setShowBatchModal(false);
+    setSelectedSessions([]);
+    loadOrphanSessions();
   };
 
   // Filtrar sessões localmente por nome
@@ -149,20 +193,44 @@ const OrphanSessionsList = ({
               Sessões Órfãs
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              Sessões realizadas sem agendamento prévio ({filteredSessions.length} encontradas)
+              {filteredSessions.length} encontradas
+              {selectedSessions.length > 0 && ` • ${selectedSessions.length} selecionadas`}
             </p>
           </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-          >
-            <FontAwesomeIcon icon={faFilter} className="mr-2" />
-            Filtros
-            <FontAwesomeIcon
-              icon={showFilters ? faChevronUp : faChevronDown}
-              className="ml-2 w-3 h-3"
-            />
-          </button>
+
+          {/* NOVO: Botões de ação */}
+          <div className="flex space-x-3">
+            {filteredSessions.length > 0 && (
+              <button
+                onClick={handleSelectAll}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+              >
+                {selectedSessions.length === filteredSessions.length ? 'Desmarcar Todas' : 'Selecionar Todas'}
+              </button>
+            )}
+
+            {selectedSessions.length > 0 && (
+              <button
+                onClick={handleBatchCreate}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors flex items-center"
+              >
+                <FontAwesomeIcon icon={faCalendarPlus} className="mr-2" />
+                Criar {selectedSessions.length} Agendamento(s)
+              </button>
+            )}
+
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            >
+              <FontAwesomeIcon icon={faFilter} className="mr-2" />
+              Filtros
+              <FontAwesomeIcon
+                icon={showFilters ? faChevronUp : faChevronDown}
+                className="ml-2 w-3 h-3"
+              />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -256,6 +324,15 @@ const OrphanSessionsList = ({
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                {/* NOVA: Coluna de checkbox */}
+                <th className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedSessions.length === filteredSessions.length && filteredSessions.length > 0}
+                    onChange={handleSelectAll}
+                    className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <FontAwesomeIcon icon={faCalendarAlt} className="mr-2" />
                   Data/Hora da Sessão
@@ -279,6 +356,15 @@ const OrphanSessionsList = ({
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredSessions.map((session) => (
                 <tr key={`${session.patient_id}-${session.therapist_id}-${session.session_date}`} className="hover:bg-gray-50">
+                  {/* NOVA: Checkbox da linha */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={selectedSessions.some(s => getSessionKey(s) === getSessionKey(session))}
+                      onChange={() => handleSelectSession(session)}
+                      className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400 mr-2" />
@@ -347,6 +433,22 @@ const OrphanSessionsList = ({
             </span>
           </div>
         </div>
+      )}
+
+      {/* NOVO: Modal de criação em lote */}
+      {showBatchModal && (
+        <BatchRetroactiveModal
+          isOpen={showBatchModal}
+          onClose={() => {
+            setShowBatchModal(false);
+            setSelectedSessions([]);
+          }}
+          selectedSessions={selectedSessions.map(s => ({
+            ...s,
+            session_id: s.session_id || `${s.patient_id}-${s.therapist_id}-${s.session_date}`
+          }))}
+          onSuccess={handleBatchSuccess}
+        />
       )}
     </div>
   );
