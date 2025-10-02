@@ -19,6 +19,7 @@ import AdminPage from './pages/AdminPage';
 import ProgramSessionPage from './pages/ProgramSessionPage';
 import ColleaguesPage from './pages/ColleaguesPage';
 import CaseDiscussionPage from './pages/CaseDiscussionPage';
+import ParentChatPage from './pages/ParentChatPage';
 import SuperAdminPage from './pages/SuperAdminPage';
 // --- IMPORTAÇÕES DO SISTEMA DE AGENDAMENTO ---
 import SchedulingPage from './pages/SchedulingPage';
@@ -110,6 +111,9 @@ function App() {
 
                   {/* Página de agenda pessoal para terapeutas */}
                   <Route path="my-schedule" element={<TherapistSchedulePage />} />
+
+                  {/* Página de chat para pais */}
+                  <Route path="parent-chat" element={<ParentChatPage />} />
 
                 </Route>
 

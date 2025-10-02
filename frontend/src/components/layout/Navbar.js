@@ -210,9 +210,9 @@ const Navbar = ({ toggleSidebar }) => {
             </div>
         </div>
       
-        <div 
-            ref={menuRef} 
-            className={`lg:hidden absolute top-full left-0 right-0 bg-gradient-to-r from-white via-indigo-50/50 to-purple-50/50 backdrop-blur-md shadow-xl border-t border-indigo-200/50 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'transform translate-y-0' : 'transform -translate-y-full'}`} 
+        <div
+            ref={menuRef}
+            className={`lg:hidden absolute top-full left-0 right-0 z-50 bg-gradient-to-r from-white via-indigo-50/50 to-purple-50/50 backdrop-blur-md shadow-xl border-t border-indigo-200/50 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'transform translate-y-0' : 'transform -translate-y-full'}`}
             style={{ visibility: isMobileMenuOpen ? 'visible' : 'hidden' }}
             id="mobile-menu"
         >

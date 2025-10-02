@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePatients } from '../context/PatientContext';
 import { usePrograms } from '../context/ProgramContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// 1. Importar o novo ícone de chat
-import { faSpinner, faExclamationCircle, faChartLine, faCalendarAlt, faTimesCircle, faComments } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faExclamationCircle, faChartLine, faCalendarAlt, faTimesCircle, faComments, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import DateRangeSelector from '../components/shared/DateRangeSelector';
 import { Line } from 'react-chartjs-2';
 import {
@@ -19,12 +18,6 @@ import {
   Filler,
 } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
-// 2. Importar o nosso novo componente de chat
-import ParentTherapistChat from '../components/chat/ParentTherapistChat';
-// 3. Importar componentes para modal mobile
-import ChatModal from '../components/chat/ChatModal';
-import ChatTrigger from '../components/chat/ChatTrigger';
-import useMediaQuery from '../hooks/useMediaQuery';
 
 
 // Regista os componentes do Chart.js que vamos usar
@@ -277,10 +270,6 @@ const ParentDashboardPage = () => {
     const { selectedPatient, isLoading, error } = usePatients();
     const { getProgramById, isLoading: programsAreLoading } = usePrograms();
 
-    // Detectar se está em mobile
-    const isMobile = useMediaQuery('(max-width: 768px)');
-    const [isChatModalOpen, setIsChatModalOpen] = useState(false);
-
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
@@ -363,81 +352,41 @@ const ParentDashboardPage = () => {
             </div>
             
 
-            {/* Chat com design moderno e elegante */}
+            {/* Botão para abrir chat em página dedicada */}
             <div className="mb-6 sm:mb-8 max-w-5xl mx-auto">
-                {isMobile ? (
-                    /* MOBILE: Botão trigger para abrir modal fullscreen */
-                    <>
-                        <ChatTrigger
-                            onClick={() => setIsChatModalOpen(true)}
-                            patientName={selectedPatient.name}
-                            unreadCount={0} // TODO: Implementar contador de não lidas
-                        />
-
-                        <ChatModal
-                            isOpen={isChatModalOpen}
-                            onClose={() => setIsChatModalOpen(false)}
-                            title={`Conversa sobre ${selectedPatient.name}`}
-                        >
-                            <ParentTherapistChat
-                                patientId={selectedPatient.id}
-                                patientName={selectedPatient.name}
-                            />
-                        </ChatModal>
-                    </>
-                ) : (
-                    /* DESKTOP: Chat embed normal */
-                    <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-2xl overflow-hidden border border-gray-100">
-                        {/* Cabeçalho com gradiente e design sofisticado */}
-                        <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative overflow-hidden">
-                            {/* Elementos decorativos de fundo */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-white/5 to-transparent rounded-full -translate-y-32 translate-x-32"></div>
-                            <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-white/5 to-transparent rounded-full translate-y-24 -translate-x-24"></div>
-
-                            {/* Conteúdo do cabeçalho */}
-                            <div className="relative z-10 text-center">
-                                <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-xl sm:rounded-2xl mb-3 sm:mb-4">
-                                    <FontAwesomeIcon icon={faComments} className="text-2xl sm:text-3xl text-white" />
-                                </div>
-
-                                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-2 sm:mb-3 tracking-wide px-2">
-                                    Comunicação com a Equipe Terapêutica
-                                </h3>
-
-                                <div className="max-w-2xl mx-auto space-y-2 sm:space-y-3">
-                                    <p className="text-blue-100 font-medium text-sm sm:text-base lg:text-lg leading-relaxed px-2">
-                                        💬 Converse diretamente com todos os terapeutas do seu filho
-                                    </p>
-
-                                    <div className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl px-3 sm:px-4 lg:px-6 py-3 sm:py-4 border border-white/20 mx-2">
-                                        <p className="text-white text-xs sm:text-sm leading-relaxed">
-                                            ✨ Use <span className="bg-white/20 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-md sm:rounded-lg font-mono font-semibold mx-1 border border-white/30 text-xs sm:text-sm">@nome</span> para mencionar um terapeuta específico
-                                        </p>
-                                    </div>
-
-                                    <div className="flex items-center justify-center space-x-3 sm:space-x-6 text-blue-100 text-xs sm:text-sm flex-wrap gap-y-2">
-                                        <div className="flex items-center space-x-1.5 sm:space-x-2">
-                                            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse flex-shrink-0"></span>
-                                            <span className="font-medium">📱 Tempo Real</span>
-                                        </div>
-                                        <div className="w-px h-3 sm:h-4 bg-white/30 hidden sm:block"></div>
-                                        <div className="flex items-center space-x-1.5 sm:space-x-2">
-                                            <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse flex-shrink-0"></span>
-                                            <span className="font-medium">🔔 Notificações</span>
-                                        </div>
-                                    </div>
-                                </div>
+                <button
+                    onClick={() => navigate('/parent-chat')}
+                    className="w-full bg-white border-2 border-indigo-200 rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200 overflow-hidden touch-manipulation"
+                >
+                    <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 px-4 py-3 flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                            <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
+                                <FontAwesomeIcon icon={faComments} className="text-white text-xl" />
+                            </div>
+                            <div className="text-left">
+                                <p className="text-white font-semibold text-sm">Conversa com a Equipe</p>
+                                <p className="text-blue-100 text-xs">Toque para abrir o chat</p>
                             </div>
                         </div>
-                        <div className="p-2 sm:p-3 lg:p-4">
-                            <ParentTherapistChat
-                                patientId={selectedPatient.id}
-                                patientName={selectedPatient.name}
-                            />
+                        <div className="flex items-center space-x-2">
+                            <FontAwesomeIcon icon={faChevronRight} className="text-white text-lg" />
                         </div>
                     </div>
-                )}
+                    <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                <p className="text-indigo-700 text-sm font-medium">Chat em tempo real</p>
+                            </div>
+                            <p className="text-indigo-600 text-xs">Mensagens instantâneas</p>
+                        </div>
+                        <div className="mt-2 bg-white/60 rounded-lg p-2 border border-indigo-100">
+                            <p className="text-gray-600 text-xs leading-relaxed">
+                                💬 Converse diretamente com todos os terapeutas de <span className="font-semibold">{selectedPatient.name}</span>
+                            </p>
+                        </div>
+                    </div>
+                </button>
             </div>
 
             {/* Seletor de Período - Posicionado entre chat e gráficos */}
