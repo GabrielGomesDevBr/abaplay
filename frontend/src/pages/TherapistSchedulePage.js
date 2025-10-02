@@ -243,40 +243,42 @@ const TherapistSchedulePage = () => {
     return (
       <div
         key={appointment.id}
-        className={`p-4 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
+        className={`p-3 sm:p-4 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 active:bg-gray-100 ${
           isOverdue ? 'border-red-300 bg-red-50' : 'border-gray-200'
         }`}
         onClick={() => handleViewAppointment(appointment)}
       >
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="flex-1 min-w-0">
             {showDate && (
-              <div className="text-sm text-gray-500 mb-1">
+              <div className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">
                 {new Date(appointment.scheduled_date).toLocaleDateString('pt-BR')}
               </div>
             )}
-            <div className="flex items-center mb-2">
-              <FontAwesomeIcon icon={faClock} className="text-blue-500 mr-2 w-4 h-4" />
-              <span className="font-medium text-gray-900">
-                {appointment.scheduled_time} ({appointment.duration_minutes}min)
-              </span>
+            <div className="flex items-center mb-2 flex-wrap gap-2">
+              <div className="flex items-center">
+                <FontAwesomeIcon icon={faClock} className="text-blue-500 mr-1.5 sm:mr-2 w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="font-medium text-gray-900 text-sm sm:text-base">
+                  {appointment.scheduled_time} ({appointment.duration_minutes}min)
+                </span>
+              </div>
               {isOverdue && (
-                <span className="ml-2 px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
+                <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
                   Atrasado
                 </span>
               )}
             </div>
-            <div className="flex items-center mb-1">
-              <FontAwesomeIcon icon={faUser} className="text-green-500 mr-2 w-4 h-4" />
-              <span className="text-gray-700">{appointment.patient_name}</span>
+            <div className="flex items-center mb-1.5 sm:mb-1">
+              <FontAwesomeIcon icon={faUser} className="text-green-500 mr-1.5 sm:mr-2 w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="text-gray-700 text-sm sm:text-base truncate">{appointment.patient_name}</span>
             </div>
-            <div className="flex items-center">
-              <FontAwesomeIcon icon={faStethoscope} className="text-purple-500 mr-2 w-4 h-4" />
-              <span className="text-sm text-gray-600">{appointment.program_name}</span>
+            <div className="flex items-start">
+              <FontAwesomeIcon icon={faStethoscope} className="text-purple-500 mr-1.5 sm:mr-2 w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 mt-0.5" />
+              <span className="text-xs sm:text-sm text-gray-600 line-clamp-2">{appointment.program_name}</span>
             </div>
           </div>
-          <div className="flex flex-col items-end space-y-2">
-            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+          <div className="flex sm:flex-col items-center sm:items-end gap-2">
+            <span className={`px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
               appointment.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
               appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
               appointment.status === 'missed' ? 'bg-red-100 text-red-800' :
@@ -293,7 +295,7 @@ const TherapistSchedulePage = () => {
                   e.stopPropagation();
                   handleJustifyAppointment(appointment);
                 }}
-                className="px-2 py-1 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200"
+                className="px-3 py-2 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200 active:bg-red-300 min-h-[44px] flex items-center whitespace-nowrap"
               >
                 Justificar
               </button>
@@ -351,23 +353,23 @@ const TherapistSchedulePage = () => {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-              <FontAwesomeIcon icon={faCalendarAlt} className="mr-3 text-purple-600" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center">
+              <FontAwesomeIcon icon={faCalendarAlt} className="mr-2 sm:mr-3 text-purple-600" />
               Agenda Completa
             </h2>
-            <div className="flex space-x-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
               <input
                 type="date"
                 value={scheduleFilters.start_date}
                 onChange={(e) => setScheduleFilters(prev => ({ ...prev, start_date: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm w-full sm:w-auto min-h-[44px]"
               />
               <input
                 type="date"
                 value={scheduleFilters.end_date}
                 onChange={(e) => setScheduleFilters(prev => ({ ...prev, end_date: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm w-full sm:w-auto min-h-[44px]"
               />
             </div>
           </div>
@@ -432,38 +434,38 @@ const TherapistSchedulePage = () => {
         </h2>
 
         {statistics ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-blue-800 mb-2">Total de Agendamentos</h3>
-              <p className="text-2xl font-bold text-blue-600">{statistics.total_appointments || 0}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="bg-blue-50 p-4 sm:p-5 rounded-lg">
+              <h3 className="text-xs sm:text-sm font-medium text-blue-800 mb-1.5 sm:mb-2">Total de Agendamentos</h3>
+              <p className="text-xl sm:text-2xl font-bold text-blue-600">{statistics.total_appointments || 0}</p>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-green-800 mb-2">Agendamentos Realizados</h3>
-              <p className="text-2xl font-bold text-green-600">{statistics.completed_appointments || 0}</p>
+            <div className="bg-green-50 p-4 sm:p-5 rounded-lg">
+              <h3 className="text-xs sm:text-sm font-medium text-green-800 mb-1.5 sm:mb-2">Agendamentos Realizados</h3>
+              <p className="text-xl sm:text-2xl font-bold text-green-600">{statistics.completed_appointments || 0}</p>
             </div>
-            <div className="bg-red-50 p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-red-800 mb-2">Agendamentos Perdidos</h3>
-              <p className="text-2xl font-bold text-red-600">{statistics.missed_appointments || 0}</p>
+            <div className="bg-red-50 p-4 sm:p-5 rounded-lg">
+              <h3 className="text-xs sm:text-sm font-medium text-red-800 mb-1.5 sm:mb-2">Agendamentos Perdidos</h3>
+              <p className="text-xl sm:text-2xl font-bold text-red-600">{statistics.missed_appointments || 0}</p>
             </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-purple-800 mb-2">Taxa de Comparecimento</h3>
-              <p className={`text-2xl font-bold ${getPerformanceColor(statistics.attendance_rate || 0)}`}>
+            <div className="bg-purple-50 p-4 sm:p-5 rounded-lg">
+              <h3 className="text-xs sm:text-sm font-medium text-purple-800 mb-1.5 sm:mb-2">Taxa de Comparecimento</h3>
+              <p className={`text-xl sm:text-2xl font-bold ${getPerformanceColor(statistics.attendance_rate || 0)}`}>
                 {statistics.attendance_rate || 0}%
               </p>
             </div>
-            <div className="bg-yellow-50 p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-yellow-800 mb-2">Taxa de Conclusão</h3>
-              <p className={`text-2xl font-bold ${getPerformanceColor(statistics.completion_rate || 0)}`}>
+            <div className="bg-yellow-50 p-4 sm:p-5 rounded-lg">
+              <h3 className="text-xs sm:text-sm font-medium text-yellow-800 mb-1.5 sm:mb-2">Taxa de Conclusão</h3>
+              <p className={`text-xl sm:text-2xl font-bold ${getPerformanceColor(statistics.completion_rate || 0)}`}>
                 {statistics.completion_rate || 0}%
               </p>
             </div>
-            <div className="bg-indigo-50 p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-indigo-800 mb-2">Pacientes Atendidos</h3>
-              <p className="text-2xl font-bold text-indigo-600">{statistics.unique_patients || 0}</p>
+            <div className="bg-indigo-50 p-4 sm:p-5 rounded-lg">
+              <h3 className="text-xs sm:text-sm font-medium text-indigo-800 mb-1.5 sm:mb-2">Pacientes Atendidos</h3>
+              <p className="text-xl sm:text-2xl font-bold text-indigo-600">{statistics.unique_patients || 0}</p>
             </div>
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-8">
+          <p className="text-sm sm:text-base text-gray-500 text-center py-8">
             Carregando estatísticas...
           </p>
         )}
@@ -505,19 +507,19 @@ const TherapistSchedulePage = () => {
       {/* Header */}
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                <FontAwesomeIcon icon={faCalendarAlt} className="mr-3 text-blue-600" />
-                Minha Agenda
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 sm:py-6 gap-3 sm:gap-0">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 flex items-center">
+                <FontAwesomeIcon icon={faCalendarAlt} className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
+                <span className="truncate">Minha Agenda</span>
               </h1>
-              <p className="mt-1 text-sm text-gray-600">
+              <p className="mt-1 text-xs sm:text-sm text-gray-600">
                 Visualize seus agendamentos e gerencie sua rotina
               </p>
             </div>
             <button
               onClick={loadAllData}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center justify-center min-h-[44px] w-full sm:w-auto"
             >
               <FontAwesomeIcon icon={faRefresh} className="mr-2 w-4 h-4" />
               Atualizar
@@ -538,18 +540,18 @@ const TherapistSchedulePage = () => {
         )}
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {getQuickStatsCards().map((stat, index) => (
-            <div key={index} className="bg-white rounded-lg shadow p-6">
+            <div key={index} className="bg-white rounded-lg shadow p-4 sm:p-6">
               <div className="flex items-center">
-                <div className={`flex-shrink-0 ${stat.color} rounded-md p-3`}>
-                  <FontAwesomeIcon icon={stat.icon} className="text-white w-6 h-6" />
+                <div className={`flex-shrink-0 ${stat.color} rounded-md p-2.5 sm:p-3`}>
+                  <FontAwesomeIcon icon={stat.icon} className="text-white w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <div className="ml-4">
-                  <h3 className="text-sm font-medium text-gray-500">{stat.title}</h3>
-                  <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+                <div className="ml-3 sm:ml-4 flex-1 min-w-0">
+                  <h3 className="text-xs sm:text-sm font-medium text-gray-500 truncate">{stat.title}</h3>
+                  <p className="text-xl sm:text-2xl font-semibold text-gray-900">{stat.value}</p>
                   {stat.subtitle && (
-                    <p className="text-xs text-gray-500 mt-1">{stat.subtitle}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 sm:mt-1 line-clamp-2">{stat.subtitle}</p>
                   )}
                 </div>
               </div>
@@ -559,8 +561,8 @@ const TherapistSchedulePage = () => {
 
         {/* Navigation Tabs */}
         <div className="bg-white rounded-lg shadow mb-8">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+          <div className="border-b border-gray-200 overflow-x-auto">
+            <nav className="-mb-px flex space-x-2 sm:space-x-4 md:space-x-8 px-2 sm:px-4 md:px-0" aria-label="Tabs">
               {[
                 { id: 'today', name: 'Hoje', icon: faCalendarCheck },
                 { id: 'upcoming', name: 'Próximos', icon: faCalendarAlt },
@@ -575,12 +577,19 @@ const TherapistSchedulePage = () => {
                     currentView === tab.id
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm flex items-center`}
+                  } whitespace-nowrap py-3 sm:py-4 px-3 sm:px-4 md:px-6 border-b-2 font-medium text-xs sm:text-sm flex items-center min-h-[44px]`}
                 >
-                  <FontAwesomeIcon icon={tab.icon} className="mr-2 w-4 h-4" />
-                  {tab.name}
+                  <FontAwesomeIcon icon={tab.icon} className="mr-1.5 sm:mr-2 w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">{tab.name}</span>
+                  <span className="sm:hidden">
+                    {tab.id === 'today' && 'Hoje'}
+                    {tab.id === 'upcoming' && 'Próx.'}
+                    {tab.id === 'schedule' && 'Agenda'}
+                    {tab.id === 'missed' && 'Perdidos'}
+                    {tab.id === 'stats' && 'Stats'}
+                  </span>
                   {tab.badge > 0 && (
-                    <span className="ml-2 bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs font-medium">
+                    <span className="ml-1.5 sm:ml-2 bg-red-100 text-red-600 py-0.5 px-1.5 sm:px-2 rounded-full text-xs font-medium">
                       {tab.badge}
                     </span>
                   )}
@@ -613,29 +622,29 @@ const TherapistSchedulePage = () => {
 
       {/* Modal de Justificativa */}
       {showJustificationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 sticky top-0 bg-white">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                 Justificar Ausência
               </h3>
               <button
                 onClick={() => setShowJustificationModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
-                <FontAwesomeIcon icon={faTimes} className="w-6 h-6" />
+                <FontAwesomeIcon icon={faTimes} className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
 
-            <div className="p-6">
-              <div className="mb-4">
+            <div className="p-4 sm:p-6">
+              <div className="mb-4 sm:mb-5">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Responsável pela ausência
                 </label>
                 <select
                   value={justificationData.missed_by}
                   onChange={(e) => setJustificationData(prev => ({ ...prev, missed_by: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base min-h-[44px]"
                 >
                   <option value="patient">Paciente</option>
                   <option value="therapist">Terapeuta</option>
@@ -644,7 +653,7 @@ const TherapistSchedulePage = () => {
                 </select>
               </div>
 
-              <div className="mb-6">
+              <div className="mb-5 sm:mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Motivo da ausência *
                 </label>
@@ -654,25 +663,25 @@ const TherapistSchedulePage = () => {
                   rows={4}
                   maxLength={500}
                   placeholder="Descreva o motivo da ausência..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 resize-none text-sm sm:text-base"
                 />
                 <div className="mt-1 text-xs text-gray-500">
                   {justificationData.missed_reason.length}/500 caracteres
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
                 <button
                   onClick={() => setShowJustificationModal(false)}
                   disabled={isSubmittingJustification}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 min-h-[44px]"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSubmitJustification}
                   disabled={isSubmittingJustification || !justificationData.missed_reason.trim()}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-h-[44px]"
                 >
                   {isSubmittingJustification && (
                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
