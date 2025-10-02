@@ -182,7 +182,7 @@ const Navbar = ({ toggleSidebar }) => {
                 </div>
                 )}
             </div>
-            <div className="relative flex items-center space-x-3">
+            <div className="relative flex items-center space-x-2 sm:space-x-3">
                 {user && user.role !== 'pai' && (
                 <button
                     onClick={toggleNotificationPanel}
@@ -192,17 +192,16 @@ const Navbar = ({ toggleSidebar }) => {
                     <NotificationBadge ref={notificationBadgeRef} />
                 </button>
                 )}
-                
+
                 <div className="w-9 h-9 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm border-2 border-white shadow-md hover:shadow-lg transition-all transform hover:scale-110" title={user?.full_name || user?.username}>
                 {getInitials(user?.full_name || user?.username)}
                 </div>
                 <button onClick={logout} title="Sair" className="text-gray-500 hover:text-red-600 transition-all duration-150 p-2 rounded-full hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 transform hover:scale-110">
                 <FontAwesomeIcon icon={faSignOutAlt} className="fa-fw" />
                 </button>
-            </div>
 
-            <div className="lg:hidden flex items-center">
-                <button ref={buttonRef} onClick={toggleMobileMenu} type="button" className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-white hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all transform hover:scale-105" aria-controls="mobile-menu" aria-expanded={isMobileMenuOpen}>
+                {/* Menu hamburguer movido para dentro, ao lado dos outros ícones */}
+                <button ref={buttonRef} onClick={toggleMobileMenu} type="button" className="lg:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-white hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all transform hover:scale-105" aria-controls="mobile-menu" aria-expanded={isMobileMenuOpen}>
                 <span className="sr-only">Abrir menu</span>
                 <FontAwesomeIcon icon={isMobileMenuOpen ? faTimes : faBars} className="h-6 w-6" />
                 </button>
