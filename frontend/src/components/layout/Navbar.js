@@ -140,7 +140,7 @@ const Navbar = ({ toggleSidebar }) => {
   };
 
   return (
-    <header className="bg-gradient-to-r from-white via-indigo-50/30 to-purple-50/30 backdrop-blur-md sticky top-0 z-10 w-full flex-shrink-0 border-b border-indigo-200/50 shadow-sm">
+    <header className="bg-gradient-to-r from-white via-indigo-50/30 to-purple-50/30 backdrop-blur-md sticky top-0 z-50 w-full flex-shrink-0 border-b border-indigo-200/50 shadow-sm">
         {/* O resto do JSX do seu componente permanece o mesmo */}
         <div className="flex items-center justify-between px-4 sm:px-6 h-16">
             <div className="flex items-center">
