@@ -12,8 +12,6 @@ import {
   faChevronDown,
   faChevronUp,
   faTachometerAlt,
-  faCalendarCheck,
-  faCalendarAlt,
   faFolderOpen,
   faPencilAlt,
   faUserShield,
@@ -45,8 +43,6 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
 
   const handleSelectPatient = (patient) => {
     selectPatient(patient);
-    // Navegar para a página de programas após selecionar o paciente
-    navigate('/programs');
   };
 
   const handleNavigateToChat = (patientId, chatType) => {
@@ -112,24 +108,12 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
     );
   }
 
-  // Ferramentas de navegação
+  // Ferramentas de navegação (menu Mais)
   const toolsMenuItems = [
     {
       icon: faTachometerAlt,
       label: 'Dashboard',
       path: '/dashboard',
-      show: true,
-    },
-    {
-      icon: user?.is_admin ? faCalendarAlt : faCalendarCheck,
-      label: user?.is_admin ? 'Agendamentos' : 'Minha Agenda',
-      path: user?.is_admin ? '/scheduling' : '/my-schedule',
-      show: true,
-    },
-    {
-      icon: faFolderOpen,
-      label: 'Programas',
-      path: '/programs',
       show: true,
     },
     {

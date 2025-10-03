@@ -328,10 +328,21 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
                 </div>
               </div>
             )}
+
+            {/* Cabeçalho da disciplina (mobile) */}
+            <div className="lg:hidden mb-6">
+              <div className={`bg-gradient-to-r ${getDisciplineColors(activeDiscipline).bg} p-4 rounded-lg shadow-md`}>
+                <h2 className="text-2xl font-bold text-white flex items-center">
+                  <FontAwesomeIcon icon={faGraduationCap} className="mr-3" />
+                  {formatDisciplineName(activeDiscipline)}
+                </h2>
+              </div>
+            </div>
+
             {Object.keys(areas).map((areaName) => {
               const subAreas = areas[areaName];
               const disciplineColors = getDisciplineColors(activeDiscipline);
-              
+
               return (
                 <div key={areaName} className="space-y-6">
                   {/* Cabeçalho da área */}

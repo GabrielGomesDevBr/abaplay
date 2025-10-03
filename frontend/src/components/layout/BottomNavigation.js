@@ -1,29 +1,35 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { usePatients } from '../../context/PatientContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUsers,
-  faTachometerAlt,
   faCalendarCheck,
   faFolderOpen,
-  faEllipsisH
+  faEllipsisH,
+  faEdit
 } from '@fortawesome/free-solid-svg-icons';
 
 const BottomNavigation = ({ toggleSidebar, toggleToolsMenu }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { selectedPatient } = usePatients();
 
   // Não renderizar para pais ou super admin
   if (user?.role === 'pai' || user?.role === 'super_admin') {
     return null;
   }
 
-  const handleProgramsClick = () => {
-    // Se há cliente selecionado, vai para programas do cliente
-    // Se não, vai para biblioteca de programas
-    navigate('/programs');
+  const handleSessionClick = () => {
+    if (!selectedPatient) {
+      // Se não há cliente selecionado, abre o sidebar para selecionar
+      toggleSidebar();
+    } else {
+      // Se há cliente selecionado, vai direto para programas
+      navigate('/programs');
+    }
   };
 
   const navItems = [
@@ -34,23 +40,23 @@ const BottomNavigation = ({ toggleSidebar, toggleToolsMenu }) => {
       isActive: false, // Sidebar não tem rota específica
     },
     {
-      icon: faTachometerAlt,
-      label: 'Dashboard',
-      action: () => navigate('/dashboard'),
-      isActive: location.pathname === '/dashboard',
+      icon: faEdit,
+      label: 'Sessão',
+      action: handleSessionClick,
+      isActive: location.pathname.startsWith('/programs') || location.pathname.startsWith('/session'),
+      hasAlert: !selectedPatient, // Mostra alerta visual se não há cliente selecionado
     },
     {
       icon: faCalendarCheck,
       label: user?.is_admin ? 'Agendamentos' : 'Agenda',
       action: () => navigate(user?.is_admin ? '/scheduling' : '/my-schedule'),
       isActive: location.pathname === '/scheduling' || location.pathname === '/my-schedule',
-      show: true, // Sempre mostrar
     },
     {
       icon: faFolderOpen,
       label: 'Programas',
-      action: handleProgramsClick,
-      isActive: location.pathname.startsWith('/programs') || location.pathname.startsWith('/session'),
+      action: () => navigate('/programs'),
+      isActive: location.pathname === '/programs',
     },
     {
       icon: faEllipsisH,
@@ -80,7 +86,7 @@ const BottomNavigation = ({ toggleSidebar, toggleToolsMenu }) => {
               `}
             >
               <div className={`
-                p-2 rounded-lg transition-all duration-200
+                p-2 rounded-lg transition-all duration-200 relative
                 ${item.isActive
                   ? 'bg-gradient-to-r from-indigo-100 to-purple-100 scale-110'
                   : 'hover:bg-gray-100'
@@ -90,6 +96,10 @@ const BottomNavigation = ({ toggleSidebar, toggleToolsMenu }) => {
                   icon={item.icon}
                   className={`text-xl ${item.isActive ? 'text-indigo-600' : ''}`}
                 />
+                {/* Badge de alerta se não há cliente selecionado no botão Sessão */}
+                {item.hasAlert && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-white"></span>
+                )}
               </div>
               <span className={`
                 text-xs mt-1 font-medium
