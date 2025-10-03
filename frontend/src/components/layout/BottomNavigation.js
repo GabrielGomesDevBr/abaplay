@@ -27,8 +27,8 @@ const BottomNavigation = ({ toggleSidebar, toggleToolsMenu }) => {
       // Se não há cliente selecionado, abre o sidebar para selecionar
       toggleSidebar();
     } else {
-      // Se há cliente selecionado, vai direto para programas
-      navigate('/programs');
+      // Se há cliente selecionado, vai para página de clientes (onde estão os programas atribuídos)
+      navigate('/clients');
     }
   };
 
@@ -43,7 +43,7 @@ const BottomNavigation = ({ toggleSidebar, toggleToolsMenu }) => {
       icon: faEdit,
       label: 'Sessão',
       action: handleSessionClick,
-      isActive: location.pathname.startsWith('/programs') || location.pathname.startsWith('/session'),
+      isActive: location.pathname.startsWith('/clients') || location.pathname.startsWith('/session'),
       hasAlert: !selectedPatient, // Mostra alerta visual se não há cliente selecionado
     },
     {
