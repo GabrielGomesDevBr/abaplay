@@ -219,16 +219,16 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
 
       {/* Sistema de navegação por disciplinas */}
       <div className="border-b border-gray-200">
-        <div className="flex flex-wrap">
+        <div className="flex overflow-x-auto scrollbar-hide">
           {Object.keys(currentPrograms).map((disciplineName, index) => {
             const colors = getDisciplineColors(disciplineName);
             const isActive = activeDiscipline === disciplineName;
-            
+
             return (
               <button
                 key={disciplineName}
                 className={`
-                  flex-1 min-w-0 px-6 py-4 font-semibold text-sm transition-all duration-200 relative
+                  flex-shrink-0 px-6 py-4 font-semibold text-sm transition-all duration-200 relative whitespace-nowrap
                   ${isActive
                     ? `bg-gradient-to-r ${colors.bg} text-white shadow-lg`
                     : `bg-gradient-to-r ${colors.light} ${colors.text} hover:shadow-md`
@@ -241,7 +241,7 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
                     icon={activeTab === 'custom' ? faCog : faGraduationCap}
                     className="flex-shrink-0"
                   />
-                  <span className="truncate">{formatDisciplineName(disciplineName)}</span>
+                  <span>{formatDisciplineName(disciplineName)}</span>
                   {activeTab === 'custom' && (
                     <span className="bg-white bg-opacity-20 text-xs px-2 py-1 rounded-full">
                       Custom
