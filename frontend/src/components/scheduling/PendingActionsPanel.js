@@ -11,7 +11,9 @@ import {
   faChevronRight,
   faRobot,
   faClock,
-  faExclamationCircle
+  faExclamationCircle,
+  faBell,
+  faRefresh
 } from '@fortawesome/free-solid-svg-icons';
 import { getPendingActions } from '../../api/schedulingApi';
 import { translateStatus } from '../../utils/statusTranslator';
@@ -40,6 +42,7 @@ const PendingActionsPanel = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [showDetails, setShowDetails] = useState(false); // ✅ NOVO: Controla expansão de detalhes
 
   useEffect(() => {
     loadPendingActions();
@@ -142,140 +145,146 @@ const PendingActionsPanel = ({
   const { orphan_sessions = [], missed_appointments = [], detected_today = 0 } = pendingData || {};
   const totalPending = orphan_sessions.length + missed_appointments.length;
 
-  // Estado perfeito - tudo automatizado
-  if (totalPending === 0 && detected_today === 0) {
-    return (
-      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-sm border-2 border-green-200 p-6 transition-all duration-300 hover:shadow-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-3 rounded-full shadow-sm">
-              <FontAwesomeIcon icon={faCheckCircle} className="text-white h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="text-green-900 font-bold text-lg">Sistema Funcionando Perfeitamente</h3>
-              <p className="text-green-700 text-sm flex items-center mt-1">
-                <FontAwesomeIcon icon={faRobot} className="mr-2" />
-                Automação ativa • Nenhuma ação pendente
-              </p>
-            </div>
+  // ✅ NOVO: Renderizar badges compactos
+  return (
+    <div className="space-y-3">
+      {/* Badges Compactos - Linha única em desktop, adaptável em mobile */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
+          {/* Badge 1: Status do Sistema */}
+          <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg flex-1 sm:flex-none ${
+            totalPending === 0
+              ? 'bg-green-100 text-green-700'
+              : 'bg-blue-100 text-blue-700'
+          }`}>
+            <FontAwesomeIcon
+              icon={totalPending === 0 ? faCheckCircle : faRobot}
+              className="h-4 w-4"
+            />
+            <span className="font-semibold text-sm whitespace-nowrap">
+              Sistema {totalPending === 0 ? 'OK' : 'ON'}
+            </span>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-green-600 flex items-center">
-              <FontAwesomeIcon icon={faClock} className="mr-1" />
-              Atualizado {getTimeAgo()}
-            </p>
+
+          {/* Badge 2: Ações Pendentes - Clicável se > 0 */}
+          <button
+            onClick={() => totalPending > 0 && setShowDetails(!showDetails)}
+            disabled={totalPending === 0}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-lg flex-1 sm:flex-none transition-all ${
+              totalPending === 0
+                ? 'bg-green-100 text-green-700 cursor-default'
+                : 'bg-orange-100 text-orange-700 hover:bg-orange-200 cursor-pointer'
+            }`}
+          >
+            <FontAwesomeIcon
+              icon={totalPending === 0 ? faCheckCircle : faBell}
+              className="h-4 w-4"
+            />
+            <span className="font-semibold text-sm whitespace-nowrap">
+              {totalPending === 0 ? '0 Pendentes' : `${totalPending} Pendente${totalPending > 1 ? 's' : ''}`}
+            </span>
+            {totalPending > 0 && (
+              <FontAwesomeIcon
+                icon={faChevronRight}
+                className={`h-3 w-3 transition-transform ${showDetails ? 'rotate-90' : ''}`}
+              />
+            )}
+          </button>
+
+          {/* Badge 3: Última Atualização + Refresh */}
+          <div className="flex items-center space-x-2 flex-1 sm:flex-none">
+            <div className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 text-gray-700">
+              <FontAwesomeIcon icon={faClock} className="h-4 w-4" />
+              <span className="font-medium text-sm whitespace-nowrap">
+                {getTimeAgo()}
+              </span>
+            </div>
+            <button
+              onClick={loadPendingActions}
+              className="p-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+              title="Atualizar agora"
+            >
+              <FontAwesomeIcon icon={faRefresh} className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="space-y-4">
-      {/* Header com Status do Sistema */}
-      <div className="bg-white rounded-xl shadow-sm border-2 border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-md">
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-white bg-opacity-20 p-2 rounded-full">
-                <FontAwesomeIcon icon={faRobot} className="text-white h-5 w-5" />
+      {/* ✅ NOVO: Detalhes expandíveis - Mostrar apenas se houver pendentes e usuário clicar */}
+      {showDetails && totalPending > 0 && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-4 space-y-3">
+            {/* Sessões Detectadas Hoje - Métrica de Sucesso */}
+            {detected_today > 0 && (
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-2 rounded-lg shadow-sm flex-shrink-0">
+                    <FontAwesomeIcon icon={faCheckCircle} className="text-white h-4 w-4" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-green-900 font-semibold text-sm">{detected_today} Sessões Vinculadas Hoje</p>
+                    <p className="text-green-700 text-xs mt-0.5">
+                      Sistema detectou e vinculou automaticamente
+                    </p>
+                  </div>
+                  <div className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-semibold">
+                    Automático
+                  </div>
+                </div>
               </div>
-              <div>
-                <h2 className="text-white font-bold text-lg">Sistema de Automação</h2>
-                <p className="text-blue-100 text-sm flex items-center">
-                  <FontAwesomeIcon icon={faClock} className="mr-2 text-xs" />
-                  Atualizado {getTimeAgo()} • Execução a cada 30 minutos
-                </p>
+            )}
+
+            {/* Sessões Órfãs - Requer Atenção */}
+            {orphan_sessions.length > 0 && (
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3 flex-1">
+                    <div className="bg-gradient-to-r from-orange-500 to-amber-600 p-2 rounded-lg shadow-sm flex-shrink-0">
+                      <FontAwesomeIcon icon={faCalendarPlus} className="text-white h-4 w-4" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-orange-900 font-semibold text-sm">
+                        {orphan_sessions.length} Sessão(ões) Órfã(s)
+                      </p>
+                      <p className="text-orange-700 text-xs mt-0.5">
+                        Sessões sem agendamento prévio
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleResolve('orphans')}
+                    className="ml-3 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-lg font-semibold text-xs hover:from-orange-600 hover:to-amber-700 transition-all flex items-center space-x-2 flex-shrink-0"
+                  >
+                    <span>Resolver</span>
+                    <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3" />
+                  </button>
+                </div>
               </div>
-            </div>
-            {totalPending > 0 && (
-              <div className="bg-white text-blue-600 px-4 py-2 rounded-full font-bold text-lg shadow-sm">
-                {totalPending}
-              </div>
+            )}
+
+            {/* Agendamentos Não Realizados - Resumo Expandível */}
+            {missed_appointments.length > 0 && (
+              <MissedAppointmentsSummary
+                appointments={missed_appointments}
+                onNotifyTherapist={handleNotifyTherapist}
+                onViewDetails={handleViewDetails}
+                onJustify={handleJustify}
+                onRefresh={loadPendingActions}
+              />
+            )}
+
+            {/* Sessões Órfãs - Resumo Expandível */}
+            {orphan_sessions.length > 0 && (
+              <OrphanSessionsSummary
+                orphanSessions={orphan_sessions}
+                onCreateRetroactive={onCreateRetroactive}
+                onCreateBatch={onCreateBatchRetroactive}
+                maxDisplay={5}
+              />
             )}
           </div>
         </div>
-
-        {/* Cards de Ações */}
-        <div className="p-6 space-y-4">
-          {/* Sessões Detectadas Hoje - Métrica de Sucesso */}
-          {detected_today > 0 && (
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-4 transition-all duration-200 hover:shadow-sm">
-              <div className="flex items-center space-x-4">
-                <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-3 rounded-full shadow-sm flex-shrink-0">
-                  <FontAwesomeIcon icon={faCheckCircle} className="text-white h-5 w-5" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-green-900 font-bold text-lg">{detected_today} Sessões Vinculadas Hoje</p>
-                  <p className="text-green-700 text-sm mt-1">
-                    Sistema detectou e vinculou automaticamente às sessões agendadas
-                  </p>
-                </div>
-                <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
-                  Automático
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Sessões Órfãs - Requer Atenção */}
-          {orphan_sessions.length > 0 && (
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-lg p-4 transition-all duration-200 hover:shadow-md hover:border-orange-300">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4 flex-1">
-                  <div className="bg-gradient-to-r from-orange-500 to-amber-600 p-3 rounded-full shadow-sm flex-shrink-0">
-                    <FontAwesomeIcon icon={faCalendarPlus} className="text-white h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-orange-900 font-bold text-lg">
-                      {orphan_sessions.length} Sessão(ões) Órfã(s)
-                    </p>
-                    <p className="text-orange-700 text-sm mt-1">
-                      Sessões realizadas sem agendamento prévio • Criar retroativos
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleResolve('orphans')}
-                  className="ml-4 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-lg font-semibold text-sm hover:from-orange-600 hover:to-amber-700 hover:shadow-lg transition-all duration-200 flex items-center space-x-2 transform hover:scale-105 flex-shrink-0"
-                >
-                  <span>Resolver</span>
-                  <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ✅ NOVO: Agendamentos Não Realizados - Resumo Expandível */}
-          {missed_appointments.length > 0 && (
-            <MissedAppointmentsSummary
-              appointments={missed_appointments}
-              onNotifyTherapist={handleNotifyTherapist}
-              onViewDetails={handleViewDetails}
-              onJustify={handleJustify}
-              onRefresh={loadPendingActions}
-            />
-          )}
-
-          {/* ✅ FASE 2: Sessões Órfãs - Resumo Expandível */}
-          {orphan_sessions.length > 0 && (
-            <OrphanSessionsSummary
-              orphanSessions={orphan_sessions}
-              onCreateRetroactive={onCreateRetroactive}
-              onCreateBatch={onCreateBatchRetroactive}
-              maxDisplay={5}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Indicador de Próxima Execução */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-center space-x-2 text-sm text-blue-700">
-        <FontAwesomeIcon icon={faRobot} className="text-blue-500" />
-        <span className="font-medium">
-          Próxima detecção automática em aproximadamente {30 - (new Date().getMinutes() % 30)} minutos
-        </span>
-      </div>
+      )}
     </div>
   );
 };
