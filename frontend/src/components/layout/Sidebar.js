@@ -300,7 +300,7 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
       )}
 
       {/* Seção de Ferramentas (colapsável em mobile) */}
-      <div className="border-t border-indigo-200 bg-white lg:hidden">
+      <div className="border-t border-indigo-200 bg-white lg:hidden pb-20">
         {/* Cabeçalho colapsável */}
         <button
           onClick={() => setToolsExpanded(!toolsExpanded)}
@@ -318,7 +318,7 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
 
         {/* Lista de ferramentas */}
         {toolsExpanded && (
-          <div className="px-2 py-2 space-y-1 bg-gradient-to-b from-white to-indigo-50/30">
+          <div className="px-2 py-2 space-y-1 bg-gradient-to-b from-white to-indigo-50/30 pb-4">
             {toolsMenuItems.filter(item => item.show).map((item, index) => {
               const isActive = item.path ? location.pathname.startsWith(item.path) : false;
               const isLogoutButton = item.isLogout;
