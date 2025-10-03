@@ -15,7 +15,8 @@ import {
   faFolderOpen,
   faPencilAlt,
   faUserShield,
-  faAddressBook
+  faAddressBook,
+  faSignOutAlt
 } from '@fortawesome/free-solid-svg-icons';
 import usePatientNotifications from '../../hooks/usePatientNotifications';
 import PatientNotificationBadge from '../notifications/PatientNotificationBadge';
@@ -24,7 +25,7 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { patients, selectedPatient, selectPatient, isLoading } = usePatients();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 
   // Se não receber props de controle, usa estado local
@@ -133,6 +134,13 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
       label: 'Admin',
       path: '/admin',
       show: user?.is_admin,
+    },
+    {
+      icon: faSignOutAlt,
+      label: 'Sair',
+      action: logout,
+      show: true,
+      isLogout: true,
     },
   ];
 
@@ -312,25 +320,33 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
         {toolsExpanded && (
           <div className="px-2 py-2 space-y-1 bg-gradient-to-b from-white to-indigo-50/30">
             {toolsMenuItems.filter(item => item.show).map((item, index) => {
-              const isActive = location.pathname.startsWith(item.path);
+              const isActive = item.path ? location.pathname.startsWith(item.path) : false;
+              const isLogoutButton = item.isLogout;
+
               return (
                 <button
                   key={index}
                   onClick={() => {
-                    navigate(item.path);
-                    setToolsExpanded(false); // Fecha o menu após navegar
+                    if (item.action) {
+                      item.action(); // Executa ação (logout)
+                    } else if (item.path) {
+                      navigate(item.path); // Navega para rota
+                    }
+                    setToolsExpanded(false); // Fecha o menu após ação
                   }}
                   className={`
                     w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 transition-all duration-200
                     ${isActive
                       ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
-                      : 'text-gray-700 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-700'
+                      : isLogoutButton
+                        ? 'text-red-600 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 hover:text-red-700'
+                        : 'text-gray-700 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-700'
                     }
                   `}
                 >
                   <FontAwesomeIcon
                     icon={item.icon}
-                    className={`${isActive ? 'text-white' : 'text-indigo-600'}`}
+                    className={`${isActive ? 'text-white' : isLogoutButton ? 'text-red-600' : 'text-indigo-600'}`}
                   />
                   <span className="font-medium">{item.label}</span>
                 </button>
