@@ -329,13 +329,13 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
               </div>
             )}
 
-            {/* Cabeçalho da disciplina (mobile) */}
+            {/* Cabeçalho da disciplina (mobile) - acima da busca */}
             <div className="lg:hidden mb-6">
-              <div className={`bg-gradient-to-r ${getDisciplineColors(activeDiscipline).bg} p-4 rounded-lg shadow-md`}>
-                <h2 className="text-2xl font-bold text-white flex items-center">
-                  <FontAwesomeIcon icon={faGraduationCap} className="mr-3" />
+              <div className={`bg-gradient-to-r ${getDisciplineColors(activeDiscipline).light} border-l-4 ${getDisciplineColors(activeDiscipline).border} p-4 rounded-r-lg`}>
+                <h3 className={`text-xl font-bold ${getDisciplineColors(activeDiscipline).text} flex items-center`}>
+                  <FontAwesomeIcon icon={faLayerGroup} className="mr-3" />
                   {formatDisciplineName(activeDiscipline)}
-                </h2>
+                </h3>
               </div>
             </div>
 
