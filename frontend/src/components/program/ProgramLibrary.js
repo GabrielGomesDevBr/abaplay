@@ -16,7 +16,9 @@ import {
   faPlus,
   faCog,
   faGlobe,
-  faBuilding
+  faBuilding,
+  faTimes,
+  faEllipsisH
 } from '@fortawesome/free-solid-svg-icons';
 import { getCustomPrograms } from '../../api/programApi';
 
@@ -31,6 +33,7 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingProgram, setEditingProgram] = useState(null);
   const [deletingProgramId, setDeletingProgramId] = useState(null);
+  const [showActionsMenu, setShowActionsMenu] = useState(false); // ✅ NOVO: Menu de ações mobile
 
   // Define a primeira disciplina como ativa assim que os dados chegarem.
   useEffect(() => {
@@ -156,15 +159,29 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
     return name.replace(/([A-Z])/g, ' $1').trim();
   };
 
+  // ✅ NOVO: Abreviações para mobile
+  const getMobileDisciplineName = (name) => {
+    const mobileNames = {
+      'Fonoaudiologia': 'Fono',
+      'Psicologia': 'Psico',
+      'Musicoterapia': 'Musico',
+      'TerapiaOcupacional': 'TO',
+      'Psicomotricidade': 'Psicomo',
+      'Psicopedagogia': 'Psicopedag',
+      'VB-MAPP': 'VB-MAPP'
+    };
+    return mobileNames[name] || name;
+  };
+
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-      {/* Sistema de abas Global/Custom */}
+      {/* Sistema de abas Global/Custom - ✅ RESPONSIVO */}
       <div className="border-b border-gray-200">
         <div className="flex">
           <button
             className={`
-              flex-1 px-6 py-3 font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2
+              flex-1 px-3 sm:px-6 py-3 font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2
               ${
                 activeTab === 'global'
                   ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
@@ -173,12 +190,15 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
             `}
             onClick={() => setActiveTab('global')}
           >
-            <FontAwesomeIcon icon={faGlobe} />
-            <span>Programas Globais</span>
+            <FontAwesomeIcon icon={faGlobe} className="text-sm sm:text-base" />
+            {/* Desktop: Texto completo */}
+            <span className="hidden sm:inline">Programas Globais</span>
+            {/* Mobile: Texto reduzido */}
+            <span className="sm:hidden">Globais</span>
           </button>
           <button
             className={`
-              flex-1 px-6 py-3 font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2
+              flex-1 px-3 sm:px-6 py-3 font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2
               ${
                 activeTab === 'custom'
                   ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
@@ -187,10 +207,13 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
             `}
             onClick={() => setActiveTab('custom')}
           >
-            <FontAwesomeIcon icon={faBuilding} />
-            <span>Programas da Clínica</span>
+            <FontAwesomeIcon icon={faBuilding} className="text-sm sm:text-base" />
+            {/* Desktop: Texto completo */}
+            <span className="hidden sm:inline">Programas da Clínica</span>
+            {/* Mobile: Texto reduzido */}
+            <span className="sm:hidden">Clínica</span>
             {hasCustomPrograms && (
-              <span className="bg-white bg-opacity-20 text-xs px-2 py-1 rounded-full">
+              <span className="bg-white bg-opacity-20 text-xs px-2 py-1 rounded-full ml-1">
                 {Object.values(customPrograms).reduce((total, discipline) => {
                   return total + Object.values(discipline).reduce((areaTotal, area) => {
                     return areaTotal + Object.values(area).reduce((subAreaTotal, subArea) => {
@@ -204,9 +227,9 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
         </div>
       </div>
 
-      {/* Botão de criar programa customizado */}
+      {/* Botão de criar programa customizado - ✅ DESKTOP APENAS */}
       {activeTab === 'custom' && user?.is_admin && (
-        <div className="border-b border-gray-200 p-4">
+        <div className="hidden lg:block border-b border-gray-200 p-4">
           <button
             onClick={() => setShowCustomModal(true)}
             className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center space-x-2 shadow-md"
@@ -236,14 +259,17 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
                 `}
                 onClick={() => handleTabClick(disciplineName)}
               >
-                <div className="flex items-center justify-center space-x-2">
+                <div className="flex items-center justify-center space-x-1 sm:space-x-2">
                   <FontAwesomeIcon
                     icon={activeTab === 'custom' ? faCog : faGraduationCap}
-                    className="flex-shrink-0"
+                    className="flex-shrink-0 text-sm sm:text-base"
                   />
-                  <span>{formatDisciplineName(disciplineName)}</span>
+                  {/* Desktop: Nome completo */}
+                  <span className="hidden sm:inline">{formatDisciplineName(disciplineName)}</span>
+                  {/* Mobile: Abreviação */}
+                  <span className="sm:hidden text-xs">{getMobileDisciplineName(disciplineName)}</span>
                   {activeTab === 'custom' && (
-                    <span className="bg-white bg-opacity-20 text-xs px-2 py-1 rounded-full">
+                    <span className="hidden sm:inline bg-white bg-opacity-20 text-xs px-2 py-1 rounded-full">
                       Custom
                     </span>
                   )}
@@ -457,6 +483,69 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
         }}
         onSuccess={handleEditSuccess}
       />
+
+      {/* ✅ NOVO: FAB Mobile - Apenas para admin */}
+      {user?.is_admin && (
+        <button
+          onClick={() => setShowActionsMenu(true)}
+          className="lg:hidden fixed bottom-20 right-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all z-40"
+          aria-label="Menu de ações"
+        >
+          <FontAwesomeIcon icon={faPlus} className="text-xl" />
+        </button>
+      )}
+
+      {/* ✅ NOVO: Modal de Ações Mobile */}
+      {showActionsMenu && (
+        <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end" onClick={() => setShowActionsMenu(false)}>
+          <div className="bg-white rounded-t-2xl w-full p-4 pb-8 space-y-3 slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Menu de Ações</h3>
+              <button onClick={() => setShowActionsMenu(false)} className="text-gray-400 hover:text-gray-600">
+                <FontAwesomeIcon icon={faTimes} className="text-xl" />
+              </button>
+            </div>
+
+            {/* Criar Programa Customizado */}
+            <button
+              onClick={() => { setShowCustomModal(true); setShowActionsMenu(false); }}
+              className="w-full py-3 px-4 bg-gradient-to-r from-purple-50 to-indigo-50 text-purple-700 rounded-lg font-medium hover:from-purple-100 hover:to-indigo-100 active:scale-95 transition-all flex items-center"
+            >
+              <FontAwesomeIcon icon={faPlus} className="mr-3 text-lg" />
+              Criar Programa Customizado
+            </button>
+
+            {/* Ver Programas Globais */}
+            <button
+              onClick={() => { setActiveTab('global'); setShowActionsMenu(false); }}
+              className="w-full py-3 px-4 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-lg font-medium hover:from-blue-100 hover:to-indigo-100 active:scale-95 transition-all flex items-center"
+            >
+              <FontAwesomeIcon icon={faGlobe} className="mr-3 text-lg" />
+              Ver Programas Globais
+            </button>
+
+            {/* Ver Programas da Clínica */}
+            <button
+              onClick={() => { setActiveTab('custom'); setShowActionsMenu(false); }}
+              className="w-full py-3 px-4 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 rounded-lg font-medium hover:from-green-100 hover:to-emerald-100 active:scale-95 transition-all flex items-center"
+            >
+              <FontAwesomeIcon icon={faBuilding} className="mr-3 text-lg" />
+              Ver Programas da Clínica
+              {hasCustomPrograms && (
+                <span className="ml-auto bg-green-200 text-green-800 text-xs px-2 py-1 rounded-full font-semibold">
+                  {Object.values(customPrograms).reduce((total, discipline) => {
+                    return total + Object.values(discipline).reduce((areaTotal, area) => {
+                      return areaTotal + Object.values(area).reduce((subAreaTotal, subArea) => {
+                        return subAreaTotal + (Array.isArray(subArea) ? subArea.length : 0);
+                      }, 0);
+                    }, 0);
+                  }, 0)}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

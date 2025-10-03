@@ -29,9 +29,9 @@ if (typeof document !== 'undefined' && !document.querySelector('#programs-page-s
 const ProgramsPage = () => {
   const { selectedPatient, refreshPatientData } = usePatients();
   const { isLoading, error: contextError } = usePrograms();
-  
+
   // SOLUÇÃO: O token agora é extraído diretamente do hook useAuth.
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [assigningId, setAssigningId] = useState(null);
   // O estado 'removingId' não é mais necessário.
@@ -116,17 +116,26 @@ const ProgramsPage = () => {
             <div className="bg-gradient-to-r from-purple-600 to-indigo-700 px-3 sm:px-4 lg:px-8 py-4 sm:py-5 lg:py-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="w-full sm:w-auto">
-                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white flex items-center">
-                    <FontAwesomeIcon icon={faBook} className="mr-2 sm:mr-3 lg:mr-4 flex-shrink-0" />
+                  {/* Desktop: Título completo */}
+                  <h1 className="hidden sm:flex text-2xl lg:text-3xl font-bold text-white items-center">
+                    <FontAwesomeIcon icon={faBook} className="mr-3 lg:mr-4 flex-shrink-0" />
                     <span className="break-words">Biblioteca de Programas</span>
                   </h1>
-                  <p className="text-purple-100 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">
-                    Explore e atribua programas de intervenção especializados
+                  {/* Mobile: Título compacto */}
+                  <h1 className="sm:hidden text-xl font-bold text-white flex items-center">
+                    <FontAwesomeIcon icon={faBook} className="mr-2 flex-shrink-0" />
+                    <span>Programas</span>
+                  </h1>
+                  <p className="text-purple-100 text-xs sm:text-base lg:text-lg mt-1 sm:mt-2">
+                    {/* Desktop: Descrição completa */}
+                    <span className="hidden sm:inline">Explore e atribua programas de intervenção especializados</span>
+                    {/* Mobile: Descrição reduzida */}
+                    <span className="sm:hidden">Biblioteca de intervenção</span>
                   </p>
                 </div>
                 {selectedPatient && (
-                  <div className="bg-white bg-opacity-20 rounded-lg p-3 sm:p-4 text-center w-full sm:w-auto">
-                    <FontAwesomeIcon icon={faUserCircle} className="text-white text-xl sm:text-2xl mb-1 sm:mb-2" />
+                  <div className="bg-white bg-opacity-20 rounded-lg p-2 sm:p-3 lg:p-4 text-center w-full sm:w-auto">
+                    <FontAwesomeIcon icon={faUserCircle} className="text-white text-lg sm:text-xl lg:text-2xl mb-1 sm:mb-2" />
                     <p className="text-white text-xs sm:text-sm font-medium break-words">{selectedPatient.name}</p>
                     <p className="text-purple-100 text-xs">Cliente selecionado</p>
                   </div>
@@ -148,7 +157,8 @@ const ProgramsPage = () => {
                 </div>
               )}
 
-              {!selectedPatient && (
+              {/* ✅ NOVO: Alerta apenas para terapeutas sem cliente selecionado */}
+              {!selectedPatient && !user?.is_admin && (
                 <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-400 p-3 sm:p-4 rounded-r-lg">
                   <div className="flex items-start space-x-2 sm:space-x-3">
                     <FontAwesomeIcon icon={faInfoCircle} className="text-amber-600 mt-1 flex-shrink-0" />
@@ -168,15 +178,16 @@ const ProgramsPage = () => {
 
         {/* Biblioteca de programas ou estado vazio */}
         <div className="animate-fade-in">
-          {selectedPatient ? (
+          {/* ✅ NOVO: Admin vê biblioteca sempre, terapeuta precisa de cliente */}
+          {selectedPatient || user?.is_admin ? (
             <ProgramLibrary
               onAssign={handleAssign}
               isPatientSelected={!!selectedPatient}
               assigningId={assigningId}
-              assignedPrograms={selectedPatient.assigned_programs || []}
+              assignedPrograms={selectedPatient?.assigned_programs || []}
             />
           ) : (
-            /* Estado vazio quando nenhum cliente está selecionado */
+            /* Estado vazio apenas para terapeutas sem cliente */
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
               <div className="flex items-center justify-center min-h-[300px] sm:min-h-[400px] text-center p-4 sm:p-6 lg:p-8">
                 <div>
