@@ -16,7 +16,8 @@ import {
   faPencilAlt,
   faUserShield,
   faAddressBook,
-  faSignOutAlt
+  faSignOutAlt,
+  faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import usePatientNotifications from '../../hooks/usePatientNotifications';
 import PatientNotificationBadge from '../notifications/PatientNotificationBadge';
@@ -24,7 +25,7 @@ import PatientNotificationBadge from '../notifications/PatientNotificationBadge'
 const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { patients, selectedPatient, selectPatient, isLoading } = usePatients();
+  const { patients, selectedPatient, selectPatient, clearPatientSelection, isLoading } = usePatients();
   const { user, logout } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -165,6 +166,18 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
               </div>
             )}
           </div>
+
+          {/* Botão Limpar Seleção - aparece apenas quando há paciente selecionado */}
+          {selectedPatient && (
+            <button
+              onClick={clearPatientSelection}
+              className="w-full mt-3 px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 border border-white border-opacity-40 rounded-lg text-white text-xs font-medium transition-all flex items-center justify-center space-x-2"
+              title="Limpar seleção de cliente"
+            >
+              <FontAwesomeIcon icon={faTimes} />
+              <span>Limpar Seleção</span>
+            </button>
+          )}
         </div>
 
         {/* Busca redesenhada */}
@@ -189,7 +202,7 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
             {filteredPatients.map((patient, index) => {
               const isSelected = selectedPatient?.id === patient.id;
               return (
-                <div key={patient.id} className="relative">
+                <div key={patient.id} className="relative group">
                   <button
                     onClick={() => handleSelectPatient(patient)}
                     className={`
@@ -241,12 +254,21 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
                         </p>
                       )}
                     </div>
-                    {isSelected && (
-                      <div className="absolute top-2 right-2">
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                      </div>
-                    )}
                   </button>
+
+                  {/* Botão X para limpar seleção - aparece apenas no paciente selecionado */}
+                  {isSelected && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        clearPatientSelection();
+                      }}
+                      className="absolute top-2 right-2 bg-white bg-opacity-20 hover:bg-opacity-40 hover:bg-red-500 backdrop-blur-sm rounded-full p-1.5 transition-all duration-200 z-10"
+                      title="Limpar seleção"
+                    >
+                      <FontAwesomeIcon icon={faTimes} className="text-white text-xs" />
+                    </button>
+                  )}
                 </div>
               );
             })}

@@ -35,6 +35,7 @@ export const PatientProvider = ({ children }) => {
     if (!isAuthenticated || !user || !token) {
       setPatients([]);
       setSelectedPatient(null);
+      localStorage.removeItem('selectedPatientId');
       setIsLoading(false);
       return;
     }
@@ -54,17 +55,34 @@ export const PatientProvider = ({ children }) => {
         patientData = parentData.patient ? [parentData.patient] : [];
         if (parentData.patient) {
           setSelectedPatient(parentData.patient);
+          localStorage.setItem('selectedPatientId', parentData.patient.id);
         }
       }
       setPatients(patientData);
 
+      // Prioridade 1: patientIdToReselect explícito
       if (patientIdToReselect) {
         const reSelected = patientData.find(p => p.id === patientIdToReselect);
         if (reSelected) {
           setSelectedPatient(reSelected);
+          localStorage.setItem('selectedPatientId', reSelected.id);
         }
-      } else if (user.role !== 'pai') {
-        setSelectedPatient(null);
+      }
+      // Prioridade 2: Recuperar do localStorage (apenas para não-pais)
+      else if (user.role !== 'pai') {
+        const savedPatientId = localStorage.getItem('selectedPatientId');
+        if (savedPatientId) {
+          const savedPatient = patientData.find(p => p.id === parseInt(savedPatientId));
+          if (savedPatient) {
+            setSelectedPatient(savedPatient);
+          } else {
+            // Paciente salvo não existe mais, limpar localStorage
+            localStorage.removeItem('selectedPatientId');
+            setSelectedPatient(null);
+          }
+        } else {
+          setSelectedPatient(null);
+        }
       }
     } catch (err) {
       setError(err.message || 'Falha ao carregar dados.');
@@ -76,9 +94,16 @@ export const PatientProvider = ({ children }) => {
   const selectPatient = useCallback(async (patient) => {
     if (!patient) {
       setSelectedPatient(null);
+      localStorage.removeItem('selectedPatientId');
       return;
     }
     setSelectedPatient(patient);
+    localStorage.setItem('selectedPatientId', patient.id);
+  }, []);
+
+  const clearPatientSelection = useCallback(() => {
+    setSelectedPatient(null);
+    localStorage.removeItem('selectedPatientId');
   }, []);
 
   useEffect(() => {
@@ -183,6 +208,7 @@ export const PatientProvider = ({ children }) => {
     isLoading,
     error,
     selectPatient,
+    clearPatientSelection,
     isPatientFormOpen, patientToEdit,
     openPatientForm: useCallback((patient = null) => { setPatientToEdit(patient); setIsPatientFormOpen(true); }, []),
     closePatientForm: useCallback(() => { setPatientToEdit(null); setIsPatientFormOpen(false); }, []),
