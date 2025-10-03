@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSave,
@@ -146,8 +147,18 @@ const SessionProgress = ({ program, assignment }) => {
     try {
       const history = await getAssignmentEvolution(assignment.assignment_id);
       const validHistory = Array.isArray(history) ? history : [];
+
+      // Filtrar últimos 30 dias
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const filteredHistory = validHistory.filter(session => {
+        const sessionDate = new Date(session.session_date);
+        return sessionDate >= thirtyDaysAgo;
+      });
+
       // Backend já retorna ordenado por data ascendente
-      setEvolutionData(validHistory);
+      setEvolutionData(filteredHistory);
     } catch (err) {
       setError('Não foi possível carregar o histórico de progresso.');
       // Erro ao carregar histórico
@@ -873,7 +884,7 @@ const SessionProgress = ({ program, assignment }) => {
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-200 px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <h4 className="text-lg font-semibold text-gray-800 flex items-center">
                 <div className="bg-emerald-100 p-2 rounded-full mr-3">
@@ -918,7 +929,24 @@ const SessionProgress = ({ program, assignment }) => {
             )}
           </div>
         </div>
-        
+
+        {/* Mensagem informativa sobre período de 30 dias */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 px-6 py-3">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center space-x-2 text-blue-700">
+              <FontAwesomeIcon icon={faInfoCircle} className="text-blue-500" />
+              <span className="font-medium">📊 Mostrando últimos 30 dias</span>
+            </div>
+            <Link
+              to="/dashboard"
+              className="text-indigo-600 hover:text-indigo-800 font-semibold hover:underline transition-colors flex items-center space-x-1"
+            >
+              <span>Ver histórico completo no Dashboard</span>
+              <span>→</span>
+            </Link>
+          </div>
+        </div>
+
         <div className="p-6">
           <div className="relative h-80 md:h-96">
               {isLoadingHistory ? (
