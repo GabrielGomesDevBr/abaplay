@@ -61,6 +61,7 @@ const SchedulingPage = () => {
   const [showIntelligentDetection, setShowIntelligentDetection] = useState(false);
   const [showRetroactiveModal, setShowRetroactiveModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false); // ✅ NOVO: Modal de cancelamento
+  const [showActionsMenu, setShowActionsMenu] = useState(false); // ✅ NOVO: Menu de ações mobile
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [selectedOrphanSession, setSelectedOrphanSession] = useState(null);
@@ -522,15 +523,18 @@ const SchedulingPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                <FontAwesomeIcon icon={faCalendarAlt} className="mr-3 text-blue-600" />
-                Sistema de Agendamento
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center">
+                <FontAwesomeIcon icon={faCalendarAlt} className="mr-2 sm:mr-3 text-blue-600" />
+                <span className="hidden sm:inline">Sistema de Agendamento</span>
+                <span className="sm:hidden">Agendamentos</span>
               </h1>
-              <p className="mt-1 text-sm text-gray-600">
+              <p className="mt-1 text-xs sm:text-sm text-gray-600 hidden sm:block">
                 Gerencie agendamentos de sessões e acompanhe estatísticas da clínica
               </p>
             </div>
-            <div className="flex space-x-3">
+
+            {/* Desktop: Botões normais */}
+            <div className="hidden sm:flex space-x-3">
               <button
                 onClick={handleRefresh}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:shadow transition-all duration-200 flex items-center"
@@ -553,6 +557,14 @@ const SchedulingPage = () => {
                 Novo Agendamento
               </button>
             </div>
+
+            {/* Mobile: Botão Menu */}
+            <button
+              onClick={() => setShowActionsMenu(true)}
+              className="sm:hidden p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <FontAwesomeIcon icon={faEllipsisV} className="text-xl" />
+            </button>
           </div>
         </div>
       </div>
@@ -742,6 +754,56 @@ const SchedulingPage = () => {
         onConfirm={handleConfirmCancel}
         isLoading={isCancelling}
       />
+
+      {/* Modal de Ações - Mobile */}
+      {showActionsMenu && (
+        <div className="sm:hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end" onClick={() => setShowActionsMenu(false)}>
+          <div className="bg-white rounded-t-2xl w-full p-4 pb-8 space-y-3 slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Menu de Ações</h3>
+              <button
+                onClick={() => setShowActionsMenu(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FontAwesomeIcon icon={faEllipsisV} className="text-xl rotate-90" />
+              </button>
+            </div>
+
+            <button
+              onClick={() => {
+                handleRefresh();
+                setShowActionsMenu(false);
+              }}
+              className="w-full py-3 px-4 bg-gradient-to-r from-gray-50 to-slate-50 text-gray-700 rounded-lg font-medium hover:from-gray-100 hover:to-slate-100 active:scale-95 transition-all flex items-center"
+            >
+              <FontAwesomeIcon icon={faRefresh} className="mr-3 text-lg" />
+              Atualizar
+            </button>
+
+            <button
+              onClick={() => {
+                setShowReportModal(true);
+                setShowActionsMenu(false);
+              }}
+              className="w-full py-3 px-4 bg-gradient-to-r from-red-50 to-pink-50 text-red-700 rounded-lg font-medium hover:from-red-100 hover:to-pink-100 active:scale-95 transition-all flex items-center"
+            >
+              <FontAwesomeIcon icon={faFilePdf} className="mr-3 text-lg" />
+              Gerar Relatório
+            </button>
+
+            <button
+              onClick={() => {
+                setShowAppointmentForm(true);
+                setShowActionsMenu(false);
+              }}
+              className="w-full py-3 px-4 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-lg font-medium hover:from-blue-100 hover:to-indigo-100 active:scale-95 transition-all flex items-center"
+            >
+              <FontAwesomeIcon icon={faCalendarPlus} className="mr-3 text-lg" />
+              Novo Agendamento
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
