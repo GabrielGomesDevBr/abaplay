@@ -10,7 +10,8 @@ import {
   faExclamationTriangle,
   faFilePdf,
   faBrain,
-  faCalendarWeek  // ✅ NOVO: Ícone para visualização de calendário
+  faCalendarWeek,  // ✅ NOVO: Ícone para visualização de calendário
+  faEllipsisV  // ✅ Ícone para menu mobile
 } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../context/AuthContext';
 import AppointmentForm from '../components/scheduling/AppointmentForm';
