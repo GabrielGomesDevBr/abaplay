@@ -1,17 +1,38 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { usePatients } from '../../context/PatientContext';
 import { useAuth } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faSearch, faUserFriends, faInfoCircle, faUserCircle } from '@fortawesome/free-solid-svg-icons';
+import {
+  faSpinner,
+  faSearch,
+  faUserFriends,
+  faInfoCircle,
+  faUserCircle,
+  faChevronDown,
+  faChevronUp,
+  faTachometerAlt,
+  faCalendarCheck,
+  faCalendarAlt,
+  faFolderOpen,
+  faPencilAlt,
+  faUserShield,
+  faAddressBook
+} from '@fortawesome/free-solid-svg-icons';
 import usePatientNotifications from '../../hooks/usePatientNotifications';
 import PatientNotificationBadge from '../notifications/PatientNotificationBadge';
 
-const Sidebar = () => {
+const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { patients, selectedPatient, selectPatient, isLoading } = usePatients();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Se não receber props de controle, usa estado local
+  const [localToolsExpanded, setLocalToolsExpanded] = useState(false);
+  const toolsExpanded = isToolsExpanded !== undefined ? isToolsExpanded : localToolsExpanded;
+  const setToolsExpanded = setIsToolsExpanded || setLocalToolsExpanded;
   
   // Hook para notificações dos pacientes
   const patientIds = useMemo(() => (patients || []).map(p => p.id), [patients]);
@@ -89,7 +110,45 @@ const Sidebar = () => {
     );
   }
 
-  // Função de contagem removida pois foi integrada diretamente no JSX
+  // Ferramentas de navegação
+  const toolsMenuItems = [
+    {
+      icon: faTachometerAlt,
+      label: 'Dashboard',
+      path: '/dashboard',
+      show: true,
+    },
+    {
+      icon: user?.is_admin ? faCalendarAlt : faCalendarCheck,
+      label: user?.is_admin ? 'Agendamentos' : 'Minha Agenda',
+      path: user?.is_admin ? '/scheduling' : '/my-schedule',
+      show: true,
+    },
+    {
+      icon: faFolderOpen,
+      label: 'Programas',
+      path: '/programs',
+      show: true,
+    },
+    {
+      icon: faPencilAlt,
+      label: 'Anotações',
+      path: '/notes',
+      show: true,
+    },
+    {
+      icon: faAddressBook,
+      label: 'Colegas',
+      path: '/colleagues',
+      show: !user?.is_admin, // Só para terapeutas
+    },
+    {
+      icon: faUserShield,
+      label: 'Admin',
+      path: '/admin',
+      show: user?.is_admin,
+    },
+  ];
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-white to-indigo-50/30 border-r border-indigo-200 shadow-sm">
@@ -245,6 +304,55 @@ const Sidebar = () => {
           </div>
         </div>
       )}
+
+      {/* Seção de Ferramentas (colapsável em mobile) */}
+      <div className="border-t border-indigo-200 bg-white lg:hidden">
+        {/* Cabeçalho colapsável */}
+        <button
+          onClick={() => setToolsExpanded(!toolsExpanded)}
+          className="w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 transition-all"
+        >
+          <div className="flex items-center space-x-2">
+            <FontAwesomeIcon icon={faFolderOpen} className="text-purple-600" />
+            <span className="font-semibold text-gray-700">Ferramentas</span>
+          </div>
+          <FontAwesomeIcon
+            icon={toolsExpanded ? faChevronUp : faChevronDown}
+            className="text-purple-600 transition-transform"
+          />
+        </button>
+
+        {/* Lista de ferramentas */}
+        {toolsExpanded && (
+          <div className="px-2 py-2 space-y-1 bg-gradient-to-b from-white to-indigo-50/30">
+            {toolsMenuItems.filter(item => item.show).map((item, index) => {
+              const isActive = location.pathname.startsWith(item.path);
+              return (
+                <button
+                  key={index}
+                  onClick={() => {
+                    navigate(item.path);
+                    setToolsExpanded(false); // Fecha o menu após navegar
+                  }}
+                  className={`
+                    w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 transition-all duration-200
+                    ${isActive
+                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
+                      : 'text-gray-700 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-700'
+                    }
+                  `}
+                >
+                  <FontAwesomeIcon
+                    icon={item.icon}
+                    className={`${isActive ? 'text-white' : 'text-indigo-600'}`}
+                  />
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

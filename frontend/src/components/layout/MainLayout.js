@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Outlet, Navigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
+import BottomNavigation from './BottomNavigation';
 import { useAuth } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
@@ -10,6 +11,7 @@ const MainLayout = () => {
     const location = useLocation();
     const { user, isAuthenticated, isLoading } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
 
     // <<< LÓGICA DE VISIBILIDADE ATUALIZADA >>>
 
@@ -28,7 +30,19 @@ const MainLayout = () => {
     // Esconde a barra lateral em mobile sempre que a rota muda.
     useEffect(() => {
         setIsSidebarOpen(false);
+        setIsToolsMenuOpen(false);
     }, [location]);
+
+    // Função para alternar o menu de ferramentas (expande Ferramentas no Sidebar)
+    const toggleToolsMenu = () => {
+        if (!isSidebarOpen) {
+            setIsSidebarOpen(true);
+        }
+        // Delay para garantir que o sidebar está aberto antes de expandir ferramentas
+        setTimeout(() => {
+            setIsToolsMenuOpen(true);
+        }, 100);
+    };
 
     // Redirect super admin to their specific page
     if (user?.role === 'super_admin') {
@@ -83,15 +97,23 @@ const MainLayout = () => {
                                     ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
                                 `}
                             >
-                                <Sidebar />
+                                <Sidebar isToolsExpanded={isToolsMenuOpen} setIsToolsExpanded={setIsToolsMenuOpen} />
                             </aside>
                         </>
                     )}
 
-                    <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+                    <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 lg:pb-6">
                         <Outlet />
                     </main>
                 </div>
+            )}
+
+            {/* Bottom Navigation (apenas mobile, não em fullscreen) */}
+            {!isFullScreenPage && (
+                <BottomNavigation
+                    toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                    toggleToolsMenu={toggleToolsMenu}
+                />
             )}
         </div>
     );

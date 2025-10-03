@@ -8,19 +8,15 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import NotificationBadge from '../notifications/NotificationBadge';
 import NotificationPanel from '../notifications/NotificationPanel';
 import ProgressAlert from '../notifications/ProgressAlert';
-import { faBrain, faSignOutAlt, faBars, faTimes, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faUserShield, faCalendarAlt, faCalendarCheck } from '@fortawesome/free-solid-svg-icons';
+import { faBrain, faSignOutAlt, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faUserShield, faCalendarAlt, faCalendarCheck } from '@fortawesome/free-solid-svg-icons';
 
-const Navbar = ({ toggleSidebar }) => {
+const Navbar = () => {
   const { user, logout } = useAuth();
   const { selectedPatient, refreshPatientData } = usePatients();
-  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isNotificationPanelOpen, setNotificationPanelOpen] = useState(false);
   const [showProgressAlert, setShowProgressAlert] = useState(false);
-  const menuRef = useRef(null);
-  const buttonRef = useRef(null);
   const notificationBadgeRef = useRef(null);
 
-  const toggleMobileMenu = () => setMobileMenuOpen(!isMobileMenuOpen);
   const toggleNotificationPanel = () => setNotificationPanelOpen(!isNotificationPanelOpen);
 
   const handleNotificationClick = (notification) => {
@@ -47,21 +43,13 @@ const Navbar = ({ toggleSidebar }) => {
   };
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target) && buttonRef.current && !buttonRef.current.contains(event.target)) {
-        setMobileMenuOpen(false);
-      }
-    };
-    
     const handleProgressAlertCheck = () => {
       setShowProgressAlert(true);
     };
-    
-    document.addEventListener('mousedown', handleClickOutside);
+
     window.addEventListener('checkProgressAlerts', handleProgressAlertCheck);
-    
+
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('checkProgressAlerts', handleProgressAlertCheck);
     };
   }, []);
@@ -70,8 +58,6 @@ const Navbar = ({ toggleSidebar }) => {
     if (!name) return '--';
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   };
-
-  const shouldShowSidebarToggle = user?.role !== 'pai';
 
   const NavLinks = ({ isMobile = false, onLinkClick = () => {} }) => {
     const location = useLocation();
@@ -141,97 +127,69 @@ const Navbar = ({ toggleSidebar }) => {
 
   return (
     <header className="bg-gradient-to-r from-white via-indigo-50/30 to-purple-50/30 backdrop-blur-md sticky top-0 z-50 w-full flex-shrink-0 border-b border-indigo-200/50 shadow-sm">
-        {/* O resto do JSX do seu componente permanece o mesmo */}
         <div className="flex items-center justify-between px-4 sm:px-6 h-16">
-            <div className="flex items-center">
-                {shouldShowSidebarToggle && (
-                    <button 
-                        onClick={toggleSidebar} 
-                        className="lg:hidden mr-3 p-2 rounded-md text-gray-600 hover:text-white hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-600 transition-all transform hover:scale-105"
-                        aria-label="Abrir menu de clientes"
-                    >
-                        <FontAwesomeIcon icon={faBars} className="h-6 w-6" />
-                    </button>
-                )}
+            {/* Mobile: Logo centralizado, ícones nas laterais */}
+            <div className="flex items-center lg:flex-1">
 
-            <NavLink to="/" className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-700 bg-clip-text text-transparent flex items-center mr-2 hover:from-indigo-700 hover:to-purple-800 transition-all">
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-2 rounded-lg mr-3 shadow-sm">
-                    <FontAwesomeIcon icon={faBrain} className="text-white" />
+            <NavLink to="/" className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-700 bg-clip-text text-transparent flex items-center hover:from-indigo-700 hover:to-purple-800 transition-all">
+                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-2 rounded-lg mr-2 sm:mr-3 shadow-sm">
+                    <FontAwesomeIcon icon={faBrain} className="text-white text-sm sm:text-base" />
                 </div>
-                <span>ABAplay</span>
+                <span className="text-lg sm:text-2xl">ABAplay</span>
             </NavLink>
+
+            {/* Desktop: Links de navegação */}
             <div className="hidden lg:flex items-center space-x-1 ml-4">
                 <NavLinks />
             </div>
             </div>
-            
-            <div className="flex items-center space-x-2 sm:space-x-4">
-            <div className="hidden md:block text-sm">
+
+            {/* Informações do cliente (desktop e tablet) */}
+            <div className="hidden md:flex items-center justify-center flex-1 lg:flex-none px-4">
                 {selectedPatient ? (
-                <div className="bg-gradient-to-r from-indigo-100 to-purple-100 border border-indigo-200 px-3 py-1 rounded-full">
-                    <span className="font-medium bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent">Cliente: {selectedPatient.name}</span>
+                <div className="bg-gradient-to-r from-indigo-100 to-purple-100 border border-indigo-200 px-3 py-1 rounded-full max-w-xs truncate">
+                    <span className="font-medium bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent text-sm">
+                        Cliente: {selectedPatient.name}
+                    </span>
                 </div>
-                ) : ( user?.role === 'terapeuta' && 
+                ) : ( user?.role === 'terapeuta' &&
                 <div className="bg-gradient-to-r from-gray-100 to-slate-100 border border-gray-200 px-3 py-1 rounded-full">
-                    <span className="italic text-gray-500">Nenhum cliente selecionado</span>
+                    <span className="italic text-gray-500 text-sm">Nenhum cliente</span>
                 </div>
                 )}
-                {user?.role === 'pai' && ( 
+                {user?.role === 'pai' && (
                 <div className="bg-gradient-to-r from-indigo-100 to-purple-100 border border-indigo-200 px-3 py-1 rounded-full">
-                    <span className="font-medium bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent">Acompanhamento</span>
+                    <span className="font-medium bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent text-sm">Acompanhamento</span>
                 </div>
                 )}
             </div>
-            <div className="relative flex items-center space-x-2 sm:space-x-3">
+
+            {/* Ícones à direita (simplificados em mobile) */}
+            <div className="flex items-center space-x-2 lg:space-x-3">
+                {/* Notificações (apenas desktop para terapeutas/admin) */}
                 {user && user.role !== 'pai' && (
                 <button
                     onClick={toggleNotificationPanel}
-                    className="p-2 rounded-full hover:bg-gradient-to-r hover:from-indigo-100 hover:to-purple-100 transition-all duration-200 transform hover:scale-110"
+                    className="hidden lg:flex p-2 rounded-full hover:bg-gradient-to-r hover:from-indigo-100 hover:to-purple-100 transition-all duration-200 transform hover:scale-110"
                     title="Notificações"
                 >
                     <NotificationBadge ref={notificationBadgeRef} />
                 </button>
                 )}
 
-                <div className="w-9 h-9 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm border-2 border-white shadow-md hover:shadow-lg transition-all transform hover:scale-110" title={user?.full_name || user?.username}>
+                {/* Avatar do usuário */}
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm border-2 border-white shadow-md hover:shadow-lg transition-all transform hover:scale-110" title={user?.full_name || user?.username}>
                 {getInitials(user?.full_name || user?.username)}
                 </div>
-                <button onClick={logout} title="Sair" className="text-gray-500 hover:text-red-600 transition-all duration-150 p-2 rounded-full hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 transform hover:scale-110">
+
+                {/* Botão de logout (apenas desktop) */}
+                <button onClick={logout} title="Sair" className="hidden lg:flex text-gray-500 hover:text-red-600 transition-all duration-150 p-2 rounded-full hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 transform hover:scale-110">
                 <FontAwesomeIcon icon={faSignOutAlt} className="fa-fw" />
                 </button>
+            </div>
+        </div>
 
-                {/* Menu hamburguer movido para dentro, ao lado dos outros ícones */}
-                <button ref={buttonRef} onClick={toggleMobileMenu} type="button" className="lg:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-white hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all transform hover:scale-105" aria-controls="mobile-menu" aria-expanded={isMobileMenuOpen}>
-                <span className="sr-only">Abrir menu</span>
-                <FontAwesomeIcon icon={isMobileMenuOpen ? faTimes : faBars} className="h-6 w-6" />
-                </button>
-            </div>
-            </div>
-        </div>
-      
-        <div
-            ref={menuRef}
-            className={`lg:hidden absolute top-full left-0 right-0 z-50 bg-gradient-to-r from-white via-indigo-50/50 to-purple-50/50 backdrop-blur-md shadow-xl border-t border-indigo-200/50 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'transform translate-y-0' : 'transform -translate-y-full'}`}
-            style={{ visibility: isMobileMenuOpen ? 'visible' : 'hidden' }}
-            id="mobile-menu"
-        >
-            <div className="px-3 pt-3 pb-4 space-y-2">
-                <NavLinks isMobile={true} onLinkClick={() => setMobileMenuOpen(false)} />
-            </div>
-            <div className="pt-4 pb-4 border-t border-gray-200">
-                <div className="flex items-center justify-between px-4">
-                    <div>
-                        <div className="text-base font-medium leading-none text-gray-800">{user?.full_name || user?.username}</div>
-                        <div className="text-sm font-medium leading-none text-gray-500">{user?.role}</div>
-                    </div>
-                    <button onClick={logout} className="ml-auto flex-shrink-0 bg-gradient-to-r from-gray-100 to-slate-100 p-2 rounded-full text-gray-500 hover:text-red-600 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 focus:outline-none transition-all transform hover:scale-110">
-                        <span className="sr-only">Sair</span>
-                        <FontAwesomeIcon icon={faSignOutAlt} />
-                    </button>
-                </div>
-            </div>
-        </div>
-      
+        {/* Painel de notificações (desktop) */}
         <NotificationPanel
             isOpen={isNotificationPanelOpen}
             onClose={() => setNotificationPanelOpen(false)}
