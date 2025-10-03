@@ -2,9 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePatients } from '../context/PatientContext';
 import { usePrograms } from '../context/ProgramContext';
+import { useAuth } from '../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faExclamationCircle, faChartLine, faCalendarAlt, faTimesCircle, faComments, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faExclamationCircle, faChartLine, faCalendarAlt, faTimesCircle, faComments, faChevronRight, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
 import DateRangeSelector from '../components/shared/DateRangeSelector';
+import { PROMPT_LEVEL_COLORS } from '../utils/promptLevelColors';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -220,28 +222,28 @@ const ParentChart = ({ program, sessionData }) => {
                 <div className="text-xs font-semibold text-gray-700 mb-2">Níveis de Prompting:</div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 text-xs">
                     <div className="flex items-center space-x-1 sm:space-x-2">
-                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{backgroundColor: '#10b981'}}></div>
-                        <span className="text-gray-600 truncate">Independente</span>
+                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{backgroundColor: PROMPT_LEVEL_COLORS[5].hex}}></div>
+                        <span className="text-gray-600 truncate">{PROMPT_LEVEL_COLORS[5].name}</span>
                     </div>
                     <div className="flex items-center space-x-1 sm:space-x-2">
-                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{backgroundColor: '#8b5cf6'}}></div>
-                        <span className="text-gray-600 truncate">Verbal</span>
+                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{backgroundColor: PROMPT_LEVEL_COLORS[4].hex}}></div>
+                        <span className="text-gray-600 truncate">{PROMPT_LEVEL_COLORS[4].name}</span>
                     </div>
                     <div className="flex items-center space-x-1 sm:space-x-2">
-                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{backgroundColor: '#f59e0b'}}></div>
-                        <span className="text-gray-600 truncate">Gestual</span>
+                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{backgroundColor: PROMPT_LEVEL_COLORS[3].hex}}></div>
+                        <span className="text-gray-600 truncate">{PROMPT_LEVEL_COLORS[3].name}</span>
                     </div>
                     <div className="flex items-center space-x-1 sm:space-x-2">
-                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{backgroundColor: '#ef4444'}}></div>
-                        <span className="text-gray-600 truncate">Física Parcial</span>
+                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{backgroundColor: PROMPT_LEVEL_COLORS[2].hex}}></div>
+                        <span className="text-gray-600 truncate">{PROMPT_LEVEL_COLORS[2].name}</span>
                     </div>
                     <div className="flex items-center space-x-1 sm:space-x-2">
-                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{backgroundColor: '#dc2626'}}></div>
-                        <span className="text-gray-600 truncate">Física Total</span>
+                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{backgroundColor: PROMPT_LEVEL_COLORS[1].hex}}></div>
+                        <span className="text-gray-600 truncate">{PROMPT_LEVEL_COLORS[1].name}</span>
                     </div>
                     <div className="flex items-center space-x-1 sm:space-x-2">
-                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{backgroundColor: '#6b7280'}}></div>
-                        <span className="text-gray-600 truncate">Sem Resposta</span>
+                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{backgroundColor: PROMPT_LEVEL_COLORS[0].hex}}></div>
+                        <span className="text-gray-600 truncate">{PROMPT_LEVEL_COLORS[0].name}</span>
                     </div>
                 </div>
 
@@ -269,6 +271,7 @@ const ParentDashboardPage = () => {
     const navigate = useNavigate();
     const { selectedPatient, isLoading, error } = usePatients();
     const { getProgramById, isLoading: programsAreLoading } = usePrograms();
+    const { logout } = useAuth();
 
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -343,12 +346,19 @@ const ParentDashboardPage = () => {
     return (
         <div className="p-2 sm:p-4 lg:p-6">
             <div className="flex flex-wrap justify-between items-start mb-4 sm:mb-6 gap-3 sm:gap-4">
-                <div className="w-full">
+                <div className="flex-1">
                     <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-2 break-words">
                         Acompanhamento de {selectedPatient.name}
                     </h1>
                     <p className="text-xs sm:text-sm text-gray-600">Progresso nos programas de intervenção.</p>
                 </div>
+                <button
+                    onClick={logout}
+                    className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg hover:from-red-600 hover:to-pink-700 transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 flex-shrink-0"
+                >
+                    <FontAwesomeIcon icon={faSignOutAlt} />
+                    <span className="text-sm font-medium">Sair</span>
+                </button>
             </div>
             
 
