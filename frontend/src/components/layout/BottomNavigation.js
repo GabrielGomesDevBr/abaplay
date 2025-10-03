@@ -38,6 +38,7 @@ const BottomNavigation = ({ toggleSidebar, toggleToolsMenu }) => {
       label: 'Clientes',
       action: toggleSidebar,
       isActive: false, // Sidebar não tem rota específica
+      show: true,
     },
     {
       icon: faEdit,
@@ -45,24 +46,28 @@ const BottomNavigation = ({ toggleSidebar, toggleToolsMenu }) => {
       action: handleSessionClick,
       isActive: location.pathname.startsWith('/clients') || location.pathname.startsWith('/session'),
       hasAlert: !selectedPatient, // Mostra alerta visual se não há cliente selecionado
+      show: !user?.is_admin, // ✅ Esconder para admin
     },
     {
       icon: faCalendarCheck,
       label: user?.is_admin ? 'Agendamentos' : 'Agenda',
       action: () => navigate(user?.is_admin ? '/scheduling' : '/my-schedule'),
       isActive: location.pathname === '/scheduling' || location.pathname === '/my-schedule',
+      show: true,
     },
     {
       icon: faFolderOpen,
       label: 'Programas',
       action: () => navigate('/programs'),
       isActive: location.pathname === '/programs',
+      show: true,
     },
     {
       icon: faEllipsisH,
       label: 'Mais',
       action: toggleToolsMenu,
       isActive: false,
+      show: true,
     },
   ];
 

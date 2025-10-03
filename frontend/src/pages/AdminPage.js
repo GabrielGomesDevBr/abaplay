@@ -10,7 +10,7 @@ import ExpandedPatientForm from '../components/patient/ExpandedPatientForm';
 import AssignmentModal from '../components/admin/AssignmentModal';
 import TransferAssignmentsModal from '../components/admin/TransferAssignmentsModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserShield, faSpinner, faExclamationTriangle, faUserPlus, faUsers, faUserGraduate, faEdit, faTrashAlt, faSearch, faCogs, faArchive, faUndo, faPlay, faPause } from '@fortawesome/free-solid-svg-icons';
+import { faUserShield, faSpinner, faExclamationTriangle, faUserPlus, faUsers, faUserGraduate, faEdit, faTrashAlt, faSearch, faCogs, faArchive, faUndo, faPlay, faPause, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons';
 
 // Componente UserList com melhorias estéticas sutis mantendo funcionalidade
 const UserList = ({ users, onEditClick, onDeleteClick }) => {
@@ -20,8 +20,10 @@ const UserList = ({ users, onEditClick, onDeleteClick }) => {
   };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
+    <>
+      {/* Desktop: Tabela */}
+      <div className="hidden lg:block overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gradient-to-r from-gray-50 to-slate-50">
           <tr>
             <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Nome Completo</th>
@@ -98,7 +100,73 @@ const UserList = ({ users, onEditClick, onDeleteClick }) => {
           <p className="text-sm text-gray-500">Não há utilizadores que correspondam aos critérios de busca.</p>
         </div>
       )}
-    </div>
+      </div>
+
+      {/* Mobile: Cards */}
+      <div className="lg:hidden space-y-3 p-4">
+        {users.length === 0 ? (
+          <div className="text-center py-12">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="text-3xl text-gray-400 mb-3" />
+            <h3 className="text-sm font-medium text-gray-900 mb-1">Nenhum utilizador encontrado</h3>
+            <p className="text-sm text-gray-500">Não há utilizadores que correspondam aos critérios de busca.</p>
+          </div>
+        ) : (
+          users.map((user) => (
+            <div key={user.id} className="bg-white rounded-lg border-2 border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+              {/* Avatar + Nome */}
+              <div className="flex items-center mb-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 ${
+                  user.is_admin ? 'bg-purple-100 text-purple-600' :
+                  user.role === 'pai' ? 'bg-amber-100 text-amber-600' :
+                  'bg-blue-100 text-blue-600'
+                }`}>
+                  <FontAwesomeIcon icon={
+                    user.is_admin ? faUserShield :
+                    user.role === 'pai' ? faUsers :
+                    faUserGraduate
+                  } className="text-lg" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 truncate">
+                    {user.full_name}
+                  </h3>
+                  <p className="text-sm text-gray-500">@{user.username}</p>
+                </div>
+              </div>
+
+              {/* Badge de função */}
+              <div className="mb-3">
+                <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                  user.is_admin ? 'bg-purple-100 text-purple-800' :
+                  user.role === 'pai' ? 'bg-amber-100 text-amber-800' :
+                  'bg-blue-100 text-blue-800'
+                }`}>
+                  {user.is_admin ? 'Admin' : user.role === 'pai' ? 'Pai/Mãe' : 'Terapeuta'}
+                </span>
+              </div>
+
+              {/* Ações */}
+              {!user.is_admin && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onEditClick(user)}
+                    className="flex-1 py-2 px-3 bg-indigo-50 text-indigo-700 rounded-lg font-medium text-sm hover:bg-indigo-100 active:scale-95 transition-all flex items-center justify-center"
+                  >
+                    <FontAwesomeIcon icon={faEdit} className="mr-1" /> Editar
+                  </button>
+                  <button
+                    onClick={() => onDeleteClick(user)}
+                    className="flex-1 py-2 px-3 bg-red-50 text-red-700 rounded-lg font-medium text-sm hover:bg-red-100 active:scale-95 transition-all flex items-center justify-center"
+                  >
+                    <FontAwesomeIcon icon={faTrashAlt} className="mr-1" /> Apagar
+                  </button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </>
   );
 };
 
@@ -122,8 +190,10 @@ const PatientList = ({ patients, onManageClick, onEditClick, onDeleteClick }) =>
     };
 
     return (
-        <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+        <>
+            {/* Desktop: Tabela */}
+            <div className="hidden lg:block overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gradient-to-r from-green-50 to-emerald-50">
                     <tr>
                         <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Paciente</th>
@@ -201,7 +271,74 @@ const PatientList = ({ patients, onManageClick, onEditClick, onDeleteClick }) =>
                     <p className="text-sm text-gray-500">Não há pacientes nesta clínica que correspondam aos critérios de busca.</p>
                 </div>
             )}
-        </div>
+            </div>
+
+            {/* Mobile: Cards */}
+            <div className="lg:hidden space-y-3 p-4">
+                {patients.length === 0 ? (
+                    <div className="text-center py-12">
+                        <FontAwesomeIcon icon={faUserGraduate} className="text-3xl text-green-400 mb-3" />
+                        <h3 className="text-sm font-medium text-gray-900 mb-1">Nenhum paciente encontrado</h3>
+                        <p className="text-sm text-gray-500">Não há pacientes nesta clínica que correspondam aos critérios de busca.</p>
+                    </div>
+                ) : (
+                    patients.map((patient) => {
+                        const age = calculateAge(patient.dob);
+                        return (
+                            <div key={patient.id} className="bg-white rounded-lg border-2 border-green-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                                {/* Nome + Idade */}
+                                <div className="flex items-start mb-3">
+                                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3 flex-shrink-0">
+                                        <FontAwesomeIcon icon={faUserGraduate} className="text-green-600 text-lg" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-semibold text-gray-900">
+                                            {patient.name}
+                                        </h3>
+                                        {age !== null && (
+                                            <p className="text-sm text-gray-600">
+                                                {age} anos
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Diagnóstico */}
+                                {patient.diagnosis && (
+                                    <div className="mb-3">
+                                        <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+                                            🏥 {patient.diagnosis}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* Ações - 3 botões empilhados */}
+                                <div className="space-y-2">
+                                    <button
+                                        onClick={() => onEditClick(patient)}
+                                        className="w-full py-2 px-3 bg-green-50 text-green-700 rounded-lg font-medium text-sm hover:bg-green-100 active:scale-95 transition-all flex items-center justify-center"
+                                    >
+                                        <FontAwesomeIcon icon={faEdit} className="mr-2" /> Editar Paciente
+                                    </button>
+                                    <button
+                                        onClick={() => onManageClick(patient)}
+                                        className="w-full py-2 px-3 bg-indigo-50 text-indigo-700 rounded-lg font-medium text-sm hover:bg-indigo-100 active:scale-95 transition-all flex items-center justify-center"
+                                    >
+                                        <FontAwesomeIcon icon={faCogs} className="mr-2" /> Gerir Terapeutas
+                                    </button>
+                                    <button
+                                        onClick={() => onDeleteClick(patient)}
+                                        className="w-full py-2 px-3 bg-red-50 text-red-700 rounded-lg font-medium text-sm hover:bg-red-100 active:scale-95 transition-all flex items-center justify-center"
+                                    >
+                                        <FontAwesomeIcon icon={faTrashAlt} className="mr-2" /> Apagar
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </div>
+        </>
     );
 };
 
@@ -222,6 +359,67 @@ const AssignmentList = ({ assignments, onArchiveClick, onDeleteClick, onRestoreC
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pausado</span>;
             default:
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Desconhecido</span>;
+        }
+    };
+
+    // Helper para renderizar ações em mobile
+    const renderMobileActions = (assignment) => {
+        const buttonClass = "flex-1 min-w-[110px] py-2 px-3 rounded-lg font-medium text-sm active:scale-95 transition-all flex items-center justify-center";
+
+        switch(assignment.status) {
+            case 'active':
+                return (
+                    <>
+                        <button
+                            onClick={() => onPauseClick(assignment)}
+                            className={`${buttonClass} bg-blue-50 text-blue-700 hover:bg-blue-100`}
+                        >
+                            <FontAwesomeIcon icon={faPause} className="mr-1" /> Pausar
+                        </button>
+                        <button
+                            onClick={() => onArchiveClick(assignment)}
+                            className={`${buttonClass} bg-amber-50 text-amber-700 hover:bg-amber-100`}
+                        >
+                            <FontAwesomeIcon icon={faArchive} className="mr-1" /> Arquivar
+                        </button>
+                    </>
+                );
+            case 'paused':
+                return (
+                    <>
+                        <button
+                            onClick={() => onResumeClick(assignment)}
+                            className={`${buttonClass} bg-green-50 text-green-700 hover:bg-green-100`}
+                        >
+                            <FontAwesomeIcon icon={faPlay} className="mr-1" /> Retomar
+                        </button>
+                        <button
+                            onClick={() => onArchiveClick(assignment)}
+                            className={`${buttonClass} bg-amber-50 text-amber-700 hover:bg-amber-100`}
+                        >
+                            <FontAwesomeIcon icon={faArchive} className="mr-1" /> Arquivar
+                        </button>
+                    </>
+                );
+            case 'archived':
+                return (
+                    <>
+                        <button
+                            onClick={() => onRestoreClick(assignment)}
+                            className={`${buttonClass} bg-green-50 text-green-700 hover:bg-green-100`}
+                        >
+                            <FontAwesomeIcon icon={faUndo} className="mr-1" /> Restaurar
+                        </button>
+                        <button
+                            onClick={() => onDeleteClick(assignment)}
+                            className={`${buttonClass} bg-red-50 text-red-700 hover:bg-red-100`}
+                        >
+                            <FontAwesomeIcon icon={faTrashAlt} className="mr-1" /> Deletar
+                        </button>
+                    </>
+                );
+            default:
+                return null;
         }
     };
 
@@ -299,8 +497,10 @@ const AssignmentList = ({ assignments, onArchiveClick, onDeleteClick, onRestoreC
     };
 
     return (
-        <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+        <>
+            {/* Desktop: Tabela */}
+            <div className="hidden lg:block overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
                     <tr>
                         <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">Paciente</th>
@@ -365,7 +565,75 @@ const AssignmentList = ({ assignments, onArchiveClick, onDeleteClick, onRestoreC
                     <p className="text-sm text-gray-500">Não há programas atribuídos que correspondam aos critérios de busca.</p>
                 </div>
             )}
-        </div>
+            </div>
+
+            {/* Mobile: Cards */}
+            <div className="lg:hidden space-y-3 p-4">
+                {assignments.length === 0 ? (
+                    <div className="text-center py-12">
+                        <FontAwesomeIcon icon={faCogs} className="text-3xl text-indigo-400 mb-3" />
+                        <h3 className="text-sm font-medium text-gray-900 mb-1">Nenhuma atribuição encontrada</h3>
+                        <p className="text-sm text-gray-500">Não há programas atribuídos que correspondam aos critérios de busca.</p>
+                    </div>
+                ) : (
+                    assignments.map((assignment) => (
+                        <div key={assignment.assignment_id} className="bg-white rounded-lg border-2 border-indigo-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                            {/* Cabeçalho: Paciente + Status */}
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center flex-1 min-w-0">
+                                    <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3 flex-shrink-0">
+                                        <FontAwesomeIcon icon={faUserGraduate} className="text-indigo-600" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="font-semibold text-gray-900 truncate">
+                                            {assignment.patient_name}
+                                        </h3>
+                                        <p className="text-xs text-gray-500">{assignment.therapist_name}</p>
+                                    </div>
+                                </div>
+                                {getStatusBadge(assignment.status)}
+                            </div>
+
+                            {/* Programa */}
+                            <div className="mb-3 bg-gray-50 rounded-lg p-2">
+                                <p className="text-sm font-medium text-gray-900 line-clamp-2">
+                                    📚 {assignment.program_name}
+                                </p>
+                                {assignment.has_custom_trials && (
+                                    <p className="text-xs text-blue-600 mt-1">
+                                        <FontAwesomeIcon icon={faCogs} className="mr-1" />
+                                        Tentativas customizadas
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Estatísticas em grid */}
+                            {assignment.total_sessions > 0 && (
+                                <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+                                    <div className="bg-blue-50 rounded px-2 py-1">
+                                        <span className="text-gray-600">Sessões:</span>
+                                        <span className="font-semibold ml-1">{assignment.total_sessions}</span>
+                                    </div>
+                                    {assignment.average_score > 0 && (
+                                        <div className="bg-green-50 rounded px-2 py-1">
+                                            <span className="text-gray-600">Média:</span>
+                                            <span className="font-semibold ml-1 text-green-600">
+                                                {assignment.average_score.toFixed(1)}%
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Ações condicionais por status */}
+                            <div className="flex flex-wrap gap-2">
+                                {renderMobileActions(assignment)}
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+        </>
     );
 };
 
@@ -382,11 +650,12 @@ const AdminPage = () => {
   const [assignmentStatusFilter, setAssignmentStatusFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false); // ✅ NOVO: Modal de ações
   const [therapistToDelete, setTherapistToDelete] = useState(null);
   const [patientToManage, setPatientToManage] = useState(null);
   const [patientToEdit, setPatientToEdit] = useState(null);
@@ -582,9 +851,10 @@ const AdminPage = () => {
   const allTherapists = useMemo(() => users.filter(u => u.role === 'terapeuta' && !u.is_admin), [users]);
 
   const TabButton = ({ tabName, activeTab, setTab, icon, children }) => (
-      <button onClick={() => setTab(tabName)} className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tabName ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`} >
-          <FontAwesomeIcon icon={icon} className="mr-2" />
-          {children}
+      <button onClick={() => setTab(tabName)} className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === tabName ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`} >
+          <FontAwesomeIcon icon={icon} className="mr-2 text-base" />
+          <span className="hidden sm:inline">{children}</span>
+          <span className="sm:hidden text-xs">{children.split(' ')[0]}</span>
       </button>
   );
 
@@ -595,14 +865,15 @@ const AdminPage = () => {
 
       return (
          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center">
-                <FontAwesomeIcon icon={faUserShield} className="mr-3 text-indigo-500" />
-                Painel de Administração
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
+                <FontAwesomeIcon icon={faUserShield} className="mr-2 sm:mr-3 text-indigo-500" />
+                <span className="hidden sm:inline">Painel de Administração</span>
+                <span className="sm:hidden">Admin</span>
             </h1>
             {showAddButton && (
               <button
                   onClick={() => isUsersTab ? handleOpenCreateUserModal() : setIsPatientModalOpen(true)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors shadow hover:shadow-md flex items-center"
+                  className="hidden sm:flex bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors shadow hover:shadow-md items-center"
               >
                   <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
                   {isUsersTab ? 'Adicionar Utilizador' : 'Adicionar Paciente'}
@@ -617,7 +888,18 @@ const AdminPage = () => {
         return (
             <div className="relative">
                 <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input type="text" placeholder="Buscar por nome ou username..." value={userSearchTerm} onChange={e => setUserSearchTerm(e.target.value)} className="w-full sm:w-72 pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+                <input
+                    type="text"
+                    placeholder="Buscar..."
+                    value={userSearchTerm}
+                    onChange={e => setUserSearchTerm(e.target.value)}
+                    className="w-full sm:w-72 pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                />
+                {filteredUsers.length > 0 && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                        {filteredUsers.length} resultado{filteredUsers.length !== 1 ? 's' : ''}
+                    </span>
+                )}
             </div>
         )
     }
@@ -625,29 +907,45 @@ const AdminPage = () => {
         return (
             <div className="relative">
                 <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input type="text" placeholder="Buscar por nome de paciente..." value={patientSearchTerm} onChange={e => setPatientSearchTerm(e.target.value)} className="w-full sm:w-72 pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+                <input
+                    type="text"
+                    placeholder="Buscar paciente..."
+                    value={patientSearchTerm}
+                    onChange={e => setPatientSearchTerm(e.target.value)}
+                    className="w-full sm:w-72 pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                />
+                {filteredPatients.length > 0 && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                        {filteredPatients.length} resultado{filteredPatients.length !== 1 ? 's' : ''}
+                    </span>
+                )}
             </div>
         )
     }
     if (activeTab === 'assignments') {
         return (
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                 <div className="relative flex-1">
                     <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Buscar paciente, programa ou terapeuta..."
+                        placeholder="Buscar..."
                         value={assignmentSearchTerm}
                         onChange={e => setAssignmentSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                        className="w-full pl-10 pr-20 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                     />
+                    {filteredAssignments.length > 0 && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                            {filteredAssignments.length}
+                        </span>
+                    )}
                 </div>
                 <select
                     value={assignmentStatusFilter}
                     onChange={e => setAssignmentStatusFilter(e.target.value)}
                     className="px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                 >
-                    <option value="all">Todos os Status</option>
+                    <option value="all">Todos</option>
                     <option value="active">Ativos</option>
                     <option value="archived">Arquivados</option>
                     <option value="paused">Pausados</option>
@@ -662,8 +960,18 @@ const AdminPage = () => {
     <>
       <div className="fade-in">
         {renderHeader()}
+
+        {/* Botão Menu Mobile - Abre modal de ações */}
+        <button
+          onClick={() => setIsActionsMenuOpen(true)}
+          className="sm:hidden fixed bottom-20 right-4 z-50 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center active:scale-95"
+          title="Menu de ações"
+        >
+          <FontAwesomeIcon icon={faPlus} className="text-xl" />
+        </button>
+
         <div className="mb-4 border-b border-gray-200">
-            <nav className="flex space-x-2" aria-label="Tabs">
+            <nav className="overflow-x-auto scrollbar-hide flex space-x-2 sm:space-x-4" aria-label="Tabs">
                 <TabButton tabName="users" activeTab={activeTab} setTab={setActiveTab} icon={faUsers}>Utilizadores</TabButton>
                 <TabButton tabName="patients" activeTab={activeTab} setTab={setActiveTab} icon={faUserGraduate}>Pacientes</TabButton>
                 <TabButton tabName="assignments" activeTab={activeTab} setTab={setActiveTab} icon={faCogs}>Programas Atribuídos</TabButton>
@@ -725,6 +1033,56 @@ const AdminPage = () => {
         availableTherapists={allTherapists}
         onTransferComplete={handleTransferComplete}
       />
+
+      {/* <<< MODAL DE AÇÕES - MOBILE >>> */}
+      {isActionsMenuOpen && (
+        <div className="sm:hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end" onClick={() => setIsActionsMenuOpen(false)}>
+          <div className="bg-white rounded-t-2xl w-full p-4 pb-8 space-y-3 slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Menu de Ações</h3>
+              <button
+                onClick={() => setIsActionsMenuOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FontAwesomeIcon icon={faTimes} className="text-xl" />
+              </button>
+            </div>
+
+            <button
+              onClick={() => {
+                handleOpenCreateUserModal();
+                setIsActionsMenuOpen(false);
+              }}
+              className="w-full py-3 px-4 bg-gradient-to-r from-purple-50 to-indigo-50 text-indigo-700 rounded-lg font-medium hover:from-purple-100 hover:to-indigo-100 active:scale-95 transition-all flex items-center"
+            >
+              <FontAwesomeIcon icon={faUserPlus} className="mr-3 text-lg" />
+              Adicionar Utilizador
+            </button>
+
+            <button
+              onClick={() => {
+                setIsPatientModalOpen(true);
+                setIsActionsMenuOpen(false);
+              }}
+              className="w-full py-3 px-4 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 rounded-lg font-medium hover:from-green-100 hover:to-emerald-100 active:scale-95 transition-all flex items-center"
+            >
+              <FontAwesomeIcon icon={faUserGraduate} className="mr-3 text-lg" />
+              Adicionar Paciente
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab('assignments');
+                setIsActionsMenuOpen(false);
+              }}
+              className="w-full py-3 px-4 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-lg font-medium hover:from-blue-100 hover:to-indigo-100 active:scale-95 transition-all flex items-center"
+            >
+              <FontAwesomeIcon icon={faCogs} className="mr-3 text-lg" />
+              Ver Programas Atribuídos
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 };
