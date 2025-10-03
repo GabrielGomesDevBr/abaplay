@@ -45,6 +45,8 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
 
   const handleSelectPatient = (patient) => {
     selectPatient(patient);
+    // Navegar para a página de programas após selecionar o paciente
+    navigate('/programs');
   };
 
   const handleNavigateToChat = (patientId, chatType) => {
