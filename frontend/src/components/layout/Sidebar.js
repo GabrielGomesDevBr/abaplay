@@ -124,12 +124,6 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
       show: true,
     },
     {
-      icon: faAddressBook,
-      label: 'Colegas',
-      path: '/colleagues',
-      show: !user?.is_admin, // Só para terapeutas
-    },
-    {
       icon: faUserShield,
       label: 'Admin',
       path: '/admin',

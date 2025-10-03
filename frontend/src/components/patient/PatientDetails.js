@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePatients } from '../../context/PatientContext';
 import { useAuth } from '../../context/AuthContext';
 import { generateProgramGradePDF, generateWeeklyRecordSheetPDF } from '../../utils/pdfGenerator';
@@ -75,6 +76,7 @@ const ActionCard = ({ icon, title, description, onClick, disabled, colorClass = 
 };
 
 const PatientDetails = () => {
+  const navigate = useNavigate();
   const { selectedPatient, openPatientForm, removePatient, openReportModal } = usePatients();
   const { user } = useAuth();
   const [isParentChatVisible, setIsParentChatVisible] = useState(false);
@@ -99,15 +101,27 @@ const PatientDetails = () => {
   const handleCloseEvolutionReport = () => setIsEvolutionReportVisible(false);
   const handleOpenExpandedForm = () => setIsExpandedFormVisible(true);
   const handleCloseExpandedForm = () => setIsExpandedFormVisible(false);
-  
+
   const handleToggleParentChat = () => {
-    setIsDiscussionChatVisible(false);
-    setIsParentChatVisible(prevState => !prevState);
+    const isMobile = window.innerWidth < 1024; // breakpoint lg
+
+    if (isMobile) {
+      navigate('/parent-chat'); // Página cheia em mobile
+    } else {
+      setIsDiscussionChatVisible(false);
+      setIsParentChatVisible(prevState => !prevState); // Modal em desktop
+    }
   };
 
   const handleToggleDiscussionChat = () => {
-    setIsParentChatVisible(false);
-    setIsDiscussionChatVisible(prevState => !prevState);
+    const isMobile = window.innerWidth < 1024; // breakpoint lg
+
+    if (isMobile) {
+      navigate('/case-discussion'); // Página cheia em mobile
+    } else {
+      setIsParentChatVisible(false);
+      setIsDiscussionChatVisible(prevState => !prevState); // Modal em desktop
+    }
   };
 
   return (
