@@ -12,7 +12,7 @@ import {
   faEdit
 } from '@fortawesome/free-solid-svg-icons';
 
-const BottomNavigation = ({ toggleSidebar, toggleNotificationPanel, isNotificationPanelOpen }) => {
+const BottomNavigation = ({ toggleSidebar }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -67,8 +67,8 @@ const BottomNavigation = ({ toggleSidebar, toggleNotificationPanel, isNotificati
     {
       icon: faBell,
       label: 'Notificações',
-      action: toggleNotificationPanel,
-      isActive: isNotificationPanelOpen,
+      action: () => navigate('/notifications'),
+      isActive: location.pathname === '/notifications',
       badge: totalUnread, // Badge vermelho com número de notificações
       show: true,
     },

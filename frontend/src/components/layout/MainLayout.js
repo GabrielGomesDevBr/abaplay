@@ -119,8 +119,6 @@ const MainLayout = () => {
             {!isFullScreenPage && (
                 <BottomNavigation
                     toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-                    toggleNotificationPanel={() => setIsNotificationPanelOpen(!isNotificationPanelOpen)}
-                    isNotificationPanelOpen={isNotificationPanelOpen}
                 />
             )}
         </div>

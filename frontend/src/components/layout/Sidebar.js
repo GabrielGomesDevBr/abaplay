@@ -137,12 +137,6 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
       show: user?.is_admin,
     },
     {
-      icon: faAddressBook,
-      label: 'Contatos',
-      path: '/contacts',
-      show: true,
-    },
-    {
       icon: faSignOutAlt,
       label: 'Sair',
       action: logout,

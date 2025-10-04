@@ -144,5 +144,30 @@ NotificationStatus.getTotalUnreadCount = async (userId) => {
   }
 };
 
+/**
+ * Marca todas as notificações de um usuário como lidas
+ * @param {number} userId - ID do usuário
+ * @returns {Promise<number>} - Número de linhas atualizadas
+ */
+NotificationStatus.markAllAsRead = async (userId) => {
+  const query = `
+    UPDATE notificationstatus
+    SET
+      "lastReadTimestamp" = NOW(),
+      "unreadCount" = 0
+    WHERE "userId" = $1 AND "unreadCount" > 0
+    RETURNING *;
+  `;
+  const values = [userId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rowCount;
+  } catch (error) {
+    console.error('Erro ao marcar todas como lidas:', error);
+    throw error;
+  }
+};
+
 module.exports = NotificationStatus;
 

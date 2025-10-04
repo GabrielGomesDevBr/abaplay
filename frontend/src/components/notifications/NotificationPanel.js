@@ -321,7 +321,16 @@ const NotificationPanel = ({ isOpen, onClose, onNotificationClick }) => {
           </div>
 
           {/* Footer - Apenas desktop */}
-          <div className="hidden lg:block p-4 border-t border-gray-200 bg-gray-50">
+          <div className="hidden lg:block p-4 border-t border-gray-200 bg-gray-50 space-y-2">
+            <button
+              onClick={() => {
+                navigate('/notifications');
+                onClose();
+              }}
+              className="w-full px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-700 rounded-md hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all"
+            >
+              Ver todas as notificações
+            </button>
             <button
               onClick={onClose}
               className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"

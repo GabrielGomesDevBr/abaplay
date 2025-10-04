@@ -15,6 +15,9 @@ router.get('/total-unread', notificationController.getTotalUnreadCount);
 // POST /api/notifications/mark-read - Marca mensagens como lidas
 router.post('/mark-read', notificationController.markAsRead);
 
+// POST /api/notifications/mark-all-read - Marca todas as mensagens como lidas
+router.post('/mark-all-read', notificationController.markAllAsRead);
+
 // GET /api/notifications/patient/:patientId - Busca notificações de um paciente específico
 router.get('/patient/:patientId', notificationController.getNotificationsByPatientAndType);
 

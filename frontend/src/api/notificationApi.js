@@ -25,7 +25,7 @@ export const markAsRead = async (patientId, chatType) => {
   try {
     console.log('[NOTIFICATION-LOG] markAsRead: Marcando como lida - patientId:', patientId, 'chatType:', chatType);
     const token = localStorage.getItem('token');
-    const response = await axios.post(`${NOTIFICATION_API_URL}/mark-read`, 
+    const response = await axios.post(`${NOTIFICATION_API_URL}/mark-read`,
       { patientId, chatType },
       {
         headers: {
@@ -38,6 +38,27 @@ export const markAsRead = async (patientId, chatType) => {
     return response.data;
   } catch (error) {
     console.error('[NOTIFICATION-LOG] markAsRead: Erro -', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+export const markAllAsRead = async () => {
+  try {
+    console.log('[NOTIFICATION-LOG] markAllAsRead: Marcando todas como lidas');
+    const token = localStorage.getItem('token');
+    const response = await axios.post(`${NOTIFICATION_API_URL}/mark-all-read`,
+      {},
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+    console.log('[NOTIFICATION-LOG] markAllAsRead: Sucesso');
+    return response.data;
+  } catch (error) {
+    console.error('[NOTIFICATION-LOG] markAllAsRead: Erro -', error.response?.data || error.message);
     throw error;
   }
 };

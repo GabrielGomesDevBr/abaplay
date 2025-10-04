@@ -40,12 +40,12 @@ notificationController.markAsRead = async (req, res) => {
     const { patientId, chatType } = req.body;
 
     if (!patientId || !chatType) {
-      return res.status(400).json({ 
-        errors: [{ msg: 'patientId e chatType são obrigatórios.' }] 
+      return res.status(400).json({
+        errors: [{ msg: 'patientId e chatType são obrigatórios.' }]
       });
     }
 
-    const validChatTypes = ['case_discussion', 'parent_chat', 'progress_alert', 'scheduling_reminder', 'appointment_cancelled'];
+    const validChatTypes = ['case_discussion', 'parent_chat', 'progress_alert', 'scheduling_reminder', 'appointment_cancelled', 'appointment_created'];
     if (!validChatTypes.includes(chatType)) {
       return res.status(400).json({
         errors: [{ msg: 'chatType inválido.' }]
@@ -56,6 +56,24 @@ notificationController.markAsRead = async (req, res) => {
     res.status(200).json(updatedStatus);
   } catch (error) {
     console.error('Erro ao marcar como lido:', error);
+    res.status(500).json({ errors: [{ msg: 'Erro interno do servidor.' }] });
+  }
+};
+
+/**
+ * Marca todas as notificações de um usuário como lidas
+ */
+notificationController.markAllAsRead = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await NotificationStatus.markAllAsRead(userId);
+    res.status(200).json({
+      message: 'Todas as notificações foram marcadas como lidas.',
+      rowsUpdated: result
+    });
+  } catch (error) {
+    console.error('Erro ao marcar todas como lidas:', error);
     res.status(500).json({ errors: [{ msg: 'Erro interno do servidor.' }] });
   }
 };

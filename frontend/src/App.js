@@ -24,6 +24,8 @@ import SuperAdminPage from './pages/SuperAdminPage';
 // --- IMPORTAÇÕES DO SISTEMA DE AGENDAMENTO ---
 import SchedulingPage from './pages/SchedulingPage';
 import TherapistSchedulePage from './pages/TherapistSchedulePage';
+// --- IMPORTAÇÃO DA PÁGINA DE NOTIFICAÇÕES ---
+import NotificationsPage from './pages/NotificationsPage';
 
 
 // Componente de Guarda para Rotas de Admin
@@ -111,6 +113,9 @@ function App() {
 
                   {/* Página de agenda pessoal para terapeutas */}
                   <Route path="my-schedule" element={<TherapistSchedulePage />} />
+
+                  {/* Página de notificações */}
+                  <Route path="notifications" element={<NotificationsPage />} />
 
                   {/* Página de chat para pais */}
                   <Route path="parent-chat" element={<ParentChatPage />} />
