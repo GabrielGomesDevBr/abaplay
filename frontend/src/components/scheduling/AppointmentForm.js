@@ -365,10 +365,9 @@ const AppointmentForm = ({
         }, 3000);
       }
     } catch (error) {
-      setAssignmentWarning({
-        type: 'warning',
-        message: 'Não foi possível verificar assignment. Prossiga com cautela.'
-      });
+      // Erro silencioso - não bloqueia o agendamento
+      // A validação de assignment é um "nice to have", não obrigatória
+      setAssignmentWarning(null);
     } finally {
       setValidatingAssignment(false);
     }

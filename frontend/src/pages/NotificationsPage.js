@@ -14,6 +14,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { getNotifications, markAsRead, markAllAsRead } from '../api/notificationApi';
 import { useAuth } from '../context/AuthContext';
+import { usePatients } from '../context/PatientContext';
 
 /**
  * Página dedicada de notificações - Fullscreen Mobile / Desktop
@@ -22,6 +23,7 @@ import { useAuth } from '../context/AuthContext';
 const NotificationsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { patients, selectPatient } = usePatients();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
@@ -66,7 +68,18 @@ const NotificationsPage = () => {
       const chatType = notification.chatType;
 
       if (chatType === 'parent_chat' || chatType === 'case_discussion') {
-        navigate('/notes');
+        // Seleciona o paciente antes de navegar
+        const patient = patients.find(p => p.id === notification.patientId);
+        if (patient) {
+          selectPatient(patient);
+        }
+
+        // Navega para a página específica do chat
+        if (chatType === 'parent_chat') {
+          navigate('/parent-chat');
+        } else {
+          navigate('/case-discussion');
+        }
       } else if (chatType === 'scheduling_reminder' || chatType === 'appointment_cancelled' || chatType === 'appointment_created') {
         if (user?.is_admin) {
           navigate('/scheduling');
