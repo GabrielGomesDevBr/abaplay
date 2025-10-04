@@ -9,7 +9,8 @@ import {
   faCalendarCheck,
   faFolderOpen,
   faBell,
-  faEdit
+  faEdit,
+  faUserShield
 } from '@fortawesome/free-solid-svg-icons';
 
 const BottomNavigation = ({ toggleSidebar }) => {
@@ -63,6 +64,13 @@ const BottomNavigation = ({ toggleSidebar }) => {
       action: () => navigate('/programs'),
       isActive: location.pathname === '/programs',
       show: true,
+    },
+    {
+      icon: faUserShield,
+      label: 'Admin',
+      action: () => navigate('/admin'),
+      isActive: location.pathname === '/admin',
+      show: user?.is_admin, // ✅ NOVO: Mostrar apenas para admin
     },
     {
       icon: faBell,

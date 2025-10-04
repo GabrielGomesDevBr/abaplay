@@ -111,6 +111,7 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
   }
 
   // Ferramentas de navegação (menu expandido no Sidebar)
+  // ✅ ATUALIZADO: Removido "Programas" (já está na barra inferior) e "Admin" (movido para barra inferior)
   const toolsMenuItems = [
     {
       icon: faTachometerAlt,
@@ -119,22 +120,10 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
       show: true,
     },
     {
-      icon: faFolderOpen,
-      label: 'Programas',
-      path: '/programs',
-      show: true,
-    },
-    {
       icon: faPencilAlt,
       label: 'Anotações',
       path: '/notes',
       show: true,
-    },
-    {
-      icon: faUserShield,
-      label: 'Admin',
-      path: '/admin',
-      show: user?.is_admin,
     },
     {
       icon: faSignOutAlt,
