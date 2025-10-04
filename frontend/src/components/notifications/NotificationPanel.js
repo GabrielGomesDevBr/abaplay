@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faComments, faUsers, faEye, faTimes, faBullseye, faCalendarAlt, faCalendarTimes, faCalendarPlus } from '@fortawesome/free-solid-svg-icons';
+import { faComments, faUsers, faEye, faTimes, faBullseye, faCalendarAlt, faCalendarTimes, faCalendarPlus, faBell } from '@fortawesome/free-solid-svg-icons';
 import { getNotifications, markAsRead } from '../../api/notificationApi';
 import { usePatients } from '../../context/PatientContext';
 import { useAuth } from '../../context/AuthContext';
