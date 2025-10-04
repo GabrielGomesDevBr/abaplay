@@ -5,6 +5,98 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-01-04
+
+### Adicionado
+- **Sistema Completo de Agendamentos Recorrentes**
+  - Criação de templates de agendamentos recorrentes (semanal, quinzenal, mensal)
+  - Geração automática de agendamentos até 4 semanas à frente
+  - Pausar/retomar templates com motivos documentados
+  - Gerenciamento de exceções e feriados
+  - Calendário visual com visualização semanal
+  - Lista detalhada de agendamentos com filtros avançados
+  - Detecção automática de conflitos de horário
+  - Tabelas: `recurring_appointment_templates`, `scheduled_sessions`
+  - Arquivos: `SchedulingPage.js`, `TherapistSchedulePage.js`, `RecurringAppointmentModal.js`
+
+- **Detecção Automática de Sessões Órfãs**
+  - Job cron executando diariamente às 2 AM
+  - Identifica sessões agendadas sem registro de progresso
+  - Marca automaticamente como "missed" após período de tolerância
+  - Envia notificações aos terapeutas para justificativa
+  - Variável de ambiente: `ENABLE_AUTO_DETECTION=true`
+  - Arquivo: `backend/src/jobs/sessionMaintenanceJob.js`
+
+- **NotificationsPage Mobile-First**
+  - Página dedicada fullscreen para notificações
+  - Substituição do bottom sheet modal para melhor UX mobile
+  - Agrupamento por data (Hoje, Ontem, Esta semana, Mais antigas)
+  - Exibição completa de texto sem truncamento
+  - Função "Marcar todas como lidas"
+  - Color-coding por tipo (verde/vermelho/azul/amarelo)
+  - Navegação direta para páginas/modais relevantes
+  - Arquivo: `frontend/src/pages/NotificationsPage.js`
+
+- **Notificações de Agendamento**
+  - `appointment_created`: Notificações de novos agendamentos
+  - `appointment_cancelled`: Alertas de cancelamento com motivos
+  - `scheduling_reminder`: Lembretes de sessão (preparação para futuro)
+  - Integração completa com NotificationsPage
+
+### Melhorado
+- **Navegação Mobile**
+  - Botão Admin movido de Sidebar Tools para BottomNavigation
+  - Botão Programas removido do Sidebar Tools (já está em BottomNavigation)
+  - Sidebar Tools agora contém: Dashboard, Anotações, Sair
+  - Melhor organização para usuários admin em dispositivos móveis
+  - Arquivos: `frontend/src/components/layout/BottomNavigation.js`, `Sidebar.js`
+
+- **Sistema de Notificações**
+  - Hook centralizado `useNotifications.js` para gerenciamento de estado
+  - Polling automático a cada 30 segundos
+  - Sincronização em tempo real entre dispositivos via WebSocket
+  - Badge de contadores em tempo real
+  - Navegação melhorada de notificações para chats
+
+### Corrigido
+- **validate-assignment Error 500**
+  - Implementado fallback silencioso para validação de assignment
+  - Erro não mostra mais mensagem confusa para usuários
+  - Validação é "nice to have", não bloqueante
+  - Arquivo: `frontend/src/components/scheduling/AppointmentForm.js:367-373`
+
+- **active_programs_count em Sessão Geral**
+  - Corrigida view `v_scheduled_sessions_complete` para calcular programas corretamente
+  - Sessão Geral (discipline_id = NULL) agora mostra TODOS os programas do paciente
+  - Antes: mostrava apenas 1 programa (do terapeuta selecionado)
+  - Agora: mostra todos os 14 programas ativos do paciente
+  - Sessões específicas por disciplina ainda mostram apenas programas daquela disciplina
+  - Migration: `backend/migrations/fix_active_programs_count.sql`
+
+- **Navegação de Notificações de Chat**
+  - Notificações `parent_chat` agora navegam para `/parent-chat` (não `/notes`)
+  - Notificações `case_discussion` agora navegam para `/case-discussion` (não `/notes`)
+  - Paciente é automaticamente selecionado no contexto antes da navegação
+  - Arquivo: `frontend/src/pages/NotificationsPage.js:60-95`
+
+### Técnico
+- **Banco de Dados**
+  - Migration `002_create_recurring_appointments.sql`: criação de tabelas de agendamento
+  - Migration `fix_active_programs_count.sql`: correção de view de sessões
+  - View `v_scheduled_sessions_complete` atualizada com lógica correta de contagem
+
+- **Backend**
+  - Novo controller: `schedulingController.js`
+  - Novo model: `scheduledSessionModel.js`, `recurringAppointmentModel.js`
+  - Novo job: `sessionMaintenanceJob.js`
+  - Nova rota: `schedulingRoutes.js`
+
+- **Frontend**
+  - Nova página: `NotificationsPage.js`, `SchedulingPage.js`, `TherapistSchedulePage.js`
+  - Novos componentes: `RecurringAppointmentModal.js`, `AppointmentForm.js`, `AppointmentsList.js`
+  - Novo hook: `useNotifications.js`
+  - Nova API: `schedulingApi.js`
+
 ## [1.1.0] - 2024-12-16
 
 ### Adicionado

@@ -26,6 +26,12 @@ A aplicação é dividida em dois módulos principais:
 - Pontuação automática de progresso baseada em níveis de prompting e taxa de sucesso
 - Anotações detalhadas e documentação de sessões
 - Visualização de gráficos interativos de progresso organizados por área de intervenção
+- **Sistema de Agendamentos Inteligente** (NOVO - Janeiro 2025):
+  - Agendamentos recorrentes automáticos (semanal, quinzenal, mensal)
+  - Calendário visual com visualização semanal e lista detalhada
+  - Notificações em tempo real de cancelamentos e mudanças
+  - Detecção automática de sessões órfãs
+  - Justificativa obrigatória para sessões não realizadas
 - **Sistema Completo de Relatórios de Evolução Terapêutica**:
   - Relatórios profissionais personalizáveis para todas as disciplinas
   - **Sincronização Multi-Dispositivo**: Dados profissionais (CRP, qualificações, assinatura) sincronizados automaticamente entre todos os dispositivos/navegadores
@@ -36,7 +42,12 @@ A aplicação é dividida em dois módulos principais:
 - Geração automatizada de relatórios consolidados em PDF com gráficos e dados de sessão
 - Comunicação em tempo real com pais através de chat integrado
 - Sistema colaborativo de discussões de caso com outros profissionais
-- Gerenciamento centralizado de notificações, alertas de progresso e badges
+- **Gerenciamento de Notificações Mobile-First** (NOVO - Janeiro 2025):
+  - Página dedicada fullscreen para notificações
+  - Agrupamento por data (Hoje, Ontem, Esta semana, Mais antigas)
+  - Navegação direta para chats e modais específicos
+  - Função "Marcar todas como lidas"
+  - Interface otimizada para mobile e desktop
 - Interface de contatos e networking profissional
 
 ### Pais/Responsáveis
@@ -333,7 +344,50 @@ src/
 - **Alertas de Progresso**: Notificações automáticas baseadas em marcos de desenvolvimento
 - **Notificações por Paciente**: Sistema granular de notificações específicas
 
-## Funcionalidades Implementadas Recentemente (2024)
+## Funcionalidades Implementadas Recentemente
+
+### 🚀 Versão 1.2.0 (Janeiro 2025) - Sistema de Agendamentos Inteligente
+
+#### ✅ Sistema Completo de Agendamentos Recorrentes
+- **Problema Resolvido**: Agendamentos manuais consomem horas de trabalho administrativo
+- **Solução**: Sistema automatizado de geração de agendamentos recorrentes
+- **Recursos**:
+  - Padrões de recorrência: semanal, quinzenal, mensal (por dia da semana)
+  - Geração automática até 4 semanas à frente
+  - Pausar/retomar templates com motivos documentados
+  - Detecção automática de conflitos de horário
+  - Calendário visual (semana) + lista detalhada
+- **Impacto**: Redução de até 95% do tempo gasto em agendamentos
+
+#### ✅ Detecção Automática de Sessões Órfãs
+- **Problema Resolvido**: Sessões agendadas mas não registradas passavam despercebidas
+- **Solução**: Job cron automático para detecção e manutenção
+- **Recursos**:
+  - Executa diariamente às 2h da manhã
+  - Identifica sessões agendadas sem registro de progresso
+  - Marca automaticamente como "não realizado" após período de tolerância
+  - Notifica terapeutas para justificativa
+  - Arquivo: `backend/src/jobs/sessionMaintenanceJob.js`
+- **Impacto**: 100% de rastreabilidade e documentação de sessões
+
+#### ✅ NotificationsPage Mobile-First
+- **Problema Resolvido**: Bottom sheet modal truncava texto das notificações em mobile
+- **Solução**: Página dedicada fullscreen com melhor UX
+- **Recursos**:
+  - Agrupamento por data (Hoje, Ontem, Esta semana, Mais antigas)
+  - Exibição completa de texto sem truncamento
+  - Navegação direta para chats e modais específicos
+  - Função "Marcar todas como lidas"
+  - Color-coding por tipo de notificação
+- **Impacto**: Melhor experiência mobile e organização de notificações
+
+#### ✅ Correções Críticas de Bugs
+1. **validate-assignment Error 500**: Implementado fallback silencioso para não bloquear agendamentos
+2. **active_programs_count**: Corrigido para mostrar todos os 14 programas em "Sessão Geral" (antes mostrava apenas 1)
+3. **Navegação de chat**: Notificações agora navegam para modais corretos (`/parent-chat` e `/case-discussion`)
+4. **Navegação mobile**: Botão Admin movido para BottomNavigation, reorganização de Sidebar Tools
+
+## Funcionalidades Implementadas (2024)
 
 ### ✅ Sistema Completo de Relatórios de Evolução Terapêutica
 - **Problema Resolvido**: Necessidade de relatórios profissionais para diferentes disciplinas

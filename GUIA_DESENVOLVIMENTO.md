@@ -117,13 +117,18 @@ npm run build  # Build para produção
 
 ## 🎯 Funcionalidades Principais
 
-### 1. Sistema de Agendamento V2.0 (Recorrente + Inteligente)
-- ✅ **Agendamentos únicos e recorrentes** (diário, semanal, mensal)
-- ✅ **Detecção automática de sessões órfãs** (agendadas sem registro)
-- ✅ **Calendário visual** com view de semana/mês
-- ✅ **Notificações em tempo real**
-- ✅ **Justificativas de ausência**
-- 📍 **Arquivo**: `ABAPLAY_V2_NOVIDADES.md` (documentação completa)
+### 1. Sistema de Agendamento V2.0 (Recorrente + Inteligente) ✅ IMPLEMENTADO
+- ✅ **Agendamentos recorrentes** (semanal, quinzenal, mensal por dia da semana)
+- ✅ **Detecção automática de sessões órfãs** (job cron diário às 2 AM)
+- ✅ **Calendário visual** com view de semana + lista detalhada
+- ✅ **Notificações em tempo real** (appointment_created, appointment_cancelled)
+- ✅ **Justificativas de ausência** com workflow obrigatório
+- ✅ **Geração automática** de agendamentos até 4 semanas à frente
+- 📍 **Arquivos**:
+  - Backend: `schedulingController.js`, `sessionMaintenanceJob.js`
+  - Frontend: `SchedulingPage.js`, `TherapistSchedulePage.js`
+  - Migrations: `002_create_recurring_appointments.sql`
+- 📍 **Documentação**: `ABAPLAY_V2_NOVIDADES.md` (marketing/vendas)
 
 ### 2. Programas Customizados por Clínica
 - ✅ **Biblioteca global** de programas ABA
@@ -150,6 +155,7 @@ npm run build  # Build para produção
 - ✅ **Chat terapeuta-pais** (Socket.IO rooms)
 - ✅ **Discussões de caso** entre profissionais
 - ✅ **Sistema de notificações** com badges
+- ✅ **NotificationsPage mobile-first** (fullscreen, agrupamento por data)
 - ✅ **Alertas de progresso automáticos**
 
 ### 6. Super Admin Enterprise
@@ -189,6 +195,9 @@ Execute na ordem:
 
 # 3. Notificações de agendamento
 004_add_appointment_cancelled_notification.sql
+
+# 4. Correções (v1.2.0)
+fix_active_programs_count.sql  # Correção de contagem de programas em sessão geral
 ```
 
 ### Histórico de Migrações

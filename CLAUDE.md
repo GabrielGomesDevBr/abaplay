@@ -105,6 +105,53 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 - **Communication**: Case discussions and parent-therapist chats with Socket.IO real-time messaging
 - **Notifications**: Real-time notification system with status management and badge indicators
 
+### Scheduling System V2.0 (NEW - January 2025)
+- **Recurring Appointments**: Complete recurring appointment system with automatic generation
+  - Patterns: Weekly, bi-weekly, monthly (by day of week, not day of month)
+  - Automatic generation up to 4 weeks in advance
+  - Pause/resume functionality with documented reasons
+  - Holiday handling and exception management
+  - Database tables: `recurring_appointment_templates`, `scheduled_sessions`
+
+- **Scheduled Sessions Management**:
+  - Calendar view (weekly) and detailed list view
+  - Status tracking: scheduled, completed, missed, cancelled
+  - Automatic conflict detection
+  - Justification workflow for missed sessions
+  - Real-time notifications for cancellations and changes
+  - Integration with session recording (`patient_program_progress`)
+
+- **Orphan Session Detection**: Automated background job for quality control
+  - Cron job: `backend/src/jobs/sessionMaintenanceJob.js`
+  - Runs daily at 2 AM (configurable)
+  - Detects scheduled sessions without recorded progress
+  - Automatically marks as "missed" after grace period
+  - Sends notifications to therapists for justification
+  - Environment variable: `ENABLE_AUTO_DETECTION=true`
+
+- **Notifications for Scheduling**:
+  - **appointment_created**: New appointment notifications
+  - **appointment_cancelled**: Cancellation alerts with reasons
+  - **scheduling_reminder**: Session reminders (future)
+  - Integration with `NotificationsPage` fullscreen view
+
+### Mobile-First Notification System (NEW - January 2025)
+- **NotificationsPage**: Dedicated fullscreen notification page
+  - Replaces bottom sheet modal for better UX on mobile
+  - Date-grouped notifications (Today, Yesterday, This Week, Older)
+  - Full-text display without truncation
+  - "Mark all as read" functionality
+  - Color-coded by notification type (green/red/blue/yellow)
+  - Direct navigation to relevant pages on click
+  - File: `frontend/src/pages/NotificationsPage.js`
+
+- **Enhanced Navigation**: Mobile bottom navigation improvements
+  - Admin button moved to BottomNavigation (from Sidebar Tools)
+  - Programs removed from Sidebar Tools (already in BottomNavigation)
+  - Sidebar Tools now contains: Dashboard, Notes, Logout
+  - Better organization for admin users on mobile devices
+  - Files: `frontend/src/components/layout/BottomNavigation.js`, `Sidebar.js`
+
 ### Comprehensive Report System
 - **Consolidated Reports** with intelligent pre-filling:
   - Generic nature suitable for schools, parents, doctors, and other professionals
@@ -245,6 +292,9 @@ Flexible system allowing clinics to override default trial numbers for specific 
   - `patientController.js` - Patient management and data access
   - `programController.js` - **ENHANCED**: Program operations, library management, and custom program creation
   - `reportController.js` - Evolution report system with automatic analysis and professional data management
+  - `schedulingController.js` - **NEW**: Scheduling and recurring appointment management
+- `src/jobs/` - **NEW**: Background jobs and cron tasks
+  - `sessionMaintenanceJob.js` - Orphan session detection and automatic maintenance (runs daily at 2 AM)
 - `src/models/` - Database query functions with enhanced error handling
   - `assignmentModel.js` - **ENHANCED**: Assignment operations with status constraints and custom trial management
   - `caseDiscussionModel.js` - Case discussion data management
@@ -274,8 +324,9 @@ Flexible system allowing clinics to override default trial numbers for specific 
   - `admin/` - Admin-specific components (AssignmentModal, UserFormModal)
   - `chat/` - Communication components (CaseDiscussionChat, ParentTherapistChat)
   - `contacts/` - Contact management components (ContactList)
-  - `layout/` - Layout components (MainLayout, Navbar, Sidebar)
+  - `layout/` - Layout components (MainLayout, Navbar, Sidebar, BottomNavigation)
   - `notifications/` - Notification system (NotificationBadge, NotificationPanel, PatientNotificationBadge, ProgressAlert)
+  - `scheduling/` - **NEW**: Scheduling components (AppointmentForm, AppointmentsList, RecurringAppointmentModal)
   - `patient/` - Patient components with enhanced reporting
     - `PatientDetails.js`, `PatientForm.js`, `PatientList.js`
     - `ConsolidatedReportModal.js` - **ENHANCED**: Consolidated reports with intelligent pre-filling and rich text editor
@@ -305,9 +356,12 @@ Flexible system allowing clinics to override default trial numbers for specific 
   - `HomePage.js` - Landing page with role-based redirection
   - `LoginPage.js` - Enhanced authentication with modern UI
   - `NotesPage.js` - Patient notes and documentation
+  - `NotificationsPage.js` - **NEW**: Dedicated fullscreen notifications page (mobile-first design)
   - `ParentDashboardPage.js` - Parent dashboard with progress visualization
   - `ProgramSessionPage.js` - Advanced session tracking with prompt levels
   - `ProgramsPage.js` - Program library and assignment interface
+  - `SchedulingPage.js` - **NEW**: Admin scheduling page with calendar and recurring appointments
+  - `TherapistSchedulePage.js` - **NEW**: Therapist personal schedule page
 - `src/api/` - Centralized API communication with error handling and sanitized logging
   - `adminApi.js` - **ENHANCED**: Admin operations with sanitized logging
   - `authApi.js`, `caseDiscussionApi.js` - **ENHANCED**: With sanitized logging
@@ -315,10 +369,12 @@ Flexible system allowing clinics to override default trial numbers for specific 
   - `patientApi.js` - **ENHANCED**: Prompt level support and sanitized logging
   - `programApi.js` - **ENHANCED**: Program management, custom programs, and hierarchy management with sanitized logging
   - `reportApi.js` - **ENHANCED**: Complete report API with evolution reports, automatic analysis, and user profile synchronization
+  - `schedulingApi.js` - **NEW**: Scheduling and recurring appointment API
 - `src/services/` - **NEW**: Business logic services
   - `reportPreFillService.js` - Intelligent text generation service with professional responsibility disclaimers
 - `src/hooks/` - Custom React hooks
   - `useApi.js` - Custom API hook with loading states
+  - `useNotifications.js` - **NEW**: Centralized notification state management with polling
   - `usePatientNotifications.js` - Patient-specific notification management
 - `src/utils/pdfGenerator.js` - **ENHANCED**: Advanced PDF generation with markdown processing and font consistency
 - `src/config.js` - Frontend configuration and API endpoints
@@ -368,6 +424,34 @@ Flexible system allowing clinics to override default trial numbers for specific 
   - **Backward Compatibility**: All existing functionality preserved during enhancement
   - **Error Resilience**: Graceful degradation when network/backend issues occur
   - **Performance**: Asynchronous operations never block UI thread
+
+### Scheduling System & Bug Fixes (v1.2.0 - January 2025)
+- **Recurring Appointments Architecture**:
+  - Complete implementation of automatic recurring appointment generation
+  - Cron job for orphan session detection and maintenance
+  - Integration with notification system for scheduling events
+  - Database migrations: `002_create_recurring_appointments.sql`
+
+- **Critical Bug Fixes**:
+  - **validate-assignment Error 500**: Fixed silent fallback for assignment validation (frontend/src/components/scheduling/AppointmentForm.js:367-373)
+    - Error no longer shows confusing warning to users
+    - Validation is "nice to have", not blocking
+
+  - **active_programs_count Correction**: Fixed program count display for general sessions (backend/migrations/fix_active_programs_count.sql)
+    - General sessions (discipline_id = NULL) now show ALL patient programs (e.g., 14 instead of 1)
+    - Specific discipline sessions show only therapist programs in that discipline
+    - View updated: `v_scheduled_sessions_complete`
+
+  - **Chat Notification Navigation**: Fixed navigation from notification clicks (frontend/src/pages/NotificationsPage.js:60-95)
+    - `parent_chat` notifications now navigate to `/parent-chat` (not `/notes`)
+    - `case_discussion` notifications now navigate to `/case-discussion` (not `/notes`)
+    - Patient is automatically selected in context before navigation
+
+- **Mobile UI Enhancements**:
+  - Admin button moved from Sidebar Tools to BottomNavigation for better accessibility
+  - Programs button removed from Sidebar Tools (redundant with BottomNavigation)
+  - Optimized mobile navigation for admin users (5 buttons: Clients, Scheduling, Programs, Admin, Notifications)
+  - Files: `frontend/src/components/layout/BottomNavigation.js`, `Sidebar.js`
 
 ### Comprehensive Report System
 - **Intelligent Pre-filling System**: 
