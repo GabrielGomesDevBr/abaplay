@@ -18,7 +18,8 @@ import {
   faGlobe,
   faBuilding,
   faTimes,
-  faEllipsisH
+  faEllipsisH,
+  faArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { getCustomPrograms } from '../../api/programApi';
 
@@ -46,8 +47,13 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
   useEffect(() => {
     if (activeTab === 'custom') {
       fetchCustomPrograms();
+    } else if (activeTab === 'global') {
+      // Restaura primeira disciplina dos programas globais ao voltar para aba global
+      if (disciplines && Object.keys(disciplines).length > 0) {
+        setActiveDiscipline(Object.keys(disciplines)[0]);
+      }
     }
-  }, [activeTab]);
+  }, [activeTab, disciplines]);
 
   const fetchCustomPrograms = async () => {
     setLoadingCustom(true);
@@ -86,6 +92,10 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
     // Remove o programa da lista local
     fetchCustomPrograms();
     setDeletingProgramId(null);
+  };
+
+  const handleViewGlobalPrograms = () => {
+    setActiveTab('global');
   };
 
   if (isLoading) {
@@ -138,7 +148,7 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
   };
 
   const currentPrograms = getCurrentPrograms();
-  const areas = activeDiscipline ? currentPrograms[activeDiscipline] : {};
+  const areas = (activeDiscipline && currentPrograms[activeDiscipline]) || {};
   const hasCustomPrograms = Object.keys(customPrograms).length > 0;
   
   // Cores para cada disciplina
@@ -295,20 +305,73 @@ const ProgramLibrary = ({ onAssign, assigningId, assignedPrograms, isPatientSele
             </div>
           </div>
         ) : activeTab === 'custom' && !hasCustomPrograms ? (
-          <div className="text-center py-12">
-            <div className="bg-gradient-to-br from-purple-100 to-indigo-100 p-6 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-              <FontAwesomeIcon icon={faBuilding} className="text-4xl text-purple-400" />
+          <div className="text-center py-8 sm:py-12 px-4">
+            {/* Ícone - responsivo */}
+            <div className={`bg-gradient-to-br ${user?.is_admin ? 'from-purple-100 to-indigo-100' : 'from-gray-100 to-slate-100'} p-6 sm:p-8 rounded-full w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6 flex items-center justify-center`}>
+              <FontAwesomeIcon
+                icon={faBuilding}
+                className={`text-3xl sm:text-4xl ${user?.is_admin ? 'text-purple-400' : 'text-gray-400'}`}
+              />
             </div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Nenhum Programa Customizado</h3>
-            <p className="text-gray-500 mb-6">Sua clínica ainda não criou programas customizados.</p>
-            {user?.is_admin && (
+
+            {/* Título - responsivo */}
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-700 mb-2">
+              {/* Desktop */}
+              <span className="hidden sm:inline">
+                A clínica ainda não possui programas próprios cadastrados
+              </span>
+              {/* Mobile */}
+              <span className="sm:hidden">
+                Sem programas da clínica
+              </span>
+            </h3>
+
+            {/* Descrição - apenas desktop */}
+            <p className="hidden sm:block text-gray-600 text-center max-w-md mx-auto mb-6">
+              {user?.is_admin
+                ? 'Programas customizados são programas exclusivos da sua clínica para necessidades específicas de intervenção.'
+                : 'Enquanto isso, você pode explorar os programas globais disponíveis para suas intervenções.'
+              }
+            </p>
+
+            {/* Descrição curta - mobile */}
+            <p className="sm:hidden text-gray-600 text-sm text-center px-4 mb-4">
+              {user?.is_admin
+                ? 'Crie programas exclusivos para sua clínica'
+                : 'Explore os programas globais disponíveis'
+              }
+            </p>
+
+            {/* Botões - layout responsivo */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center mt-6">
+              {user?.is_admin && (
+                <button
+                  onClick={() => setShowCustomModal(true)}
+                  className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center space-x-2 shadow-md min-h-[44px]"
+                >
+                  <FontAwesomeIcon icon={faPlus} />
+                  <span className="hidden sm:inline">Cadastrar Primeiro Programa</span>
+                  <span className="sm:hidden">Cadastrar</span>
+                </button>
+              )}
+
               <button
-                onClick={() => setShowCustomModal(true)}
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 flex items-center space-x-2 mx-auto"
+                onClick={handleViewGlobalPrograms}
+                className="w-full sm:w-auto bg-white border-2 border-purple-600 text-purple-600 px-6 py-3 rounded-lg hover:bg-purple-50 transition-all duration-200 flex items-center justify-center space-x-2 min-h-[44px]"
               >
-                <FontAwesomeIcon icon={faPlus} />
-                <span>Criar Primeiro Programa</span>
+                <span className="hidden sm:inline">Ver Programas Globais</span>
+                <span className="sm:hidden">Ver Globais</span>
+                <FontAwesomeIcon icon={faArrowRight} />
               </button>
+            </div>
+
+            {/* Dica adicional - apenas desktop admin */}
+            {user?.is_admin && (
+              <div className="hidden sm:block mt-6 pt-6 border-t border-gray-200">
+                <p className="text-sm text-gray-500">
+                  💡 Você também pode começar explorando os programas globais e depois criar versões customizadas
+                </p>
+              </div>
             )}
           </div>
         ) : activeDiscipline && Object.keys(areas).length > 0 ? (
