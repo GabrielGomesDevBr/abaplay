@@ -1,13 +1,22 @@
 # Backend Node modules
 backend/node_modules/
 
-# Frontend Node modules 
+# Frontend Node modules
 frontend/node_modules/
 
 # Arquivos de ambiente
 .env
 backend/.env
 frontend/.env
+
+# Build outputs (React)
+frontend/build/
+frontend/dist/
+build/
+dist/
+
+# Source maps
+*.map
 
 # Logs e arquivos do sistema operacional
 npm-debug.log*
