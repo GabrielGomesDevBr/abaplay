@@ -12,6 +12,7 @@ const MainLayout = () => {
     const { user, isAuthenticated, isLoading } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
+    const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
 
     // <<< LÓGICA DE VISIBILIDADE ATUALIZADA >>>
 
@@ -27,10 +28,11 @@ const MainLayout = () => {
         location.pathname === '/parent-chat' ||
         location.pathname === '/case-discussion';
 
-    // Esconde a barra lateral em mobile sempre que a rota muda.
+    // Esconde a barra lateral e painel de notificações em mobile sempre que a rota muda.
     useEffect(() => {
         setIsSidebarOpen(false);
         setIsToolsMenuOpen(false);
+        setIsNotificationPanelOpen(false);
     }, [location]);
 
     // Função para alternar o menu de ferramentas (expande Ferramentas no Sidebar)
@@ -64,7 +66,12 @@ const MainLayout = () => {
     return (
         <div className="relative h-screen flex flex-col bg-gray-50">
             {/* Navbar aparece sempre, exceto em páginas fullscreen */}
-            {!isFullScreenPage && <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />}
+            {!isFullScreenPage && (
+                <Navbar
+                    isNotificationPanelOpen={isNotificationPanelOpen}
+                    setNotificationPanelOpen={setIsNotificationPanelOpen}
+                />
+            )}
 
             {/* Layout condicional: fullscreen vs normal */}
             {isFullScreenPage ? (
@@ -112,7 +119,8 @@ const MainLayout = () => {
             {!isFullScreenPage && (
                 <BottomNavigation
                     toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-                    toggleToolsMenu={toggleToolsMenu}
+                    toggleNotificationPanel={() => setIsNotificationPanelOpen(!isNotificationPanelOpen)}
+                    isNotificationPanelOpen={isNotificationPanelOpen}
                 />
             )}
         </div>

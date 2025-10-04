@@ -2,20 +2,22 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePatients } from '../../context/PatientContext';
+import useNotifications from '../../hooks/useNotifications';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUsers,
   faCalendarCheck,
   faFolderOpen,
-  faEllipsisH,
+  faBell,
   faEdit
 } from '@fortawesome/free-solid-svg-icons';
 
-const BottomNavigation = ({ toggleSidebar, toggleToolsMenu }) => {
+const BottomNavigation = ({ toggleSidebar, toggleNotificationPanel, isNotificationPanelOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const { selectedPatient } = usePatients();
+  const { totalUnread } = useNotifications();
 
   // Não renderizar para pais ou super admin
   if (user?.role === 'pai' || user?.role === 'super_admin') {
@@ -63,10 +65,11 @@ const BottomNavigation = ({ toggleSidebar, toggleToolsMenu }) => {
       show: true,
     },
     {
-      icon: faEllipsisH,
-      label: 'Mais',
-      action: toggleToolsMenu,
-      isActive: false,
+      icon: faBell,
+      label: 'Notificações',
+      action: toggleNotificationPanel,
+      isActive: isNotificationPanelOpen,
+      badge: totalUnread, // Badge vermelho com número de notificações
       show: true,
     },
   ];
@@ -104,6 +107,12 @@ const BottomNavigation = ({ toggleSidebar, toggleToolsMenu }) => {
                 {/* Badge de alerta se não há cliente selecionado no botão Sessão */}
                 {item.hasAlert && (
                   <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-white"></span>
+                )}
+                {/* Badge de notificações com número */}
+                {item.badge > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 border-2 border-white">
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
                 )}
               </div>
               <span className={`

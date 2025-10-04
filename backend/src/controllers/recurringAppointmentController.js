@@ -83,11 +83,29 @@ const RecurringAppointmentController = {
             // Gerar primeiros agendamentos automaticamente
             const generationResults = await RecurringAppointmentModel.generateAppointments(newTemplate.id);
 
+            // ✅ NOVO: Notificar terapeuta sobre os agendamentos recorrentes criados
+            const successfulAppointments = generationResults.filter(r => r.success).length;
+            if (successfulAppointments > 0) {
+                try {
+                    const NotificationStatus = require('../models/notificationStatusModel');
+                    await NotificationStatus.incrementUnreadCount(
+                        parseInt(therapist_id),
+                        parseInt(patient_id),
+                        'appointment_created'
+                    );
+                    console.log(`[RECURRING] Notificação de ${successfulAppointments} agendamentos recorrentes enviada ao terapeuta ID ${therapist_id}`);
+                } catch (notifError) {
+                    // Não bloquear a criação se a notificação falhar
+                    console.error('[RECURRING] Erro ao enviar notificação:', notifError);
+                }
+            }
+
             res.status(201).json({
                 message: 'Template de recorrência criado com sucesso!',
                 template: newTemplate,
-                generated_appointments: generationResults.filter(r => r.success).length,
-                conflicts: generationResults.filter(r => !r.success).length
+                generated_appointments: successfulAppointments,
+                conflicts: generationResults.filter(r => !r.success).length,
+                notification_sent: successfulAppointments > 0
             });
 
         } catch (error) {

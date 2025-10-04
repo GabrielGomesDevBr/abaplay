@@ -60,6 +60,21 @@ class RecurringAppointmentJob {
 
                     console.log(`[RECURRING-JOB] Template ${template.id}: ${generated} gerados, ${conflicts} conflitos`);
 
+                    // ✅ NOVO: Notificar terapeuta se novos agendamentos foram gerados
+                    if (generated > 0) {
+                        try {
+                            const NotificationStatus = require('../models/notificationStatusModel');
+                            await NotificationStatus.incrementUnreadCount(
+                                template.therapist_id,
+                                template.patient_id,
+                                'appointment_created'
+                            );
+                            console.log(`[RECURRING-JOB] Notificação enviada ao terapeuta ${template.therapist_name}: ${generated} novos agendamentos`);
+                        } catch (notifError) {
+                            console.error(`[RECURRING-JOB] Erro ao notificar terapeuta ${template.therapist_id}:`, notifError);
+                        }
+                    }
+
                 } catch (templateError) {
                     console.error(`[RECURRING-JOB] Erro ao processar template ${template.id}:`, templateError);
                     this.stats.errors.push({

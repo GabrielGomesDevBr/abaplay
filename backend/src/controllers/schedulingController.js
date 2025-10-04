@@ -65,9 +65,24 @@ const SchedulingController = {
             // Buscar dados completos para retorno
             const completeAppointment = await ScheduledSessionModel.findById(newAppointment.id, clinic_id);
 
+            // ✅ NOVO: Notificar terapeuta automaticamente sobre o novo agendamento
+            try {
+                const NotificationStatus = require('../models/notificationStatusModel');
+                await NotificationStatus.incrementUnreadCount(
+                    parseInt(therapist_id),
+                    parseInt(patient_id),
+                    'appointment_created'
+                );
+                console.log(`[SCHEDULING] Notificação de novo agendamento enviada ao terapeuta ID ${therapist_id}`);
+            } catch (notifError) {
+                // Não bloquear a criação se a notificação falhar
+                console.error('[SCHEDULING] Erro ao enviar notificação de novo agendamento:', notifError);
+            }
+
             res.status(201).json({
                 message: 'Agendamento criado com sucesso!',
-                appointment: completeAppointment
+                appointment: completeAppointment,
+                notification_sent: true
             });
 
         } catch (error) {

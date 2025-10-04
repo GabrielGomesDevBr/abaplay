@@ -110,12 +110,18 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
     );
   }
 
-  // Ferramentas de navegação (menu Mais)
+  // Ferramentas de navegação (menu expandido no Sidebar)
   const toolsMenuItems = [
     {
       icon: faTachometerAlt,
       label: 'Dashboard',
       path: '/dashboard',
+      show: true,
+    },
+    {
+      icon: faFolderOpen,
+      label: 'Programas',
+      path: '/programs',
       show: true,
     },
     {
@@ -129,6 +135,12 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
       label: 'Admin',
       path: '/admin',
       show: user?.is_admin,
+    },
+    {
+      icon: faAddressBook,
+      label: 'Contatos',
+      path: '/contacts',
+      show: true,
     },
     {
       icon: faSignOutAlt,

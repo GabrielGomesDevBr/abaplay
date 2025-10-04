@@ -1,37 +1,29 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePatients } from '../../context/PatientContext';
-// --- CORREÇÃO ---
-// A importação do usePrograms não é mais necessária aqui, pois não geramos links dinâmicos.
+import useNotifications from '../../hooks/useNotifications';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import NotificationBadge from '../notifications/NotificationBadge';
+import { faBrain, faSignOutAlt, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faUserShield, faCalendarAlt, faCalendarCheck, faBell } from '@fortawesome/free-solid-svg-icons';
 import NotificationPanel from '../notifications/NotificationPanel';
 import ProgressAlert from '../notifications/ProgressAlert';
-import { faBrain, faSignOutAlt, faTachometerAlt, faUsers, faFolderOpen, faPencilAlt, faUserShield, faCalendarAlt, faCalendarCheck } from '@fortawesome/free-solid-svg-icons';
 
-const Navbar = () => {
+const Navbar = ({ isNotificationPanelOpen, setNotificationPanelOpen }) => {
   const { user, logout } = useAuth();
   const { selectedPatient, refreshPatientData } = usePatients();
-  const [isNotificationPanelOpen, setNotificationPanelOpen] = useState(false);
+  const { totalUnread, refresh: refreshNotifications } = useNotifications();
   const [showProgressAlert, setShowProgressAlert] = useState(false);
-  const notificationBadgeRef = useRef(null);
 
   const toggleNotificationPanel = () => setNotificationPanelOpen(!isNotificationPanelOpen);
 
-  const handleNotificationClick = (notification) => {
-    if (notificationBadgeRef.current?.updateCount) {
-      notificationBadgeRef.current.updateCount();
-    }
+  const handleNotificationClick = () => {
+    refreshNotifications();
     setNotificationPanelOpen(false);
-    console.log('Notificação clicada:', notification);
   };
 
   const handleProgressAlertClose = () => {
     setShowProgressAlert(false);
-    if (notificationBadgeRef.current?.updateCount) {
-      notificationBadgeRef.current.updateCount();
-    }
+    refreshNotifications();
   };
 
   const handleProgramCompleted = async () => {
@@ -170,10 +162,20 @@ const Navbar = () => {
                 {user && user.role !== 'pai' && (
                 <button
                     onClick={toggleNotificationPanel}
-                    className="hidden lg:flex p-2 rounded-full hover:bg-gradient-to-r hover:from-indigo-100 hover:to-purple-100 transition-all duration-200 transform hover:scale-110"
+                    className="hidden lg:flex p-2 rounded-full hover:bg-gradient-to-r hover:from-indigo-100 hover:to-purple-100 transition-all duration-200 transform hover:scale-110 relative"
                     title="Notificações"
                 >
-                    <NotificationBadge ref={notificationBadgeRef} />
+                    <FontAwesomeIcon
+                        icon={faBell}
+                        className={`transition-colors duration-200 ${
+                            totalUnread > 0 ? 'text-indigo-600' : 'text-gray-500'
+                        }`}
+                    />
+                    {totalUnread > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 border-2 border-white">
+                            {totalUnread > 99 ? '99+' : totalUnread}
+                        </span>
+                    )}
                 </button>
                 )}
 
