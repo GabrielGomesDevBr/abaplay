@@ -1,7 +1,7 @@
 import axios from 'axios';
-import API_BASE_URL from '../config';
+import { API_URL as BASE_URL } from '../config';
 
-const API_URL = `${API_BASE_URL}/subscription`;
+const API_URL = `${BASE_URL}/subscription`;
 
 /**
  * API para gerenciamento de assinaturas e planos

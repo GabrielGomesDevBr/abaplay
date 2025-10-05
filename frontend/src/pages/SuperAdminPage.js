@@ -10,7 +10,7 @@ import {
   faCreditCard, faCalendarAlt, faUserTie, faChartPie, faArrowTrendUp,
   faUserPlus, faMoneyBillWave, faClipboardList, faHistory, faTimes, faTrash,
   faCogs, faLightbulb, faHeartbeat, faBullseye, faBrain, faMedal, faRocket,
-  faExclamationCircle, faTrophy, faTable, faGlobe, faCrown, faClock
+  faExclamationCircle, faTrophy, faTable, faGlobe, faCrown, faClock, faCalendarCheck
 } from '@fortawesome/free-solid-svg-icons';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import {
