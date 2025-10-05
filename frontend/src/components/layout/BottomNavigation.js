@@ -16,7 +16,7 @@ import {
 const BottomNavigation = ({ toggleSidebar }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, canAccessPrograms, canAccessSessionRecording } = useAuth();
   const { selectedPatient } = usePatients();
   const { totalUnread } = useNotifications();
 
@@ -49,21 +49,21 @@ const BottomNavigation = ({ toggleSidebar }) => {
       action: handleSessionClick,
       isActive: location.pathname.startsWith('/clients') || location.pathname.startsWith('/session'),
       hasAlert: !selectedPatient, // Mostra alerta visual se não há cliente selecionado
-      show: !user?.is_admin, // ✅ Esconder para admin
+      show: !user?.is_admin && canAccessSessionRecording(), // ✅ Requer plano Pro
     },
     {
       icon: faCalendarCheck,
       label: user?.is_admin ? 'Agendamentos' : 'Agenda',
       action: () => navigate(user?.is_admin ? '/scheduling' : '/my-schedule'),
       isActive: location.pathname === '/scheduling' || location.pathname === '/my-schedule',
-      show: true,
+      show: true, // ✅ Sempre disponível (ambos planos)
     },
     {
       icon: faFolderOpen,
       label: 'Programas',
       action: () => navigate('/programs'),
       isActive: location.pathname === '/programs',
-      show: true,
+      show: canAccessPrograms(), // ✅ Requer plano Pro
     },
     {
       icon: faUserShield,

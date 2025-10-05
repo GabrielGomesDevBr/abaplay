@@ -23,11 +23,15 @@ const schedulingRoutes = require('./routes/schedulingRoutes');
 const therapistScheduleRoutes = require('./routes/therapistScheduleRoutes');
 // --- Sistema de agendamentos recorrentes ---
 const recurringAppointmentRoutes = require('./routes/recurringAppointmentRoutes');
+// --- Sistema de assinaturas e planos ---
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
 
 // --- Job unificado de manutenção de sessões (NOVO) ---
 const SessionMaintenanceJob = require('./jobs/sessionMaintenanceJob');
 // --- Job de agendamentos recorrentes ---
 const { recurringJobInstance } = require('./jobs/recurringAppointmentJob');
+// --- Job de expiração de trials ---
+const TrialExpirationJob = require('./jobs/trialExpirationJob');
 
 // Importa o middleware de autenticação
 const { verifyToken } = require('./middleware/authMiddleware');
@@ -112,6 +116,8 @@ app.use('/api/admin/recurring-appointments', verifyToken, verifyClinicStatus, re
 app.use('/api/scheduling', verifyToken, verifyClinicStatus, schedulingRoutes);
 // --- Nova rota para super admin (sem verificação de clínica) ---
 app.use('/api/super-admin', superAdminRoutes);
+// --- Sistema de assinaturas e planos ---
+app.use('/api/subscription', verifyToken, subscriptionRoutes);
 
 
 // Rota de autenticação (não precisa de token)
@@ -143,5 +149,14 @@ server.listen(PORT, () => {
     console.log('[RECURRING] Jobs de agendamentos recorrentes configurados');
   } else {
     console.log('[RECURRING] Jobs de agendamentos recorrentes desabilitados (NODE_ENV != production e ENABLE_RECURRING_JOBS != true)');
+  }
+
+  // Inicializar job de expiração de trials
+  if (process.env.NODE_ENV === 'production' || process.env.ENABLE_SUBSCRIPTION_MODULES === 'true') {
+    console.log('[TRIAL-EXPIRATION] Iniciando job de expiração de trials...');
+    TrialExpirationJob.scheduleJob();
+    console.log('[TRIAL-EXPIRATION] Job configurado para executar diariamente às 3 AM');
+  } else {
+    console.log('[TRIAL-EXPIRATION] Job de expiração de trials desabilitado (habilite com ENABLE_SUBSCRIPTION_MODULES=true)');
   }
 });

@@ -3,6 +3,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { getUserProfile } from '../api/reportApi';
+import { getMySubscription } from '../api/subscriptionApi';
 
 const AuthContext = createContext(null);
 
@@ -12,6 +13,21 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   // <<< MELHORIA: Estado de carregamento para a verificação inicial >>>
   const [isLoading, setIsLoading] = useState(true);
+  // <<< NOVO: Estado de assinatura >>>
+  const [subscription, setSubscription] = useState(null);
+
+  // Função para sincronizar assinatura
+  const syncSubscription = useCallback(async () => {
+    try {
+      const subscriptionData = await getMySubscription();
+      setSubscription(subscriptionData);
+      return subscriptionData;
+    } catch (error) {
+      // Erro ao buscar assinatura - não bloqueia aplicação
+      setSubscription(null);
+      return null;
+    }
+  }, []);
 
   // Função para sincronizar perfil do backend com localStorage
   const syncUserProfile = useCallback(async (token) => {
@@ -40,6 +56,10 @@ export const AuthProvider = ({ children }) => {
       };
 
       setUser(completeUser);
+
+      // Sincronizar assinatura
+      await syncSubscription();
+
       return completeUser;
 
     } catch (error) {
@@ -60,7 +80,7 @@ export const AuthProvider = ({ children }) => {
       setUser(userWithProfessionalData);
       return userWithProfessionalData;
     }
-  }, []);
+  }, [syncSubscription]);
 
   // Função para inicializar o estado de autenticação a partir do localStorage
   const initializeAuth = useCallback(async () => {
@@ -151,7 +171,34 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const value = { token, user, isAuthenticated, isLoading, login, logout, updateUser };
+  // Helper functions para verificar plano
+  const hasProAccess = useCallback(() => {
+    if (!subscription) return false;
+    return subscription.effective_plan === 'pro' || subscription.has_active_trial;
+  }, [subscription]);
+
+  const canAccessPrograms = useCallback(() => {
+    return hasProAccess();
+  }, [hasProAccess]);
+
+  const canAccessSessionRecording = useCallback(() => {
+    return hasProAccess();
+  }, [hasProAccess]);
+
+  const value = {
+    token,
+    user,
+    isAuthenticated,
+    isLoading,
+    subscription,
+    hasProAccess,
+    canAccessPrograms,
+    canAccessSessionRecording,
+    syncSubscription,
+    login,
+    logout,
+    updateUser
+  };
 
   return (
     <AuthContext.Provider value={value}>
