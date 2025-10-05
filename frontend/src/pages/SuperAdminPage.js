@@ -10,7 +10,7 @@ import {
   faCreditCard, faCalendarAlt, faUserTie, faChartPie, faArrowTrendUp,
   faUserPlus, faMoneyBillWave, faClipboardList, faHistory, faTimes, faTrash,
   faCogs, faLightbulb, faHeartbeat, faBullseye, faBrain, faMedal, faRocket,
-  faExclamationCircle, faTrophy, faTable, faGlobe
+  faExclamationCircle, faTrophy, faTable, faGlobe, faCrown, faClock
 } from '@fortawesome/free-solid-svg-icons';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import {
@@ -466,7 +466,8 @@ const SuperAdminPage = () => {
               { key: 'clinics', label: 'Clínicas', icon: faBuilding },
               { key: 'programs', label: 'Programas Globais', icon: faGlobe },
               { key: 'financial', label: 'Financeiro', icon: faDollarSign },
-              { key: 'calendar', label: 'Calendário', icon: faCalendarAlt }
+              { key: 'calendar', label: 'Calendário', icon: faCalendarAlt },
+              { key: 'subscriptions', label: 'Assinaturas', icon: faCreditCard }
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -543,7 +544,7 @@ const SuperAdminPage = () => {
         )}
         
         {activeTab === 'calendar' && (
-          <CalendarContent 
+          <CalendarContent
             billings={billings}
             onViewBilling={(billing) => {
               setSelectedBilling(billing);
@@ -559,6 +560,10 @@ const SuperAdminPage = () => {
             }}
             onCreateBilling={() => setShowCreateBilling(true)}
           />
+        )}
+
+        {activeTab === 'subscriptions' && (
+          <SubscriptionsContent />
         )}
       </div>
 
@@ -2325,6 +2330,320 @@ const CohortAnalysisSection = ({ data }) => {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+// ========================================
+// SUBSCRIPTIONS CONTENT COMPONENT
+// ========================================
+
+const SubscriptionsContent = () => {
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [stats, setStats] = useState([]);
+  const [expiringTrials, setExpiringTrials] = useState([]);
+  const [selectedClinic, setSelectedClinic] = useState(null);
+  const [showTrialModal, setShowTrialModal] = useState(false);
+  const [trialDuration, setTrialDuration] = useState(7);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadSubscriptionData();
+  }, []);
+
+  const loadSubscriptionData = async () => {
+    setLoading(true);
+    try {
+      const { getAllSubscriptions, getSubscriptionStats, getExpiringTrials, activateTrial, convertTrial, cancelTrial, updateSubscriptionPlan } = require('../api/subscriptionApi');
+
+      const [subsData, statsData, trialsData] = await Promise.all([
+        getAllSubscriptions(),
+        getSubscriptionStats(),
+        getExpiringTrials(7)
+      ]);
+
+      setSubscriptions(subsData);
+      setStats(statsData);
+      setExpiringTrials(trialsData);
+    } catch (error) {
+      console.error('Erro ao carregar dados de assinatura:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleActivateTrial = async (clinic) => {
+    setSelectedClinic(clinic);
+    setShowTrialModal(true);
+  };
+
+  const confirmActivateTrial = async () => {
+    if (!selectedClinic) return;
+
+    try {
+      const { activateTrial } = require('../api/subscriptionApi');
+      await activateTrial(selectedClinic.clinic_id, trialDuration);
+      alert(`Trial de ${trialDuration} dias ativado com sucesso!`);
+      setShowTrialModal(false);
+      setSelectedClinic(null);
+      setTrialDuration(7);
+      loadSubscriptionData();
+    } catch (error) {
+      alert('Erro ao ativar trial: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  const handleConvertTrial = async (clinic) => {
+    if (!window.confirm(`Converter trial da clínica "${clinic.clinic_name}" para plano Pro permanente?`)) return;
+
+    try {
+      const { convertTrial } = require('../api/subscriptionApi');
+      await convertTrial(clinic.clinic_id);
+      alert('Trial convertido para Pro com sucesso!');
+      loadSubscriptionData();
+    } catch (error) {
+      alert('Erro ao converter trial: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  const handleCancelTrial = async (clinic) => {
+    if (!window.confirm(`Cancelar trial da clínica "${clinic.clinic_name}"?`)) return;
+
+    try {
+      const { cancelTrial } = require('../api/subscriptionApi');
+      await cancelTrial(clinic.clinic_id);
+      alert('Trial cancelado com sucesso!');
+      loadSubscriptionData();
+    } catch (error) {
+      alert('Erro ao cancelar trial: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  const handleChangePlan = async (clinic, newPlan) => {
+    if (!window.confirm(`Alterar plano da clínica "${clinic.clinic_name}" para "${newPlan === 'pro' ? 'Pro' : 'Agenda'}"?`)) return;
+
+    try {
+      const { updateSubscriptionPlan } = require('../api/subscriptionApi');
+      await updateSubscriptionPlan(clinic.clinic_id, newPlan);
+      alert('Plano atualizado com sucesso!');
+      loadSubscriptionData();
+    } catch (error) {
+      alert('Erro ao atualizar plano: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <FontAwesomeIcon icon={faSpinner} spin className="text-4xl text-blue-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {stats.map((stat, index) => (
+          <div key={index} className="bg-white p-6 rounded-lg shadow border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">
+                  {stat.plan === 'pro' && 'Plano Pro'}
+                  {stat.plan === 'scheduling' && 'Plano Agenda'}
+                  {stat.plan === 'trial' && 'Trials Ativos'}
+                </p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">
+                  {stat.total_clinics}
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  {stat.total_patients} pacientes • R$ {safeToFixed(stat.total_revenue, 2)}
+                </p>
+              </div>
+              <div className={`p-4 rounded-full ${
+                stat.plan === 'pro' ? 'bg-amber-100' :
+                stat.plan === 'trial' ? 'bg-green-100' : 'bg-blue-100'
+              }`}>
+                <FontAwesomeIcon
+                  icon={stat.plan === 'pro' ? faTrophy : stat.plan === 'trial' ? faClock : faCalendarAlt}
+                  className={`text-2xl ${
+                    stat.plan === 'pro' ? 'text-amber-600' :
+                    stat.plan === 'trial' ? 'text-green-600' : 'text-blue-600'
+                  }`}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Expiring Trials Alert */}
+      {expiringTrials.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="text-yellow-600 text-xl mr-3" />
+            <div>
+              <h4 className="font-semibold text-yellow-900">
+                {expiringTrials.length} trial(s) expirando em breve
+              </h4>
+              <p className="text-sm text-yellow-700">
+                Clínicas com trial expirando nos próximos 7 dias
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subscriptions Table */}
+      <div className="bg-white rounded-lg shadow border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Todas as Assinaturas</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Clínica</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plano</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trial</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pacientes</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Receita</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {subscriptions.map((sub) => {
+                const daysLeft = sub.trial_pro_expires_at
+                  ? Math.ceil((new Date(sub.trial_pro_expires_at) - new Date()) / (1000 * 60 * 60 * 24))
+                  : 0;
+
+                return (
+                  <tr key={sub.clinic_id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{sub.clinic_name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                        sub.effective_plan === 'pro'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        <FontAwesomeIcon
+                          icon={sub.effective_plan === 'pro' ? faCrown : faCalendarCheck}
+                          className="mr-2"
+                        />
+                        {sub.plan_display_name}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {sub.has_active_trial ? (
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          daysLeft <= 2 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                        }`}>
+                          <FontAwesomeIcon icon={faClock} className="mr-1" />
+                          {daysLeft} dia{daysLeft !== 1 ? 's' : ''}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-500">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {sub.total_patients}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      R$ {safeToFixed(sub.monthly_revenue, 2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex items-center gap-2">
+                        {!sub.has_active_trial && (
+                          <button
+                            onClick={() => handleActivateTrial(sub)}
+                            className="text-green-600 hover:text-green-900"
+                            title="Ativar Trial"
+                          >
+                            <FontAwesomeIcon icon={faPlay} />
+                          </button>
+                        )}
+
+                        {sub.has_active_trial && (
+                          <>
+                            <button
+                              onClick={() => handleConvertTrial(sub)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Converter para Pro"
+                            >
+                              <FontAwesomeIcon icon={faCheckCircle} />
+                            </button>
+                            <button
+                              onClick={() => handleCancelTrial(sub)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Cancelar Trial"
+                            >
+                              <FontAwesomeIcon icon={faTimes} />
+                            </button>
+                          </>
+                        )}
+
+                        <button
+                          onClick={() => handleChangePlan(sub, sub.subscription_plan === 'pro' ? 'scheduling' : 'pro')}
+                          className="text-indigo-600 hover:text-indigo-900"
+                          title="Mudar Plano"
+                        >
+                          <FontAwesomeIcon icon={faEdit} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Trial Activation Modal */}
+      {showTrialModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Ativar Trial Pro</h3>
+            <p className="text-gray-600 mb-4">
+              Clínica: <strong>{selectedClinic?.clinic_name}</strong>
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Duração do Trial (dias)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="30"
+                value={trialDuration}
+                onChange={(e) => setTrialDuration(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+              <p className="text-xs text-gray-500 mt-1">Máximo: 30 dias</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={confirmActivateTrial}
+                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+              >
+                Ativar Trial
+              </button>
+              <button
+                onClick={() => {
+                  setShowTrialModal(false);
+                  setSelectedClinic(null);
+                  setTrialDuration(7);
+                }}
+                className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
