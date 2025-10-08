@@ -57,6 +57,10 @@ promptLevelController.updatePromptLevel = async (req, res) => {
 
     console.log(`[PROMPT-LEVEL] Nível atualizado para ${promptLevel} - Assignment ${assignmentId} por usuário ${userId}`);
 
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     res.status(200).json({
       message: 'Nível de prompting atualizado com sucesso.',
       assignment: updatedAssignment
@@ -112,6 +116,10 @@ promptLevelController.getCurrentPromptLevel = async (req, res) => {
     // Busca o nível atual
     const currentLevel = await Assignment.getCurrentPromptLevel(assignmentId);
 
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     res.status(200).json({
       assignmentId: parseInt(assignmentId),
       currentPromptLevel: currentLevel || 5, // Default para 5 se não encontrado
@@ -146,6 +154,10 @@ promptLevelController.getPromptLevelByPatientAndProgram = async (req, res) => {
     // Admins podem ver qualquer coisa, terapeutas podem ver seus pacientes, pais podem ver seus filhos
     
     const currentLevel = await Assignment.getPromptLevelByPatientAndProgram(patientId, programId);
+
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
 
     res.status(200).json({
       patientId: parseInt(patientId),
