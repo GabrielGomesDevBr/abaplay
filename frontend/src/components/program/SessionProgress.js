@@ -173,29 +173,20 @@ const SessionProgress = ({ program, assignment }) => {
     const assignmentId = assignment?.assignment_id || assignment?.id;
 
     if (!selectedPatient || !program || !programId || !assignmentId) {
-      console.error('[SESSION-PROGRESS] Dados insuficientes para atualizar prompt level');
+      console.error('[SessionProgress] Dados insuficientes para atualizar o nível de prompt.');
       return;
     }
 
-    // Atualiza UI imediatamente
+    // Atualiza a UI imediatamente para feedback rápido (Atualização Otimista)
     setPromptLevel(newLevel);
 
     try {
-      console.log(`[SESSION-PROGRESS] Atualizando prompt level para ${newLevel}`);
       await setPromptLevelForProgram(selectedPatient.id, programId, newLevel, assignmentId);
-      console.log(`[SESSION-PROGRESS] Prompt level ${newLevel} salvo com sucesso`);
+      // Opcional: Adicionar um feedback de sucesso aqui, como um toast.
     } catch (error) {
-      console.error(`[SESSION-PROGRESS] Erro ao salvar prompt level:`, error);
-
-      // Em caso de erro, recarrega o valor real do banco
-      try {
-        const realLevel = await getPromptLevelForProgram(selectedPatient.id, programId);
-        setPromptLevel(realLevel);
-        console.log(`[SESSION-PROGRESS] Prompt level revertido para valor do banco: ${realLevel}`);
-      } catch (reloadError) {
-        console.error(`[SESSION-PROGRESS] Erro ao recarregar prompt level:`, reloadError);
-        setPromptLevel(5); // Último fallback
-      }
+      // Em caso de falha, loga o erro mas não reverte a UI para evitar o "reset".
+      console.error(`[SessionProgress] Falha ao salvar o nível de prompt:`, error);
+      // Opcional: Adicionar um feedback de erro aqui, como um toast.
     }
   }, [selectedPatient, program, assignment, setPromptLevelForProgram, getPromptLevelForProgram]);
 
