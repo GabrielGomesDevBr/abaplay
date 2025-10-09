@@ -32,8 +32,8 @@ const SessionMaintenanceJob = {
       // ETAPA 1: Detectar e vincular sessões realizadas
       console.log('[SESSION-MAINTENANCE] Etapa 1: Detectando sessões realizadas...');
 
-      // Buscar todas as clínicas ativas
-      const clinicsQuery = 'SELECT DISTINCT id FROM clinics WHERE is_active = true';
+      // Buscar todas as clínicas
+      const clinicsQuery = 'SELECT DISTINCT id FROM clinics';
       const pool = require('../models/db');
       const { rows: clinics } = await pool.query(clinicsQuery);
 

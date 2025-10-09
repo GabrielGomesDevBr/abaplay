@@ -48,7 +48,7 @@ main (produção estável)
 ┌─────────────────────────────────────┐
 │   PRODUÇÃO (Servidor)               │
 │                                     │
-│   URL:    abaplay.com.br          │
+│   URL:    abaplay.app.br          │
 │   Branch: main                     │
 │                                     │
 │   Conecta → Mesma Base de Dados    │

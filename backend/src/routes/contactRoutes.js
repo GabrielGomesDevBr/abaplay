@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/authMiddleware');
+const { requireProPlan } = require('../middleware/subscriptionMiddleware');
 const contactController = require('../controllers/contactController');
 
 /**
@@ -13,8 +14,8 @@ router.get('/therapists/:patientId', verifyToken, contactController.getTherapist
 /**
  * @route GET /api/contacts/colleagues/:patientId
  * @desc Busca colegas terapeutas que trabalham com o mesmo paciente (para discussões de caso)
- * @access Private (apenas terapeutas)
+ * @access Private (apenas terapeutas + plano Pro)
  */
-router.get('/colleagues/:patientId', verifyToken, contactController.getColleagueContacts);
+router.get('/colleagues/:patientId', verifyToken, requireProPlan, contactController.getColleagueContacts);
 
 module.exports = router;

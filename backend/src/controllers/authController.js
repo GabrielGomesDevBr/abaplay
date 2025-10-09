@@ -78,18 +78,30 @@ authController.loginUser = async (req, res) => {
             terms_accepted_at: user.terms_accepted_at // Para verificar se precisa aceitar termos
         };
 
-        // Se for admin normal, busca informações da clínica
-        if (user.is_admin && user.clinic_id) {
+        // Busca informações da clínica (para todos os usuários com clinic_id)
+        if (user.clinic_id) {
             try {
                 const clinic = await ClinicModel.findById(user.clinic_id);
+                console.log('[AUTH-DEBUG] Clinic data:', JSON.stringify({ id: clinic?.id, subscription_plan: clinic?.subscription_plan }));
                 if (clinic) {
-                    payload.max_patients = clinic.max_patients || 0;
-                    payload.clinic_name = clinic.name;
+                    payload.subscription_plan = clinic.subscription_plan || 'scheduling';
+                    payload.trial_pro_enabled = clinic.trial_pro_enabled || false;
+                    payload.trial_pro_expires_at = clinic.trial_pro_expires_at || null;
+
+                    if (user.is_admin) {
+                        payload.max_patients = clinic.max_patients || 0;
+                        payload.clinic_name = clinic.name;
+                    }
                 }
+                console.log('[AUTH-DEBUG] Final payload subscription:', payload.subscription_plan);
             } catch (clinicError) {
                 console.error('Erro ao buscar informações da clínica:', clinicError);
                 // Continua sem as informações da clínica se houver erro
-                payload.max_patients = 0;
+                payload.subscription_plan = 'scheduling';
+                payload.trial_pro_enabled = false;
+                if (user.is_admin) {
+                    payload.max_patients = 0;
+                }
             }
         }
 

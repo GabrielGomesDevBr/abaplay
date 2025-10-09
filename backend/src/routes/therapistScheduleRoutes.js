@@ -4,6 +4,7 @@ const express = require('express');
 const { body, param, query } = require('express-validator');
 const { verifyToken } = require('../middleware/authMiddleware');
 const therapistScheduleController = require('../controllers/therapistScheduleController');
+const schedulingController = require('../controllers/schedulingController');
 
 const router = express.Router();
 
@@ -114,6 +115,20 @@ router.post(
         ...justificationValidation
     ],
     therapistScheduleController.justifyMissedAppointment
+);
+
+/**
+ * Marcar sessão como completa com anotações (Plano Agendamento)
+ * PUT /api/therapist/schedule/sessions/:id/complete
+ * ⚠️ Esta rota NÃO tem requireProPlan - é exclusiva do plano agendamento
+ */
+router.put(
+    '/sessions/:id/complete',
+    [
+        param('id', 'ID da sessão deve ser um número válido.').isInt(),
+        body('notes', 'Anotações são obrigatórias e devem ter entre 10 e 5000 caracteres.').isLength({ min: 10, max: 5000 })
+    ],
+    schedulingController.completeSessionWithNotes
 );
 
 module.exports = router;

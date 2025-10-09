@@ -46,6 +46,23 @@ const SuperAdminRoute = ({ children }) => {
   return children;
 };
 
+// Componente de Guarda para Rotas Pro (FASE 2)
+const ProRoute = ({ children }) => {
+  const { canAccessDashboard } = useAuth();
+  if (!canAccessDashboard()) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
+// Componente de Guarda para Programas (FASE 2)
+const ProgramsRoute = ({ children }) => {
+  const { canAccessPrograms } = useAuth();
+  if (!canAccessPrograms()) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
 
 function App() {
   return (
@@ -89,16 +106,40 @@ function App() {
                     } 
                   />
 
-                  {/* --- ROTA CORRIGIDA --- */}
-                  {/* A rota de programas não precisa mais do parâmetro, pois a página exibe a biblioteca completa. */}
-                  <Route path="programs" element={<ProgramsPage />} />
+                  {/* --- ROTA PROTEGIDA (FASE 2) --- */}
+                  {/* Programas: apenas plano Pro */}
+                  <Route
+                    path="programs"
+                    element={
+                      <ProgramsRoute>
+                        <ProgramsPage />
+                      </ProgramsRoute>
+                    }
+                  />
 
-                  {/* --- NOVA ROTA ADICIONADA --- */}
-                  {/* Rota para a página de execução da sessão de um programa. */}
-                  <Route path="session/:assignmentId" element={<ProgramSessionPage />} />
+                  {/* --- ROTA PROTEGIDA (FASE 2) --- */}
+                  {/* Sessão de programa: apenas plano Pro */}
+                  <Route
+                    path="session/:assignmentId"
+                    element={
+                      <ProgramsRoute>
+                        <ProgramSessionPage />
+                      </ProgramsRoute>
+                    }
+                  />
 
                   <Route path="notes" element={<NotesPage />} />
-                  <Route path="dashboard" element={<DashboardPage />} />
+
+                  {/* --- ROTA PROTEGIDA (FASE 2) --- */}
+                  {/* Dashboard: apenas plano Pro */}
+                  <Route
+                    path="dashboard"
+                    element={
+                      <ProRoute>
+                        <DashboardPage />
+                      </ProRoute>
+                    }
+                  />
 
                   {/* --- ROTAS DO SISTEMA DE AGENDAMENTO --- */}
                   {/* Página de agendamento para administradores */}

@@ -26,7 +26,7 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { patients, selectedPatient, selectPatient, clearPatientSelection, isLoading } = usePatients();
-  const { user, logout } = useAuth();
+  const { user, logout, canAccessDashboard } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 
   // Se não receber props de controle, usa estado local
@@ -112,12 +112,13 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
 
   // Ferramentas de navegação (menu expandido no Sidebar)
   // ✅ ATUALIZADO: Removido "Programas" (já está na barra inferior) e "Admin" (movido para barra inferior)
+  // ✅ FASE 2: Dashboard oculto para plano agendamento
   const toolsMenuItems = [
     {
       icon: faTachometerAlt,
       label: 'Dashboard',
       path: '/dashboard',
-      show: true,
+      show: canAccessDashboard(), // Apenas plano Pro
     },
     {
       icon: faPencilAlt,

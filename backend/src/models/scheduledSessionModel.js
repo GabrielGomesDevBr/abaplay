@@ -276,6 +276,64 @@ const ScheduledSession = {
     },
 
     /**
+     * Marca sessão como completa com anotações (Plano Agendamento)
+     * Esta função é para o plano agendamento, que NÃO usa registro detalhado de programas
+     * @param {number} id - ID da sessão agendada
+     * @param {string} notes - Anotações da sessão realizada
+     * @param {number} clinic_id - ID da clínica (para segurança)
+     * @returns {Promise<Object>} A sessão atualizada
+     */
+    async completeWithNotes(id, notes, clinic_id) {
+        // Verificar se o agendamento pertence à clínica
+        const existing = await this.findById(id, clinic_id);
+        if (!existing) {
+            throw new Error('Agendamento não encontrado ou não pertence a esta clínica.');
+        }
+
+        // Verificar se sessão já está completa ou cancelada
+        if (existing.status === 'completed') {
+            // Se já está completa, apenas atualiza as notas
+            const query = `
+                UPDATE scheduled_sessions
+                SET notes = $1, updated_at = NOW()
+                WHERE id = $2
+                RETURNING *
+            `;
+
+            try {
+                const { rows } = await pool.query(query, [notes, id]);
+                return rows[0];
+            } catch (error) {
+                console.error(`[SCHEDULING-ERROR] Erro ao atualizar notas da sessão ID ${id}:`, error);
+                throw error;
+            }
+        }
+
+        if (existing.status === 'cancelled') {
+            throw new Error('Não é possível marcar como completa uma sessão cancelada.');
+        }
+
+        // Marcar como completa e adicionar notas
+        const query = `
+            UPDATE scheduled_sessions
+            SET status = 'completed',
+                notes = $1,
+                updated_at = NOW()
+            WHERE id = $2
+            RETURNING *
+        `;
+
+        try {
+            const { rows } = await pool.query(query, [notes, id]);
+            console.log(`[SCHEDULING] Sessão marcada como completa: ID ${id}`);
+            return rows[0];
+        } catch (error) {
+            console.error(`[SCHEDULING-ERROR] Erro ao completar sessão ID ${id}:`, error);
+            throw error;
+        }
+    },
+
+    /**
      * Remove um agendamento (cancelamento)
      * @param {number} id - ID do agendamento
      * @param {number} clinic_id - ID da clínica (para segurança)

@@ -29,7 +29,18 @@ const ClinicModel = {
    * @returns {Promise<object|undefined>} O objeto da clínica ou undefined se não for encontrada.
    */
   async findById(clinicId) {
-    const query = 'SELECT id, name, max_patients, created_at FROM clinics WHERE id = $1';
+    const query = `
+      SELECT
+        id,
+        name,
+        max_patients,
+        subscription_plan,
+        trial_pro_enabled,
+        trial_pro_expires_at,
+        created_at
+      FROM clinics
+      WHERE id = $1
+    `;
     const { rows } = await pool.query(query, [clinicId]);
     return rows[0];
   },

@@ -4,6 +4,7 @@ const { body } = require('express-validator');
 
 const patientController = require('../controllers/patientController.js');
 const { verifyToken } = require('../middleware/authMiddleware.js');
+const { requireProPlan } = require('../middleware/subscriptionMiddleware');
 
 // --- ROTAS CORRIGIDAS ---
 // Mantemos apenas as rotas que gerenciam PACIENTES.
@@ -17,15 +18,17 @@ router.get('/', verifyToken, patientController.getAllPatients);
 // ROTAS ESPECÍFICAS DEVEM VIR ANTES DAS GENÉRICAS
 // ==========================================
 
-// GET /api/patients/:id/expanded - Buscar dados expandidos (apenas admin)
+// GET /api/patients/:id/expanded - Buscar dados expandidos (permite visualizar dados antigos ao fazer downgrade)
 router.get('/:id/expanded', verifyToken, patientController.getPatientExpandedData);
 
 // ROTA REMOVIDA: GET /api/patients/:id/completeness
 // Motivo: Funcionalidade de completude removida - todos os campos são opcionais
 
 // PUT /api/patients/:id/expanded - Atualizar dados expandidos (apenas admin)
+// ⚠️ PROTEGIDA: Edição de dados expandidos é feature Pro
 router.put('/:id/expanded',
     verifyToken,
+    requireProPlan,
     [
         // Validações básicas para dados principais
         // IMPORTANTE: optional({ values: 'falsy' }) aceita strings vazias, null, undefined

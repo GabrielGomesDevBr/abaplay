@@ -185,6 +185,26 @@ export const AuthProvider = ({ children }) => {
     return hasProAccess();
   }, [hasProAccess]);
 
+  const canAccessDashboard = useCallback(() => {
+    return hasProAccess();
+  }, [hasProAccess]);
+
+  const canAccessReports = useCallback(() => {
+    return hasProAccess();
+  }, [hasProAccess]);
+
+  const canAccessCaseDiscussions = useCallback(() => {
+    return hasProAccess();
+  }, [hasProAccess]);
+
+  const canAccessParentChat = useCallback(() => {
+    return hasProAccess();
+  }, [hasProAccess]);
+
+  const canAccessExpandedPatientData = useCallback(() => {
+    return hasProAccess();
+  }, [hasProAccess]);
+
   const value = {
     token,
     user,
@@ -194,6 +214,11 @@ export const AuthProvider = ({ children }) => {
     hasProAccess,
     canAccessPrograms,
     canAccessSessionRecording,
+    canAccessDashboard,
+    canAccessReports,
+    canAccessCaseDiscussions,
+    canAccessParentChat,
+    canAccessExpandedPatientData,
     syncSubscription,
     login,
     logout,

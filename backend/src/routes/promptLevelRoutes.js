@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const promptLevelController = require('../controllers/promptLevelController');
 const { verifyToken } = require('../middleware/authMiddleware');
+const { requireProPlan } = require('../middleware/subscriptionMiddleware');
 
 // Aplica verificação de token a todas as rotas
 router.use(verifyToken);
+
+// ⚠️ PROTEGIDAS: Níveis de prompting são feature Pro
+router.use(requireProPlan);
 
 /**
  * PUT /api/prompt-levels/assignment/:assignmentId

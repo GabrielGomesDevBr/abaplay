@@ -12,8 +12,8 @@ import { expandedPatientApi } from '../../api/expandedPatientApi';
 import { createPatient, updatePatient } from '../../api/adminApi';
 import { useAuth } from '../../context/AuthContext';
 
-const ExpandedPatientForm = ({ isOpen, onClose, onSave, patient }) => {
-    const { user } = useAuth();
+const ExpandedPatientForm = ({ isOpen, onClose, onSave, patient, simplified = false }) => {
+    const { user, canAccessExpandedPatientData } = useAuth();
     const [activeTab, setActiveTab] = useState('basic');
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -468,6 +468,23 @@ const ExpandedPatientForm = ({ isOpen, onClose, onSave, patient }) => {
                         </button>
                     </div>
                 </div>
+
+                {/* FASE 3: Aviso para plano Agendamento */}
+                {!canAccessExpandedPatientData() && (
+                    <div className="bg-blue-50 border-l-4 border-blue-400 p-4 m-4">
+                        <div className="flex">
+                            <FontAwesomeIcon icon={faInfoCircle} className="text-blue-400 mr-3 mt-1" />
+                            <div>
+                                <h3 className="text-sm font-medium text-blue-800">
+                                    📅 Plano Agendamento
+                                </h3>
+                                <p className="mt-1 text-sm text-blue-700">
+                                    Apenas os dados básicos são necessários. As demais abas são opcionais e ficam disponíveis ao fazer upgrade para o Plano Pro.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Errors */}
                 {errors.length > 0 && (

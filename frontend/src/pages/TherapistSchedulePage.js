@@ -23,6 +23,7 @@ import {
   getPersonalStatistics,
   getAppointmentDetails,
   justifyMissedAppointment,
+  completeSessionWithNotes,
   groupAppointmentsByDate,
   getNextAppointment,
   calculateSummaryStats,
@@ -31,6 +32,7 @@ import {
   getPerformanceColor
 } from '../api/therapistScheduleApi';
 import AppointmentDetailsModal from '../components/scheduling/AppointmentDetailsModal';
+import SessionNoteModal from '../components/scheduling/SessionNoteModal';
 
 /**
  * Página de agenda pessoal para terapeutas
@@ -53,6 +55,8 @@ const TherapistSchedulePage = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showJustificationModal, setShowJustificationModal] = useState(false);
   const [justifyingAppointment, setJustifyingAppointment] = useState(null);
+  const [showSessionNoteModal, setShowSessionNoteModal] = useState(false);
+  const [editingSession, setEditingSession] = useState(null);
 
   // Estados de visualização
   const [currentView, setCurrentView] = useState('today'); // today, upcoming, schedule, missed, stats
@@ -166,6 +170,22 @@ const TherapistSchedulePage = () => {
     }
   };
 
+  const handleAddSessionNote = (appointment) => {
+    setEditingSession(appointment);
+    setShowSessionNoteModal(true);
+  };
+
+  const handleSaveSessionNote = async (sessionId, notes) => {
+    try {
+      await completeSessionWithNotes(sessionId, notes);
+
+      // Recarregar dados após salvar
+      await loadAllData();
+    } catch (error) {
+      throw new Error(error.message || 'Erro ao salvar anotação');
+    }
+  };
+
   const handleJustifyAppointment = (appointment) => {
     setJustifyingAppointment(appointment);
     setJustificationData({
@@ -267,11 +287,28 @@ const TherapistSchedulePage = () => {
                   Atrasado
                 </span>
               )}
-              {appointment.status === 'completed' && !appointment.progress_session_id && (
-                <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full flex items-center gap-1">
-                  <FontAwesomeIcon icon={faExclamationTriangle} className="w-3 h-3" />
-                  Sem registro
-                </span>
+              {appointment.status === 'scheduled' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddSessionNote(appointment);
+                  }}
+                  className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded hover:bg-green-200 active:bg-green-300 flex items-center gap-1"
+                >
+                  <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
+                  Registrar
+                </button>
+              )}
+              {appointment.notes && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddSessionNote(appointment);
+                  }}
+                  className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded hover:bg-blue-200 active:bg-blue-300"
+                >
+                  Editar nota
+                </button>
               )}
             </div>
             <div className="flex items-center mb-1.5 sm:mb-1">
@@ -624,6 +661,17 @@ const TherapistSchedulePage = () => {
         appointment={selectedAppointment}
         canEdit={false}
         canDelete={false}
+      />
+
+      {/* Modal de Registro de Sessão (Plano Agendamento) */}
+      <SessionNoteModal
+        session={editingSession}
+        isOpen={showSessionNoteModal}
+        onClose={() => {
+          setShowSessionNoteModal(false);
+          setEditingSession(null);
+        }}
+        onSave={handleSaveSessionNote}
       />
 
       {/* Modal de Justificativa */}

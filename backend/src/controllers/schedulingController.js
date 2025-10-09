@@ -335,6 +335,80 @@ const SchedulingController = {
     },
 
     /**
+     * Marcar sessão como completa com anotações (Plano Agendamento)
+     * PUT /api/therapist-schedule/sessions/:id/complete
+     * Esta é a funcionalidade SIMPLIFICADA para o plano agendamento
+     */
+    async completeSessionWithNotes(req, res, next) {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json(formatValidationErrors(errors));
+        }
+
+        try {
+            const { id } = req.params;
+            const { notes } = req.body;
+            const { clinic_id, id: userId, is_admin, subscription_plan } = req.user;
+
+            // Verificar que o usuário está no plano agendamento
+            // (plano Pro usa registro detalhado via patient_program_progress)
+            if (subscription_plan === 'pro') {
+                return res.status(400).json({
+                    errors: [{
+                        msg: 'Esta função é apenas para o plano agendamento. Use o registro detalhado de programas.',
+                        code: 'PRO_PLAN_USE_PROGRAM_RECORDING'
+                    }]
+                });
+            }
+
+            if (!notes || !notes.trim()) {
+                return res.status(400).json({
+                    errors: [{ msg: 'É necessário adicionar anotações da sessão.' }]
+                });
+            }
+
+            // Buscar agendamento para validar permissões
+            const appointment = await ScheduledSessionModel.findById(parseInt(id), clinic_id);
+
+            if (!appointment) {
+                return res.status(404).json({
+                    errors: [{ msg: 'Agendamento não encontrado.' }]
+                });
+            }
+
+            // Validação de permissões: apenas terapeuta responsável ou admin
+            const isTherapistResponsible = appointment.therapist_id === userId;
+
+            if (!isTherapistResponsible && !is_admin) {
+                return res.status(403).json({
+                    errors: [{
+                        msg: 'Apenas o terapeuta responsável pode marcar esta sessão como completa.',
+                        code: 'NOT_THERAPIST'
+                    }]
+                });
+            }
+
+            // Marcar como completa com anotações
+            const completedSession = await ScheduledSessionModel.completeWithNotes(
+                parseInt(id),
+                notes.trim(),
+                clinic_id
+            );
+
+            res.status(200).json({
+                message: 'Sessão marcada como completa com sucesso!',
+                session: completedSession
+            });
+
+        } catch (error) {
+            console.error(`[SCHEDULING-CONTROLLER] Erro ao completar sessão ID ${req.params.id}:`, error);
+            res.status(500).json({
+                errors: [{ msg: error.message || 'Erro ao marcar sessão como completa.' }]
+            });
+        }
+    },
+
+    /**
      * Adicionar justificativa categorizada a agendamento perdido - NOVA ESTRUTURA
      * POST /api/scheduling/justify-absence/:id
      * ✅ FASE 2: Validação de permissões - apenas terapeuta responsável ou admin

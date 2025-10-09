@@ -155,6 +155,22 @@ export const justifyMissedAppointment = async (appointmentId, justificationData)
   }
 };
 
+/**
+ * Marcar sessão como completa com anotações (Plano Agendamento)
+ * @param {number} sessionId - ID da sessão
+ * @param {string} notes - Anotações da sessão
+ * @returns {Promise<Object>} Sessão atualizada
+ */
+export const completeSessionWithNotes = async (sessionId, notes) => {
+  try {
+    const response = await apiClient.put(`/therapist/schedule/sessions/${sessionId}/complete`, { notes });
+    return response.data;
+  } catch (error) {
+    console.error(`[THERAPIST-SCHEDULE-API] Erro ao marcar sessão ID ${sessionId} como completa`);
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao marcar sessão como completa');
+  }
+};
+
 // --- HELPERS E UTILITÁRIOS ---
 
 /**

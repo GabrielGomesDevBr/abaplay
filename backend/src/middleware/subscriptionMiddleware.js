@@ -41,24 +41,6 @@ const requireProPlan = async (req, res, next) => {
 
     // Verificar se tem acesso Pro (plano pro OU trial ativo)
     if (effective_plan !== 'pro') {
-      // Registrar tentativa de acesso bloqueada para analytics
-      await pool.query(`
-        INSERT INTO subscription_analytics (clinic_id, plan_name, event_type, event_data)
-        SELECT
-          u.clinic_id,
-          c.subscription_plan,
-          'feature_blocked',
-          jsonb_build_object(
-            'user_id', $1,
-            'endpoint', $2,
-            'method', $3,
-            'attempted_at', CURRENT_TIMESTAMP
-          )
-        FROM users u
-        JOIN clinics c ON c.id = u.clinic_id
-        WHERE u.id = $1
-      `, [userId, req.originalUrl, req.method]);
-
       return res.status(403).json({
         error: 'Este recurso está disponível apenas no plano Pro',
         currentPlan: 'scheduling',

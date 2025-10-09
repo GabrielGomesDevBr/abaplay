@@ -187,6 +187,111 @@ exports.getCustomPrograms = async (req, res) => {
 };
 
 /**
+ * @description Atualiza um programa customizado
+ * @route PUT /api/programs/custom/:id
+ * @access Private (Apenas admin da clínica ou criador)
+ */
+exports.updateCustomProgram = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { clinic_id, is_admin, id: user_id } = req.user;
+
+        // Buscar programa existente
+        const program = await Program.findById(id);
+
+        if (!program) {
+            return res.status(404).json({ message: 'Programa não encontrado.' });
+        }
+
+        // Verificar permissões
+        if (program.clinic_id !== clinic_id) {
+            return res.status(403).json({ message: 'Sem permissão para editar este programa.' });
+        }
+
+        if (program.is_global) {
+            return res.status(403).json({ message: 'Programas globais não podem ser editados por clínicas.' });
+        }
+
+        if (!is_admin && program.created_by !== user_id) {
+            return res.status(403).json({ message: 'Apenas administradores ou o criador podem editar este programa.' });
+        }
+
+        // Atualizar programa
+        const updatedProgram = await Program.update(id, {
+            ...req.body,
+            clinic_id, // Garante que não mude de clínica
+            is_global: false // Garante que não vire global
+        });
+
+        res.json(updatedProgram);
+    } catch (error) {
+        console.error('[CONTROLLER-ERROR] updateCustomProgram:', error);
+        if (error.code === '23505') {
+            return res.status(409).json({ message: 'Já existe um programa com este nome nesta clínica.' });
+        }
+        res.status(500).json({ message: 'Erro ao atualizar programa customizado.' });
+    }
+};
+
+/**
+ * @description Deleta um programa customizado
+ * @route DELETE /api/programs/custom/:id
+ * @access Private (Apenas admin da clínica ou criador)
+ */
+exports.deleteCustomProgram = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { clinic_id, is_admin, id: user_id } = req.user;
+
+        // Buscar programa existente
+        const program = await Program.findById(id);
+
+        if (!program) {
+            return res.status(404).json({ message: 'Programa não encontrado.' });
+        }
+
+        // Verificar permissões
+        if (program.clinic_id !== clinic_id) {
+            return res.status(403).json({ message: 'Sem permissão para deletar este programa.' });
+        }
+
+        if (program.is_global) {
+            return res.status(403).json({ message: 'Programas globais não podem ser deletados por clínicas.' });
+        }
+
+        if (!is_admin && program.created_by !== user_id) {
+            return res.status(403).json({ message: 'Apenas administradores ou o criador podem deletar este programa.' });
+        }
+
+        // Verificar se o programa está em uso
+        const pool = require('../models/db');
+        const usageCheck = await pool.query(
+            'SELECT COUNT(*) as count FROM patient_program_assignments WHERE program_id = $1',
+            [id]
+        );
+
+        if (parseInt(usageCheck.rows[0].count) > 0) {
+            return res.status(409).json({
+                message: 'Não é possível deletar este programa pois ele está atribuído a pacientes.',
+                in_use: true,
+                usage_count: parseInt(usageCheck.rows[0].count)
+            });
+        }
+
+        // Deletar programa
+        await Program.delete(id);
+
+        res.json({
+            message: 'Programa customizado deletado com sucesso.',
+            deleted_id: parseInt(id)
+        });
+    } catch (error) {
+        console.error('[CONTROLLER-ERROR] deleteCustomProgram:', error);
+        res.status(500).json({ message: 'Erro ao deletar programa customizado.' });
+    }
+};
+
+/**
  * @description Busca hierarquia de disciplinas para formulário
  * @route GET /api/programs/hierarchy
  * @access Private

@@ -1,11 +1,15 @@
 const express = require('express');
 const { verifyToken } = require('../middleware/authMiddleware');
+const { requireProPlan } = require('../middleware/subscriptionMiddleware');
 const reportController = require('../controllers/reportController');
 
 const router = express.Router();
 
 // Middleware para verificar autenticação em todas as rotas
 router.use(verifyToken);
+
+// ⚠️ PROTEGIDAS: Relatórios de evolução são feature Pro
+router.use(requireProPlan);
 
 // Rota para buscar dados completos para relatório de evolução terapêutica
 router.get('/evolution-data/:patientId', reportController.getEvolutionReportData);

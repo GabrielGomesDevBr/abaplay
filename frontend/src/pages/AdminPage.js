@@ -639,7 +639,7 @@ const AssignmentList = ({ assignments, onArchiveClick, onDeleteClick, onRestoreC
 
 
 const AdminPage = () => {
-  const { token } = useAuth();
+  const { token, canAccessPrograms, subscription } = useAuth();
   const [users, setUsers] = useState([]);
   const [patients, setPatients] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -865,11 +865,23 @@ const AdminPage = () => {
 
       return (
          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
-                <FontAwesomeIcon icon={faUserShield} className="mr-2 sm:mr-3 text-indigo-500" />
-                <span className="hidden sm:inline">Painel de Administração</span>
-                <span className="sm:hidden">Admin</span>
-            </h1>
+            <div className="flex items-center gap-3">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
+                    <FontAwesomeIcon icon={faUserShield} className="mr-2 sm:mr-3 text-indigo-500" />
+                    <span className="hidden sm:inline">Painel de Administração</span>
+                    <span className="sm:hidden">Admin</span>
+                </h1>
+                {/* FASE 3: Badge visual do plano */}
+                {subscription && (
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold hidden sm:inline-block ${
+                    subscription.subscription_plan === 'pro'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {subscription.subscription_plan === 'pro' ? '🚀 Plano Pro' : '📅 Plano Agendamento'}
+                  </span>
+                )}
+            </div>
             {showAddButton && (
               <button
                   onClick={() => isUsersTab ? handleOpenCreateUserModal() : setIsPatientModalOpen(true)}
@@ -974,7 +986,10 @@ const AdminPage = () => {
             <nav className="overflow-x-auto scrollbar-hide flex space-x-2 sm:space-x-4" aria-label="Tabs">
                 <TabButton tabName="users" activeTab={activeTab} setTab={setActiveTab} icon={faUsers}>Utilizadores</TabButton>
                 <TabButton tabName="patients" activeTab={activeTab} setTab={setActiveTab} icon={faUserGraduate}>Pacientes</TabButton>
-                <TabButton tabName="assignments" activeTab={activeTab} setTab={setActiveTab} icon={faCogs}>Programas Atribuídos</TabButton>
+                {/* FASE 2: Tab de Programas Atribuídos apenas para plano Pro */}
+                {canAccessPrograms() && (
+                  <TabButton tabName="assignments" activeTab={activeTab} setTab={setActiveTab} icon={faCogs}>Programas Atribuídos</TabButton>
+                )}
             </nav>
         </div>
 
@@ -1070,16 +1085,19 @@ const AdminPage = () => {
               Adicionar Paciente
             </button>
 
-            <button
-              onClick={() => {
-                setActiveTab('assignments');
-                setIsActionsMenuOpen(false);
-              }}
-              className="w-full py-3 px-4 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-lg font-medium hover:from-blue-100 hover:to-indigo-100 active:scale-95 transition-all flex items-center"
-            >
-              <FontAwesomeIcon icon={faCogs} className="mr-3 text-lg" />
-              Ver Programas Atribuídos
-            </button>
+            {/* FASE 2: Botão Ver Programas Atribuídos apenas para plano Pro */}
+            {canAccessPrograms() && (
+              <button
+                onClick={() => {
+                  setActiveTab('assignments');
+                  setIsActionsMenuOpen(false);
+                }}
+                className="w-full py-3 px-4 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-lg font-medium hover:from-blue-100 hover:to-indigo-100 active:scale-95 transition-all flex items-center"
+              >
+                <FontAwesomeIcon icon={faCogs} className="mr-3 text-lg" />
+                Ver Programas Atribuídos
+              </button>
+            )}
           </div>
         </div>
       )}

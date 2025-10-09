@@ -9,7 +9,8 @@ const CreateClinicModal = ({ isOpen, onClose, onSubmit }) => {
     clinic_name: '',
     max_patients: 50,
     admin_name: '',
-    admin_username: ''
+    admin_username: '',
+    subscription_plan: 'pro' // FASE 3: Plano padrão Pro
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -68,7 +69,8 @@ const CreateClinicModal = ({ isOpen, onClose, onSubmit }) => {
         clinic_name: '',
         max_patients: 50,
         admin_name: '',
-        admin_username: ''
+        admin_username: '',
+        subscription_plan: 'pro'
       });
       setErrors({});
     } catch (error) {
@@ -149,14 +151,71 @@ const CreateClinicModal = ({ isOpen, onClose, onSubmit }) => {
             )}
           </div>
 
-          {/* Modelo de Negócio */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          {/* FASE 3: Seletor de Plano de Assinatura */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Plano de Assinatura *
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Plano Agendamento */}
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, subscription_plan: 'scheduling' }))}
+                className={`p-4 border-2 rounded-lg transition-all ${
+                  formData.subscription_plan === 'scheduling'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 bg-white hover:border-blue-300'
+                }`}
+              >
+                <div className="text-sm font-semibold text-gray-900">📅 Agendamento</div>
+                <div className="text-xl font-bold text-blue-600 mt-1">R$ 10</div>
+                <div className="text-xs text-gray-500 mt-1">/paciente/mês</div>
+                <div className="text-xs text-gray-600 mt-2">
+                  • Agendamentos<br/>
+                  • Notas simples<br/>
+                  • Calendário
+                </div>
+              </button>
+
+              {/* Plano Pro */}
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, subscription_plan: 'pro' }))}
+                className={`p-4 border-2 rounded-lg transition-all ${
+                  formData.subscription_plan === 'pro'
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-300 bg-white hover:border-green-300'
+                }`}
+              >
+                <div className="text-sm font-semibold text-gray-900">🚀 Pro</div>
+                <div className="text-xl font-bold text-green-600 mt-1">R$ 35</div>
+                <div className="text-xs text-gray-500 mt-1">/paciente/mês</div>
+                <div className="text-xs text-gray-600 mt-2">
+                  • Tudo do Agendamento<br/>
+                  • Programas ABA<br/>
+                  • Relatórios<br/>
+                  • Dashboard
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Previsão de Faturamento */}
+          <div className={`border-2 rounded-lg p-4 ${
+            formData.subscription_plan === 'pro'
+              ? 'bg-green-50 border-green-200'
+              : 'bg-blue-50 border-blue-200'
+          }`}>
             <div className="flex items-center justify-center">
               <div className="text-center">
-                <div className="text-sm font-medium text-gray-700 mb-1">Modelo de Cobrança</div>
-                <div className="text-lg font-bold text-green-600">R$ 34,90 por paciente/mês</div>
+                <div className="text-sm font-medium text-gray-700 mb-1">Faturamento Máximo Estimado</div>
+                <div className={`text-lg font-bold ${
+                  formData.subscription_plan === 'pro' ? 'text-green-600' : 'text-blue-600'
+                }`}>
+                  R$ {(formData.max_patients * (formData.subscription_plan === 'pro' ? 35 : 10)).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  Exemplo: {formData.max_patients} pacientes = R$ {(formData.max_patients * 34.90).toLocaleString('pt-BR', {minimumFractionDigits: 2})} máximo/mês
+                  {formData.max_patients} pacientes × R$ {formData.subscription_plan === 'pro' ? '35,00' : '10,00'} = faturamento máximo/mês
                 </div>
               </div>
             </div>
