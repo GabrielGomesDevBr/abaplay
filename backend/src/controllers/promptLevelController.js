@@ -120,9 +120,13 @@ promptLevelController.getCurrentPromptLevel = async (req, res) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
 
+    // Busca timestamp da última atualização
+    const assignmentInfo = await Assignment.getAssignmentDetailsById(assignmentId);
+
     res.status(200).json({
       assignmentId: parseInt(assignmentId),
       currentPromptLevel: currentLevel || 5, // Default para 5 se não encontrado
+      updated_at: assignmentInfo?.updated_at || null,
       assignment: {
         id: assignmentDetails.assignment_id,
         patient: assignmentDetails.patient,
@@ -152,8 +156,8 @@ promptLevelController.getPromptLevelByPatientAndProgram = async (req, res) => {
 
     // Para esta função, implementamos verificação de permissão mais flexível
     // Admins podem ver qualquer coisa, terapeutas podem ver seus pacientes, pais podem ver seus filhos
-    
-    const currentLevel = await Assignment.getPromptLevelByPatientAndProgram(patientId, programId);
+
+    const result = await Assignment.getPromptLevelByPatientAndProgramWithTimestamp(patientId, programId);
 
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -162,7 +166,8 @@ promptLevelController.getPromptLevelByPatientAndProgram = async (req, res) => {
     res.status(200).json({
       patientId: parseInt(patientId),
       programId: parseInt(programId),
-      currentPromptLevel: currentLevel || 5 // Default para 5 se não encontrado
+      currentPromptLevel: result?.level || 5, // Default para 5 se não encontrado
+      updated_at: result?.updated_at || null
     });
 
   } catch (error) {
