@@ -273,10 +273,10 @@ export const formatTime = (timeString) => {
  */
 export const getStatusBadgeClass = (status) => {
   const statusClasses = {
-    scheduled: 'bg-yellow-100 text-yellow-800',
-    completed: 'bg-green-100 text-green-800',
-    missed: 'bg-red-100 text-red-800',
-    cancelled: 'bg-gray-100 text-gray-800'
+    scheduled: 'bg-blue-100 text-blue-800',      // Azul - Planejado/Confirmado
+    completed: 'bg-green-100 text-green-800',    // Verde - Sucesso/Concluído
+    missed: 'bg-orange-100 text-orange-800',     // Laranja - Atenção/Requer Ação
+    cancelled: 'bg-red-100 text-red-800'         // Vermelho - Cancelado/Problema
   };
 
   return statusClasses[status] || 'bg-gray-100 text-gray-600';

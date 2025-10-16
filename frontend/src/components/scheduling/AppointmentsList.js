@@ -21,7 +21,7 @@ import {
 import { formatDate, formatTime, getStatusBadgeClass, getStatusText } from '../../api/schedulingApi';
 import { translateStatus } from '../../utils/statusTranslator';
 import AppointmentActions from './AppointmentActions';
-import { X } from 'lucide-react';
+import { X, Calendar, CalendarDays, CalendarRange, CheckCircle, RotateCw, Filter as FilterIcon } from 'lucide-react';
 
 /**
  * Hook para detectar se estamos em modo tablet/mobile
@@ -374,62 +374,182 @@ const AppointmentsList = ({
             </button>
           </div>
 
-          {/* Pills de Filtros Rápidos */}
-          <div className="mb-4 flex flex-wrap gap-2">
-            <button
-              onClick={() => applyQuickFilter('today')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
-                isQuickFilterActive('today')
-                  ? 'bg-blue-500 text-white border-blue-600 shadow-sm'
-                  : 'text-gray-700 bg-gray-100 border border-gray-300 hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300'
-              }`}
-            >
-              📅 Hoje
-            </button>
-            <button
-              onClick={() => applyQuickFilter('week')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
-                isQuickFilterActive('week')
-                  ? 'bg-blue-500 text-white border-blue-600 shadow-sm'
-                  : 'text-gray-700 bg-gray-100 border border-gray-300 hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300'
-              }`}
-            >
-              📆 Esta Semana
-            </button>
-            <button
-              onClick={() => applyQuickFilter('month')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
-                isQuickFilterActive('month')
-                  ? 'bg-blue-500 text-white border-blue-600 shadow-sm'
-                  : 'text-gray-700 bg-gray-100 border border-gray-300 hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300'
-              }`}
-            >
-              🗓️ Este Mês
-            </button>
-            <button
-              onClick={() => applyQuickFilter('pending')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
-                isQuickFilterActive('pending')
-                  ? 'bg-yellow-500 text-white border-yellow-600 shadow-sm'
-                  : 'text-gray-700 bg-gray-100 border border-gray-300 hover:bg-yellow-100 hover:text-yellow-700 hover:border-yellow-300'
-              }`}
-            >
-              ⏳ Pendentes
-            </button>
-            <button
-              onClick={() => applyQuickFilter('recurring')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
-                isQuickFilterActive('recurring')
-                  ? 'bg-purple-500 text-white border-purple-600 shadow-sm'
-                  : 'text-gray-700 bg-gray-100 border border-gray-300 hover:bg-purple-100 hover:text-purple-700 hover:border-purple-300'
-              }`}
-            >
-              🔄 Recorrentes
-            </button>
+          {/* Filtros Rápidos - Mobile First */}
+          <div className="mb-4">
+            {/* Label com ícone */}
+            <div className="flex items-center gap-2 mb-3">
+              <FilterIcon className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-semibold text-gray-700">Filtros Rápidos</span>
+            </div>
+
+            {/* Container com scroll horizontal no mobile e wrap no desktop */}
+            <div className="overflow-x-auto pb-2 -mx-1 px-1">
+              <div className="flex gap-2 md:flex-wrap min-w-max md:min-w-0">
+                {/* SEÇÃO: PERÍODO */}
+                <div className="flex items-center gap-2 pr-3 border-r-2 border-gray-300">
+                  {/* Label Período - apenas desktop */}
+                  <span className="text-xs font-semibold text-gray-500 uppercase hidden lg:inline whitespace-nowrap">Período:</span>
+
+                  {/* Hoje - Cinza */}
+                  <button
+                    onClick={() => applyQuickFilter('today')}
+                    title="Ver agendamentos de hoje"
+                    className={`group relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      isQuickFilterActive('today')
+                        ? 'bg-gradient-to-r from-gray-700 to-gray-800 text-white shadow-lg scale-105 ring-2 ring-gray-400 border-2 border-gray-600'
+                        : 'bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200 hover:border-gray-400 hover:shadow-md active:scale-95'
+                    }`}
+                  >
+                    <Calendar className={`w-5 h-5 transition-transform ${isQuickFilterActive('today') ? 'scale-110 text-white' : 'scale-100 text-gray-600 group-hover:scale-110'}`} />
+                    <span className="whitespace-nowrap font-semibold">Hoje</span>
+                    {isQuickFilterActive('today') && (
+                      <span className="absolute -top-1 -right-1 flex h-5 w-5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gray-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-5 w-5 bg-gray-600"></span>
+                      </span>
+                    )}
+                    {sortedAppointments.filter(apt => {
+                      const today = new Date().toISOString().split('T')[0];
+                      return apt.scheduled_date === today;
+                    }).length > 0 && (
+                      <span className={`ml-1 px-2 py-0.5 text-xs font-bold rounded-full ${
+                        isQuickFilterActive('today')
+                          ? 'bg-white/30 text-white'
+                          : 'bg-gray-300 text-gray-800'
+                      }`}>
+                        {sortedAppointments.filter(apt => {
+                          const today = new Date().toISOString().split('T')[0];
+                          return apt.scheduled_date === today;
+                        }).length}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Esta Semana - Cinza */}
+                  <button
+                    onClick={() => applyQuickFilter('week')}
+                    title="Ver agendamentos desta semana"
+                    className={`group relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      isQuickFilterActive('week')
+                        ? 'bg-gradient-to-r from-gray-700 to-gray-800 text-white shadow-lg scale-105 ring-2 ring-gray-400 border-2 border-gray-600'
+                        : 'bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200 hover:border-gray-400 hover:shadow-md active:scale-95'
+                    }`}
+                  >
+                    <CalendarDays className={`w-5 h-5 transition-transform ${isQuickFilterActive('week') ? 'scale-110 text-white' : 'scale-100 text-gray-600 group-hover:scale-110'}`} />
+                    <span className="whitespace-nowrap font-semibold">Esta Semana</span>
+                    {isQuickFilterActive('week') && (
+                      <span className="absolute -top-1 -right-1 flex h-5 w-5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gray-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-5 w-5 bg-gray-600"></span>
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Este Mês - Cinza */}
+                  <button
+                    onClick={() => applyQuickFilter('month')}
+                    title="Ver agendamentos deste mês"
+                    className={`group relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      isQuickFilterActive('month')
+                        ? 'bg-gradient-to-r from-gray-700 to-gray-800 text-white shadow-lg scale-105 ring-2 ring-gray-400 border-2 border-gray-600'
+                        : 'bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200 hover:border-gray-400 hover:shadow-md active:scale-95'
+                    }`}
+                  >
+                    <CalendarRange className={`w-5 h-5 transition-transform ${isQuickFilterActive('month') ? 'scale-110 text-white' : 'scale-100 text-gray-600 group-hover:scale-110'}`} />
+                    <span className="whitespace-nowrap font-semibold">Este Mês</span>
+                    {isQuickFilterActive('month') && (
+                      <span className="absolute -top-1 -right-1 flex h-5 w-5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gray-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-5 w-5 bg-gray-600"></span>
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {/* SEÇÃO: TIPO */}
+                <div className="flex items-center gap-2">
+                  {/* Label Tipo - apenas desktop */}
+                  <span className="text-xs font-semibold text-gray-500 uppercase hidden lg:inline whitespace-nowrap">Tipo:</span>
+
+                  {/* Agendados - Azul */}
+                  <button
+                    onClick={() => applyQuickFilter('pending')}
+                    title="Ver todos os agendamentos confirmados"
+                    className={`group relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      isQuickFilterActive('pending')
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg scale-105 ring-2 ring-blue-300 border-2 border-blue-400'
+                        : 'bg-blue-50 text-blue-700 border-2 border-blue-200 hover:bg-blue-100 hover:border-blue-300 hover:shadow-md active:scale-95'
+                    }`}
+                  >
+                    <CheckCircle className={`w-5 h-5 transition-transform ${isQuickFilterActive('pending') ? 'scale-110 text-white' : 'scale-100 text-blue-600 group-hover:scale-110'}`} />
+                    <span className="whitespace-nowrap font-semibold">Agendados</span>
+                    {isQuickFilterActive('pending') && (
+                      <span className="absolute -top-1 -right-1 flex h-5 w-5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-5 w-5 bg-blue-500"></span>
+                      </span>
+                    )}
+                    {sortedAppointments.filter(apt => apt.status === 'scheduled').length > 0 && (
+                      <span className={`ml-1 px-2 py-0.5 text-xs font-bold rounded-full ${
+                        isQuickFilterActive('pending')
+                          ? 'bg-white/30 text-white'
+                          : 'bg-blue-200 text-blue-800'
+                      }`}>
+                        {sortedAppointments.filter(apt => apt.status === 'scheduled').length}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Recorrentes - Roxo */}
+                  <button
+                    onClick={() => applyQuickFilter('recurring')}
+                    title="Mostrar apenas agendamentos recorrentes"
+                    className={`group relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      isQuickFilterActive('recurring')
+                        ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg scale-105 ring-2 ring-violet-300 border-2 border-violet-400'
+                        : 'bg-violet-50 text-violet-700 border-2 border-violet-200 hover:bg-violet-100 hover:border-violet-300 hover:shadow-md active:scale-95'
+                    }`}
+                  >
+                    <RotateCw className={`w-5 h-5 transition-transform ${isQuickFilterActive('recurring') ? 'scale-110 rotate-180 text-white' : 'scale-100 text-violet-600 group-hover:scale-110 group-hover:rotate-180'}`} />
+                    <span className="whitespace-nowrap font-semibold">Recorrentes</span>
+                    {isQuickFilterActive('recurring') && (
+                      <span className="absolute -top-1 -right-1 flex h-5 w-5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-5 w-5 bg-violet-500"></span>
+                      </span>
+                    )}
+                    {sortedAppointments.filter(apt => !!apt.recurring_template_id).length > 0 && (
+                      <span className={`ml-1 px-2 py-0.5 text-xs font-bold rounded-full ${
+                        isQuickFilterActive('recurring')
+                          ? 'bg-white/30 text-white'
+                          : 'bg-violet-200 text-violet-800'
+                      }`}>
+                        {sortedAppointments.filter(apt => !!apt.recurring_template_id).length}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Botão Limpar Filtros - Mais visível */}
+                  {activeFiltersCount > 0 && (
+                    <button
+                      onClick={clearFilters}
+                      title="Limpar todos os filtros ativos"
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-red-50 text-red-700 border-2 border-red-200 hover:bg-red-100 hover:border-red-300 hover:shadow-md transition-all duration-200 active:scale-95"
+                    >
+                      <X className="w-5 h-5 text-red-600" />
+                      <span className="whitespace-nowrap font-semibold">Limpar</span>
+                      <span className="px-2 py-0.5 text-xs font-bold bg-red-200 text-red-800 rounded-full">
+                        {activeFiltersCount}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Filtro principal */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <FontAwesomeIcon icon={faSearch} className="mr-1 text-gray-400" />
@@ -456,14 +576,6 @@ const AppointmentsList = ({
                 <option value="missed">Não realizado</option>
                 <option value="cancelled">Cancelado</option>
               </select>
-            </div>
-            <div className="flex items-end">
-              <button
-                onClick={clearFilters}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-              >
-                Limpar filtros
-              </button>
             </div>
           </div>
 

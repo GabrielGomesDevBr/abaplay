@@ -571,8 +571,8 @@ const SchedulingPage = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+        <div className="px-2 sm:px-4">
+          <div className="flex justify-between items-center py-4 sm:py-6">
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center">
                 <FontAwesomeIcon icon={faCalendarAlt} className="mr-2 sm:mr-3 text-blue-600" />
@@ -631,7 +631,7 @@ const SchedulingPage = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="px-2 sm:px-4 py-4 sm:py-6">
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
             <div className="flex items-center">
