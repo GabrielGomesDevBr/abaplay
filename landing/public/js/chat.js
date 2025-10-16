@@ -31,17 +31,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const escapedText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const withLineBreaks = escapedText.replace(/\n/g, '<br>');
         const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-        const htmlLink = '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-brand-accent font-bold hover:underline">$1</a>';
+        const htmlLink = '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary-600 font-bold hover:underline">$1</a>';
         return withLineBreaks.replace(markdownLinkRegex, htmlLink);
     };
 
     const addMessage = (text, sender) => {
         let messageHtml;
         if (sender === 'user') {
-            messageHtml = `<div class="flex items-start gap-3 justify-end"><div class="bg-brand-accent text-white p-3 rounded-lg rounded-tr-none max-w-sm"><p class="text-sm">${text}</p></div></div>`;
+            // Mensagem do usuário (à direita, roxo)
+            const escapedUserText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            messageHtml = `
+                <div class="flex items-start gap-3 justify-end">
+                    <div class="bg-gradient-to-r from-primary-600 to-purple-600 text-white p-4 rounded-2xl rounded-tr-none shadow-sm max-w-sm">
+                        <p class="text-sm">${escapedUserText}</p>
+                    </div>
+                </div>
+            `;
         } else {
+            // Mensagem do assistente (à esquerda, branco)
             const parsedText = parseAssistantText(text);
-            messageHtml = `<div class="flex items-start gap-3"><div class="bg-brand-dark text-white p-2 rounded-full flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" /></svg></div><div class="bg-gray-100 text-gray-800 p-3 rounded-lg rounded-tl-none max-w-sm"><p class="text-sm">${parsedText}</p></div></div>`;
+            messageHtml = `
+                <div class="flex items-start gap-3">
+                    <div class="bg-primary-600 text-white p-2 rounded-full flex-shrink-0">
+                        <i class="fas fa-robot text-lg"></i>
+                    </div>
+                    <div class="bg-white text-gray-800 p-4 rounded-2xl rounded-tl-none shadow-sm max-w-sm">
+                        <p class="text-sm">${parsedText}</p>
+                    </div>
+                </div>
+            `;
         }
         messagesContainer.insertAdjacentHTML('beforeend', messageHtml);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;

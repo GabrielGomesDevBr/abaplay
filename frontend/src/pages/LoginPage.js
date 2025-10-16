@@ -581,9 +581,20 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      {/* Link para Landing Page - Visível apenas em mobile */}
+      <a
+        href="https://info.abaplay.app.br"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed top-4 right-4 lg:hidden bg-white text-primary-600 px-4 py-2 rounded-full text-sm font-semibold shadow-lg hover:shadow-xl transition-all z-50 flex items-center gap-2"
+      >
+        <FontAwesomeIcon icon={faLightbulb} />
+        <span>Conhecer ABAPlay</span>
+      </a>
+
       <div className="w-full max-w-7xl mx-auto">
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden lg:grid lg:grid-cols-5 border border-gray-100">
-          
+
           {/* Painel Esquerdo - Vitrine Interativa */}
           <div className="relative hidden lg:block lg:col-span-3">
             <AnimatedBackground />
@@ -616,7 +627,7 @@ const LoginPage = () => {
               {/* Footer */}
               <div className="text-center">
                 <p className="text-blue-200 text-sm mb-3">Usado por clínicas líderes em intervenção infantil</p>
-                <div className="flex items-center justify-center space-x-6 opacity-60">
+                <div className="flex items-center justify-center space-x-6 opacity-60 mb-4">
                   <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
                     <FontAwesomeIcon icon={faAward} className="text-white text-sm" />
                   </div>
@@ -627,6 +638,19 @@ const LoginPage = () => {
                     <FontAwesomeIcon icon={faShieldAlt} className="text-white text-sm" />
                   </div>
                 </div>
+
+                {/* Link para Landing Page */}
+                <a
+                  href="https://info.abaplay.app.br"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-white/20 transition-all mb-4"
+                >
+                  <FontAwesomeIcon icon={faLightbulb} />
+                  <span>Conheça o ABAPlay</span>
+                  <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
+                </a>
+
                 <p className="text-blue-300 text-xs mt-4">
                   &copy; {new Date().getFullYear()} ABAplay. Todos os direitos reservados.
                 </p>
@@ -643,7 +667,7 @@ const LoginPage = () => {
                 <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <FontAwesomeIcon icon={faBrain} className="text-2xl text-white" />
                 </div>
-                <h1 className="text-2xl font-bold text-gray-800 mb-2">Bem-vindo à ABAplay</h1>
+                <h1 className="text-2xl font-bold text-gray-800 mb-2">Bem-vindo ao ABAPlay</h1>
                 <p className="text-gray-600">Sua plataforma de intervenção infantil</p>
               </div>
 
