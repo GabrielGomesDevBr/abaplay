@@ -29,3 +29,7 @@ Thumbs.db
 *.backup
 *.bak
 programs.json.backup
+
+# Landing page
+landing/node_modules/
+landing/.env
