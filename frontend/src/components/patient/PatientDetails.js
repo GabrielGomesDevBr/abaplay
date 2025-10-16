@@ -12,6 +12,8 @@ import ParentTherapistChat from '../chat/ParentTherapistChat';
 import CaseDiscussionChat from '../chat/CaseDiscussionChat';
 import ReportEvolutionModal from '../reports/ReportEvolutionModal';
 import ExpandedPatientForm from './ExpandedPatientForm';
+import SessionNoteModal from '../scheduling/SessionNoteModal';
+import { completeSessionWithNotes, getTodaySchedule, createAndCompleteSession } from '../../api/therapistScheduleApi';
 
 const formatDate = (dateString) => {
   if (!dateString) return 'Não informado';
@@ -78,11 +80,13 @@ const ActionCard = ({ icon, title, description, onClick, disabled, colorClass = 
 const PatientDetails = () => {
   const navigate = useNavigate();
   const { selectedPatient, openPatientForm, removePatient, openReportModal } = usePatients();
-  const { user } = useAuth();
+  const { user, hasProAccess } = useAuth();
   const [isParentChatVisible, setIsParentChatVisible] = useState(false);
   const [isDiscussionChatVisible, setIsDiscussionChatVisible] = useState(false);
   const [isEvolutionReportVisible, setIsEvolutionReportVisible] = useState(false);
   const [isExpandedFormVisible, setIsExpandedFormVisible] = useState(false);
+  const [isSessionNoteModalOpen, setIsSessionNoteModalOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState(null);
 
   if (!selectedPatient) {
     return (
@@ -101,6 +105,86 @@ const PatientDetails = () => {
   const handleCloseEvolutionReport = () => setIsEvolutionReportVisible(false);
   const handleOpenExpandedForm = () => setIsExpandedFormVisible(true);
   const handleCloseExpandedForm = () => setIsExpandedFormVisible(false);
+
+  // Handlers para o plano agendamento
+  const handleOpenSessionNote = async () => {
+    try {
+      // Buscar sessões de hoje do paciente
+      const response = await getTodaySchedule();
+      const todaySessions = response.appointments || [];
+
+      // Filtrar por paciente selecionado e status 'scheduled'
+      let patientSession = todaySessions.find(
+        s => s.patient_id === selectedPatient.id && s.status === 'scheduled'
+      );
+
+      // Se não há sessão agendada, criar um objeto mock para o modal
+      if (!patientSession) {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+        const currentTime = today.toTimeString().slice(0, 5); // HH:MM
+        const endTime = new Date(today.getTime() + 60 * 60 * 1000).toTimeString().slice(0, 5); // +1h
+
+        // Criar objeto mock para o modal (sem ID = sessão não agendada)
+        patientSession = {
+          id: null, // NULL indica que ainda não existe no banco
+          patient_id: selectedPatient.id,
+          patient_name: selectedPatient.name,
+          therapist_id: user.id,
+          scheduled_date: todayStr,
+          scheduled_at: todayStr, // Para formatação no modal
+          start_time: currentTime,
+          end_time: endTime,
+          scheduled_time: currentTime,
+          duration_minutes: 60,
+          discipline_name: null,
+          notes: '',
+          _isMock: true // Flag para identificar sessão mock
+        };
+      }
+
+      setSelectedSession(patientSession);
+      setIsSessionNoteModalOpen(true);
+
+    } catch (error) {
+      console.error('Erro ao buscar sessão:', error);
+      alert('Erro ao processar sessão. Tente novamente.');
+    }
+  };
+
+  const handleCloseSessionNote = () => {
+    setIsSessionNoteModalOpen(false);
+    setSelectedSession(null);
+  };
+
+  const handleSaveSessionNote = async (sessionId, notes) => {
+    try {
+      // Se sessionId é null, significa que é uma sessão mock (sem agendamento prévio)
+      if (sessionId === null && selectedSession?._isMock) {
+        // Criar e completar em uma única chamada via API de terapeuta
+        const sessionData = {
+          patient_id: selectedSession.patient_id,
+          scheduled_date: selectedSession.scheduled_date,
+          scheduled_time: selectedSession.scheduled_time,
+          notes: notes,
+          duration_minutes: 60,
+          discipline_id: null
+        };
+
+        await createAndCompleteSession(sessionData);
+        handleCloseSessionNote();
+        alert('Sessão registrada com sucesso!');
+      } else {
+        // Sessão já existe no banco, apenas completar
+        await completeSessionWithNotes(sessionId, notes);
+        handleCloseSessionNote();
+        alert('Sessão registrada com sucesso!');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar sessão:', error);
+      throw error;
+    }
+  };
 
   const handleToggleParentChat = () => {
     const isMobile = window.innerWidth < 1024; // breakpoint lg
@@ -182,56 +266,80 @@ const PatientDetails = () => {
                       </div>
                   </div>
               )}
-              {/* Seção de Comunicação redesenhada */}
-              <div className="mb-6">
+              {/* Seção de Comunicação redesenhada - APENAS PLANO PRO */}
+              {hasProAccess() && (
+                <div className="mb-6">
+                    <div className="flex items-center mb-4 pb-2 border-b border-gray-200">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                        <h3 className="text-lg font-semibold text-gray-800">💬 Comunicação</h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 p-4 rounded-lg">
+                            <button
+                                onClick={handleToggleDiscussionChat}
+                                className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg shadow-sm hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105"
+                            >
+                                <FontAwesomeIcon icon={faUsers} className="mr-2" />
+                                <span className="font-medium text-sm">Discussão de Caso</span>
+                            </button>
+                            <p className="text-xs text-gray-600 mt-2 text-center leading-relaxed">
+                                {isDiscussionChatVisible ? '✅ Chat da equipe aberto' : 'Chat interno entre terapeutas'}
+                            </p>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 p-4 rounded-lg">
+                            <button
+                                onClick={handleToggleParentChat}
+                                className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg shadow-sm hover:from-blue-700 hover:to-cyan-700 transition-all transform hover:scale-105"
+                            >
+                                <FontAwesomeIcon icon={faComments} className="mr-2" />
+                                <span className="font-medium text-sm">Comunicação com os Pais</span>
+                            </button>
+                            <p className="text-xs text-gray-600 mt-2 text-center leading-relaxed">
+                                {isParentChatVisible ? '✅ Chat com pais aberto' : 'Comunicação com responsáveis'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+              )}
+
+              {/* Seção de Registro de Sessão - APENAS PLANO AGENDAMENTO */}
+              {!hasProAccess() && (
+                <div className="mb-6">
                   <div className="flex items-center mb-4 pb-2 border-b border-gray-200">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-                      <h3 className="text-lg font-semibold text-gray-800">💬 Comunicação</h3>
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <h3 className="text-lg font-semibold text-gray-800">📝 Registro de Sessão</h3>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 p-4 rounded-lg">
-                          <button
-                              onClick={handleToggleDiscussionChat}
-                              className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg shadow-sm hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105"
-                          >
-                              <FontAwesomeIcon icon={faUsers} className="mr-2" />
-                              <span className="font-medium text-sm">Discussão de Caso</span>
-                          </button>
-                          <p className="text-xs text-gray-600 mt-2 text-center leading-relaxed">
-                              {isDiscussionChatVisible ? '✅ Chat da equipe aberto' : 'Chat interno entre terapeutas'}
-                          </p>
-                      </div>
-
-                      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 p-4 rounded-lg">
-                          <button
-                              onClick={handleToggleParentChat}
-                              className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg shadow-sm hover:from-blue-700 hover:to-cyan-700 transition-all transform hover:scale-105"
-                          >
-                              <FontAwesomeIcon icon={faComments} className="mr-2" />
-                              <span className="font-medium text-sm">Comunicação com os Pais</span>
-                          </button>
-                          <p className="text-xs text-gray-600 mt-2 text-center leading-relaxed">
-                              {isParentChatVisible ? '✅ Chat com pais aberto' : 'Comunicação com responsáveis'}
-                          </p>
-                      </div>
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 p-4 rounded-lg">
+                    <button
+                      onClick={handleOpenSessionNote}
+                      className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg shadow-sm hover:from-green-700 hover:to-emerald-700 transition-all transform hover:scale-105"
+                    >
+                      <FontAwesomeIcon icon={faNotesMedical} className="mr-2" />
+                      <span className="font-medium text-sm">Registrar Sessão</span>
+                    </button>
+                    <p className="text-xs text-gray-600 mt-2 text-center leading-relaxed">
+                      Registre notas e observações sobre a sessão realizada hoje
+                    </p>
                   </div>
-              </div>
+                </div>
+              )}
 
-          {/* Renderização condicional para AMBOS os chats */}
-          {isDiscussionChatVisible && (
+          {/* Renderização condicional para AMBOS os chats - APENAS PLANO PRO */}
+          {hasProAccess() && isDiscussionChatVisible && (
               <div className="my-5 animate-fade-in max-w-4xl mx-auto w-full">
-                  <CaseDiscussionChat 
-                      patientId={selectedPatient.id} 
-                      patientName={selectedPatient.name} 
+                  <CaseDiscussionChat
+                      patientId={selectedPatient.id}
+                      patientName={selectedPatient.name}
                   />
               </div>
           )}
 
-          {isParentChatVisible && (
+          {hasProAccess() && isParentChatVisible && (
               <div className="my-5 animate-fade-in max-w-4xl mx-auto w-full">
-                  <ParentTherapistChat 
-                      patientId={selectedPatient.id} 
-                      patientName={selectedPatient.name} 
+                  <ParentTherapistChat
+                      patientId={selectedPatient.id}
+                      patientName={selectedPatient.name}
                   />
               </div>
           )}
@@ -258,43 +366,45 @@ const PatientDetails = () => {
                 </div>
               )}
 
-              {/* Seção de Documentos redesenhada */}
-              <div className="border-t border-gray-200 pt-6">
-                  <div className="flex items-center mb-4 pb-2 border-b border-gray-200">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
-                      <h3 className="text-lg font-semibold text-gray-800">📄 Documentos e Relatórios</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <ActionCard 
-                          icon={faFilePdf}
-                          title="Grade de Programas"
-                          description="Gera um PDF detalhado com a lista dos programas atribuídos ao cliente."
-                          onClick={handleGenerateGradePdf}
-                          colorClass="red"
-                      />
-                      <ActionCard 
-                          icon={faClipboardList}
-                          title="Folha de Registro"
-                          description="Cria uma folha de registro em branco para anotações manuais durante as sessões."
-                          onClick={handleGenerateRecordSheet}
-                          colorClass="blue"
-                      />
-                      <ActionCard 
-                          icon={faStethoscope}
-                          title="Evolução Terapêutica"
-                          description="Gera relatório de evolução profissional detalhado com análise do progresso do paciente."
-                          onClick={handleOpenEvolutionReport}
-                          colorClass="green"
-                      />
-                      <ActionCard 
-                          icon={faChartPie}
-                          title="Relatório Consolidado"
-                          description="Gera um relatório completo com análise do progresso e gráficos."
-                          onClick={openReportModal}
-                          colorClass="purple"
-                      />
-                  </div>
-              </div>
+              {/* Seção de Documentos redesenhada - APENAS PLANO PRO */}
+              {hasProAccess() && (
+                <div className="border-t border-gray-200 pt-6">
+                    <div className="flex items-center mb-4 pb-2 border-b border-gray-200">
+                        <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
+                        <h3 className="text-lg font-semibold text-gray-800">📄 Documentos e Relatórios</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <ActionCard
+                            icon={faFilePdf}
+                            title="Grade de Programas"
+                            description="Gera um PDF detalhado com a lista dos programas atribuídos ao cliente."
+                            onClick={handleGenerateGradePdf}
+                            colorClass="red"
+                        />
+                        <ActionCard
+                            icon={faClipboardList}
+                            title="Folha de Registro"
+                            description="Cria uma folha de registro em branco para anotações manuais durante as sessões."
+                            onClick={handleGenerateRecordSheet}
+                            colorClass="blue"
+                        />
+                        <ActionCard
+                            icon={faStethoscope}
+                            title="Evolução Terapêutica"
+                            description="Gera relatório de evolução profissional detalhado com análise do progresso do paciente."
+                            onClick={handleOpenEvolutionReport}
+                            colorClass="green"
+                        />
+                        <ActionCard
+                            icon={faChartPie}
+                            title="Relatório Consolidado"
+                            description="Gera um relatório completo com análise do progresso e gráficos."
+                            onClick={openReportModal}
+                            colorClass="purple"
+                        />
+                    </div>
+                </div>
+              )}
           </div>
       </div>
       
@@ -311,6 +421,16 @@ const PatientDetails = () => {
           patient={selectedPatient}
           isOpen={isExpandedFormVisible}
           onClose={handleCloseExpandedForm}
+        />
+      )}
+
+      {/* Modal de Registro de Sessão (apenas para Plano Agendamento) */}
+      {!hasProAccess() && selectedSession && (
+        <SessionNoteModal
+          session={selectedSession}
+          isOpen={isSessionNoteModalOpen}
+          onClose={handleCloseSessionNote}
+          onSave={handleSaveSessionNote}
         />
       )}
     </>

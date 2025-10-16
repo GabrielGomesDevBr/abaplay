@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faSave, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { useAuth } from '../../context/AuthContext';
 
 // O componente agora recebe a lista de `patients` da clínica
 const UserFormModal = ({ isOpen, onClose, onSave, userToEdit = null, patients = [] }) => {
+  const { hasProAccess } = useAuth(); // ✅ Verificar plano
   const [formData, setFormData] = useState({
     fullName: '',
     username: '',
@@ -107,8 +109,17 @@ const UserFormModal = ({ isOpen, onClose, onSave, userToEdit = null, patients = 
             <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">Função</label>
             <select id="role" name="role" value={formData.role} onChange={handleRoleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white">
                 <option value="terapeuta">Terapeuta</option>
-                <option value="pai">Pai/Responsável</option>
+                {/* ✅ Cadastro de Pai apenas no plano Pro */}
+                {hasProAccess && hasProAccess() && (
+                  <option value="pai">Pai/Responsável</option>
+                )}
             </select>
+            {/* ✅ Aviso visual se não tiver acesso Pro */}
+            {!hasProAccess || !hasProAccess() ? (
+              <p className="mt-1 text-xs text-gray-500">
+                💡 Cadastro de pais/responsáveis disponível apenas no plano Pro
+              </p>
+            ) : null}
           </div>
           
           {/* <<< MELHORIA: Substituído o campo de texto por um dropdown >>> */}

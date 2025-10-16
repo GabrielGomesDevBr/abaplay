@@ -20,6 +20,20 @@ import {
 import { formatDate, formatTime, getStatusBadgeClass, getStatusText } from '../../api/schedulingApi';
 
 /**
+ * Traduções para tipos de cancelamento
+ * Mapeia valores técnicos do banco para textos amigáveis
+ */
+const CANCELLATION_REASON_LABELS = {
+  'personal_emergency': 'Emergência pessoal',
+  'unavoidable_commitment': 'Compromisso inadiável',
+  'health_issue': 'Problema de saúde',
+  'schedule_conflict': 'Conflito de agenda',
+  'other': 'Outro motivo',
+  'outro': 'Outro motivo',
+  'admin': 'Cancelado pela administração'
+};
+
+/**
  * Modal para visualizar detalhes de um agendamento
  * Implementação da Fase 1 - MVP do Sistema de Agendamento
  */
@@ -308,17 +322,24 @@ const AppointmentDetailsModal = ({
           )}
 
           {/* Justificativa (se houver) */}
-          {(isMissed || isCancelled) && (appointment.missed_reason || appointment.cancellation_reason) && (
+          {(isMissed || isCancelled) && (appointment.missed_reason_type || appointment.cancellation_reason_type) && (
             <div className="bg-red-50 p-4 rounded-lg mb-6">
               <h3 className="text-sm font-medium text-red-800 mb-3 flex items-center">
                 <FontAwesomeIcon icon={faInfoCircle} className="mr-2" />
                 {isMissed ? 'Justificativa da Ausência' : 'Motivo do Cancelamento'}
               </h3>
               <div className="space-y-2">
-                {appointment.missed_reason && (
+                {/* Missed appointment fields */}
+                {appointment.missed_reason_type && (
                   <div className="text-sm">
                     <span className="font-medium text-red-700">Motivo:</span>
-                    <span className="ml-2 text-red-600">{appointment.missed_reason}</span>
+                    <span className="ml-2 text-red-600">{appointment.missed_reason_type}</span>
+                  </div>
+                )}
+                {appointment.missed_reason_description && (
+                  <div className="text-sm">
+                    <span className="font-medium text-red-700">Descrição:</span>
+                    <span className="ml-2 text-red-600">{appointment.missed_reason_description}</span>
                   </div>
                 )}
                 {appointment.missed_by && (
@@ -332,11 +353,45 @@ const AppointmentDetailsModal = ({
                     </span>
                   </div>
                 )}
-                {appointment.cancellation_reason && (
+
+                {/* Cancellation fields - ✅ CORRECTED TO USE ADMIN PATTERN */}
+                {appointment.cancellation_reason_type && (
                   <div className="text-sm">
                     <span className="font-medium text-red-700">Motivo:</span>
-                    <span className="ml-2 text-red-600">{appointment.cancellation_reason}</span>
+                    <span className="ml-2 text-red-600">
+                      {CANCELLATION_REASON_LABELS[appointment.cancellation_reason_type] || appointment.cancellation_reason_type}
+                    </span>
                   </div>
+                )}
+                {appointment.cancellation_reason_description && (
+                  <div className="text-sm">
+                    <span className="font-medium text-red-700">Detalhes:</span>
+                    <span className="ml-2 text-red-600">{appointment.cancellation_reason_description}</span>
+                  </div>
+                )}
+
+                {/* Show who cancelled and when */}
+                {appointment.cancelled_at && (
+                  <>
+                    {appointment.cancelled_by_name && (
+                      <div className="text-sm pt-2 border-t border-red-200">
+                        <span className="font-medium text-red-700">Cancelado por:</span>
+                        <span className="ml-2 text-red-600 font-semibold">{appointment.cancelled_by_name}</span>
+                      </div>
+                    )}
+                    <div className="text-sm">
+                      <span className="font-medium text-red-700">Cancelado em:</span>
+                      <span className="ml-2 text-red-600">
+                        {new Date(appointment.cancelled_at).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                  </>
                 )}
               </div>
             </div>

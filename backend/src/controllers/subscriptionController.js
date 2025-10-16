@@ -6,16 +6,31 @@ const subscriptionModel = require('../models/subscriptionModel');
 
 /**
  * Buscar informações de assinatura da clínica do usuário logado
+ * ✅ Super admins não têm clinic_id, então retornamos assinatura fictícia Pro
  */
 const getMySubscription = async (req, res) => {
   try {
-    const clinicId = req.user.clinic_id;
+    const { clinic_id, role } = req.user;
 
-    if (!clinicId) {
+    // ✅ Super admins têm acesso Pro por padrão (sem clínica associada)
+    if (role === 'super_admin') {
+      return res.json({
+        clinic_id: null,
+        clinic_name: 'Super Admin',
+        subscription_plan: 'pro',
+        effective_plan: 'pro',
+        trial_pro_enabled: false,
+        trial_pro_expires_at: null,
+        has_pro_access: true,
+        is_super_admin: true
+      });
+    }
+
+    if (!clinic_id) {
       return res.status(400).json({ error: 'Usuário não associado a uma clínica' });
     }
 
-    const subscription = await subscriptionModel.getClinicSubscription(clinicId);
+    const subscription = await subscriptionModel.getClinicSubscription(clinic_id);
 
     if (!subscription) {
       return res.status(404).json({ error: 'Informações de assinatura não encontradas' });

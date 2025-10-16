@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePatients } from '../../context/PatientContext';
 import useNotifications from '../../hooks/useNotifications';
+import usePendingActions from '../../hooks/usePendingActions';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUsers,
@@ -19,6 +20,7 @@ const BottomNavigation = ({ toggleSidebar }) => {
   const { user, canAccessPrograms, canAccessSessionRecording } = useAuth();
   const { selectedPatient } = usePatients();
   const { totalUnread } = useNotifications();
+  const { pendingCount } = usePendingActions();
 
   // Não renderizar para pais ou super admin
   if (user?.role === 'pai' || user?.role === 'super_admin') {
@@ -56,6 +58,7 @@ const BottomNavigation = ({ toggleSidebar }) => {
       label: user?.is_admin ? 'Agendamentos' : 'Agenda',
       action: () => navigate(user?.is_admin ? '/scheduling' : '/my-schedule'),
       isActive: location.pathname === '/scheduling' || location.pathname === '/my-schedule',
+      badge: user?.is_admin ? pendingCount : 0, // ✅ Badge de pendências para admins
       show: true, // ✅ Sempre disponível (ambos planos)
     },
     {

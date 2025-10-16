@@ -329,6 +329,94 @@ const TherapistScheduleController = {
             console.error(`[THERAPIST-SCHEDULE] Erro ao buscar detalhes do agendamento ID ${req.params.id}:`, error);
             next(error);
         }
+    },
+
+    /**
+     * Cancelar agendamento pelo terapeuta
+     * POST /api/therapist/schedule/cancel/:id
+     */
+    async cancelAppointment(req, res, next) {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json(formatValidationErrors(errors));
+        }
+
+        try {
+            const { id } = req.params;
+            const { cancellation_reason, cancellation_notes } = req.body;
+            const { id: userId, clinic_id } = req.user;
+
+            // Verificar se o agendamento pertence ao terapeuta
+            const appointment = await ScheduledSessionModel.findById(parseInt(id), clinic_id);
+
+            if (!appointment) {
+                return res.status(404).json({
+                    errors: [{ msg: 'Agendamento não encontrado.' }]
+                });
+            }
+
+            if (appointment.therapist_id !== userId) {
+                return res.status(403).json({
+                    errors: [{ msg: 'Acesso negado. Este agendamento não pertence a você.' }]
+                });
+            }
+
+            // Verificar se o agendamento pode ser cancelado
+            if (appointment.status !== 'scheduled') {
+                return res.status(400).json({
+                    errors: [{ msg: 'Apenas agendamentos com status "agendado" podem ser cancelados.' }]
+                });
+            }
+
+            // ✅ USAR MESMO PADRÃO DO ADMIN: Chamar método cancel() do model
+            // Mapear campos do frontend para o padrão estabelecido
+            const cancellationData = {
+                reason_type: cancellation_reason,        // → cancellation_reason_type
+                reason_description: cancellation_notes || 'Cancelado pelo terapeuta', // → cancellation_reason_description
+                cancelled_by: userId                     // ✅ Integer FK (não string)
+            };
+
+            const cancelledAppointment = await ScheduledSessionModel.cancel(parseInt(id), cancellationData, clinic_id);
+
+            // Notificar administradores da clínica sobre o cancelamento
+            try {
+                const NotificationStatus = require('../models/notificationStatusModel');
+
+                // Buscar administradores da clínica
+                const pool = require('../models/db');
+                const adminQuery = `
+                    SELECT id FROM users
+                    WHERE clinic_id = $1
+                    AND is_admin = true
+                    AND id != $2
+                `;
+                const { rows: admins } = await pool.query(adminQuery, [clinic_id, userId]);
+
+                // Criar notificações para cada admin
+                for (const admin of admins) {
+                    await NotificationStatus.incrementUnreadCount(
+                        admin.id,
+                        appointment.patient_id,
+                        'appointment_cancelled'
+                    );
+                }
+
+                console.log(`[THERAPIST-SCHEDULE] Cancelamento notificado para ${admins.length} administradores`);
+            } catch (notifError) {
+                // Não bloquear o cancelamento se a notificação falhar
+                console.error('[THERAPIST-SCHEDULE] Erro ao enviar notificações:', notifError);
+            }
+
+            res.status(200).json({
+                message: 'Agendamento cancelado com sucesso!',
+                appointment: cancelledAppointment,
+                notification_sent: true
+            });
+
+        } catch (error) {
+            console.error(`[THERAPIST-SCHEDULE] Erro ao cancelar agendamento ID ${req.params.id}:`, error);
+            next(error);
+        }
     }
 };
 

@@ -290,6 +290,14 @@ const ScheduledSession = {
             throw new Error('Agendamento não encontrado ou não pertence a esta clínica.');
         }
 
+        // ✅ CORREÇÃO: Validar que a sessão não está no futuro
+        const appointmentDateTime = new Date(`${existing.scheduled_date}T${existing.scheduled_time}`);
+        const now = new Date();
+
+        if (appointmentDateTime > now) {
+            throw new Error('Não é possível registrar uma sessão que ainda não aconteceu. A data/hora do agendamento está no futuro.');
+        }
+
         // Verificar se sessão já está completa ou cancelada
         if (existing.status === 'completed') {
             // Se já está completa, apenas atualiza as notas
@@ -1015,9 +1023,8 @@ const ScheduledSession = {
         try {
             const query = `
                 SELECT
-                    tpa.id,
-                    tpa.patient_id,
                     tpa.therapist_id,
+                    tpa.patient_id,
                     p.name as patient_name,
                     u.full_name as therapist_name
                 FROM therapist_patient_assignments tpa
@@ -1026,7 +1033,6 @@ const ScheduledSession = {
                 WHERE tpa.patient_id = $1
                   AND tpa.therapist_id = $2
                   AND p.clinic_id = $3
-                  AND tpa.status = 'active'
                 LIMIT 1
             `;
 

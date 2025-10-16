@@ -50,3 +50,20 @@ export const getUnreadMessagesCount = async () => {
     return 0;
   }
 };
+
+// ✅ NOVO: Buscar lista de conversas com mensagens não lidas (para prioridades)
+export const getUnreadChats = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${PARENT_CHAT_API_URL}/unread-chats`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    });
+    return response.data.chats || [];
+  } catch (error) {
+    console.error('Erro ao buscar conversas não lidas:', error);
+    return [];
+  }
+};

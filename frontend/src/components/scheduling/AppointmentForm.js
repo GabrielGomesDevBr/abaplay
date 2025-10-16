@@ -21,7 +21,7 @@ const AppointmentForm = ({
   editingAppointment = null,
   isLoading = false
 }) => {
-  const { token } = useAuth();
+  const { token, hasProAccess } = useAuth();
 
   // Estados dos dropdowns - NOVA ESTRUTURA
   const [therapists, setTherapists] = useState([]);
@@ -103,6 +103,12 @@ const AppointmentForm = ({
   };
 
   const loadDisciplines = async () => {
+    // Só carregar disciplinas se o usuário tiver acesso Pro
+    if (!hasProAccess || !hasProAccess()) {
+      setDisciplines([]);
+      return;
+    }
+
     try {
       setLoadingDisciplines(true);
       const disciplinesData = await getDisciplineHierarchy();
@@ -119,7 +125,6 @@ const AppointmentForm = ({
       setDisciplines(disciplinesList);
     } catch (error) {
       console.error('Erro ao carregar disciplinas');
-      setErrors(['Erro ao carregar lista de disciplinas']);
       setDisciplines([]); // Garantir que seja array mesmo em caso de erro
     } finally {
       setLoadingDisciplines(false);
@@ -416,17 +421,25 @@ const AppointmentForm = ({
       const templateData = {
         patient_id: parseInt(formData.patient_id),
         therapist_id: parseInt(formData.therapist_id),
-        discipline_id: formData.discipline_id ? parseInt(formData.discipline_id) : null,
         recurrence_type: recurrenceConfig.type,
         day_of_week: dayOfWeek,
         scheduled_time: formData.scheduled_time,
         duration_minutes: parseInt(formData.duration_minutes),
         start_date: ensureYYYYMMDD(formData.scheduled_date),
-        end_date: recurrenceConfig.endDate ? ensureYYYYMMDD(recurrenceConfig.endDate) : null,
         generate_weeks_ahead: parseInt(recurrenceConfig.generateWeeks),
         skip_holidays: Boolean(recurrenceConfig.skipHolidays),
         notes: recurrenceConfig.notes || formData.notes || null
       };
+
+      // Adicionar discipline_id apenas se preenchido (evitar enviar null)
+      if (formData.discipline_id) {
+        templateData.discipline_id = parseInt(formData.discipline_id);
+      }
+
+      // Adicionar end_date apenas se preenchido (evitar enviar string vazia)
+      if (recurrenceConfig.endDate && recurrenceConfig.endDate.trim() !== '') {
+        templateData.end_date = ensureYYYYMMDD(recurrenceConfig.endDate);
+      }
 
       const templateErrors = recurringAppointmentApi.validateTemplate(templateData);
       if (templateErrors.length > 0) {
@@ -564,38 +577,40 @@ const AppointmentForm = ({
               </select>
             </div>
 
-            {/* 3. Seleção de Disciplina (Opcional) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <FontAwesomeIcon icon={faStickyNote} className="mr-2 text-gray-400" />
-                Área de Intervenção <span className="text-gray-500 text-sm">(opcional)</span>
-              </label>
-              <select
-                name="discipline_id"
-                value={formData.discipline_id}
-                onChange={handleInputChange}
-                disabled={isLoading || loadingDisciplines}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">
-                  {loadingDisciplines ? 'Carregando disciplinas...' : 'Sessão geral (todos os programas)'}
-                </option>
-                {Array.isArray(disciplines) && disciplines.map((discipline) => (
-                  <option key={discipline.id} value={discipline.id}>
-                    {discipline.name}
+            {/* 3. Seleção de Disciplina (Opcional - Apenas Plano Pro) */}
+            {hasProAccess && hasProAccess() && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <FontAwesomeIcon icon={faStickyNote} className="mr-2 text-gray-400" />
+                  Área de Intervenção <span className="text-gray-500 text-sm">(opcional)</span>
+                </label>
+                <select
+                  name="discipline_id"
+                  value={formData.discipline_id}
+                  onChange={handleInputChange}
+                  disabled={isLoading || loadingDisciplines}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">
+                    {loadingDisciplines ? 'Carregando disciplinas...' : 'Sessão geral (todos os programas)'}
                   </option>
-                ))}
-              </select>
-              <div className="mt-1 text-xs text-gray-500">
-                💡 Deixe em branco para sessão geral que pode trabalhar qualquer programa do paciente
-              </div>
-              {loadingDisciplines && (
-                <div className="mt-2 flex items-center text-sm text-gray-500">
-                  <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
-                  Carregando áreas de intervenção...
+                  {Array.isArray(disciplines) && disciplines.map((discipline) => (
+                    <option key={discipline.id} value={discipline.id}>
+                      {discipline.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="mt-1 text-xs text-gray-500">
+                  💡 Deixe em branco para sessão geral que pode trabalhar qualquer programa do paciente
                 </div>
-              )}
-            </div>
+                {loadingDisciplines && (
+                  <div className="mt-2 flex items-center text-sm text-gray-500">
+                    <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
+                    Carregando áreas de intervenção...
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Data e Horário */}

@@ -1,6 +1,7 @@
 // frontend/src/pages/SchedulingPage.js
 
 import React, { useState, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCalendarPlus,
@@ -26,6 +27,7 @@ import PendingActionsPanel from '../components/scheduling/PendingActionsPanel';
 import EditRecurringSeriesModal from '../components/scheduling/EditRecurringSeriesModal'; // ✅ FASE 3
 import CancelAppointmentModal from '../components/scheduling/CancelAppointmentModal'; // ✅ NOVO: Modal de cancelamento
 import WeekCalendarView from '../components/scheduling/WeekCalendarView'; // ✅ NOVO: Visualização de calendário
+import RetroactiveSessionModal from '../components/scheduling/RetroactiveSessionModal'; // ✅ SOLUÇÃO 4: Modal para registro retroativo
 import {
   getAppointments,
   createAppointment,
@@ -63,6 +65,7 @@ const SchedulingPage = () => {
   const [showRetroactiveModal, setShowRetroactiveModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false); // ✅ NOVO: Modal de cancelamento
   const [showActionsMenu, setShowActionsMenu] = useState(false); // ✅ NOVO: Menu de ações mobile
+  const [showRetroactiveSessionModal, setShowRetroactiveSessionModal] = useState(false); // ✅ SOLUÇÃO 4: Modal retroativo
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [selectedOrphanSession, setSelectedOrphanSession] = useState(null);
@@ -120,8 +123,10 @@ const SchedulingPage = () => {
   // Função para ver agendamentos de um template
   const handleViewTemplateAppointments = (template) => {
     // Implementar modal ou navegação para ver agendamentos do template
-    // Por agora, só mostrar alerta
-    alert(`Visualizar agendamentos do template:\n\n${template.patient_name} - ${template.therapist_name}\nTemplate ID: ${template.id}`);
+    // Por agora, só mostrar toast
+    toast.success(`Template: ${template.patient_name} - ${template.therapist_name}\nID: ${template.id}`, {
+      duration: 5000
+    });
   };
 
   const refreshAssignments = useCallback(async () => {
@@ -223,7 +228,10 @@ const SchedulingPage = () => {
         setEditingAppointment(null);
 
         // Mostrar resultado
-        alert(`Template recorrente criado com sucesso!\n\n${generated_appointments} agendamentos gerados\n${conflicts} conflitos encontrados\n\nTemplate ID: ${template.id}`);
+        toast.success(
+          `Template recorrente criado com sucesso!\n${generated_appointments} agendamentos gerados\n${conflicts > 0 ? conflicts + ' conflitos encontrados' : 'Sem conflitos'}`,
+          { duration: 5000 }
+        );
 
         // Atualizar listas
         await loadAppointments();
@@ -292,7 +300,7 @@ const SchedulingPage = () => {
       setShowAppointmentDetails(false);
     } catch (error) {
       console.error('Erro ao remover agendamento');
-      alert('Erro ao remover agendamento. Tente novamente.');
+      toast.error('Erro ao remover agendamento. Tente novamente.');
     }
   };
 
@@ -344,11 +352,11 @@ const SchedulingPage = () => {
     try {
       const result = await deleteRecurringSeries(appointment.recurring_template_id, appointment.id);
       await loadAppointments();
-      
-      alert(`✅ ${result.count} agendamento(s) da série foram removidos com sucesso!`);
+
+      toast.success(`${result.count} agendamento(s) da série foram removidos com sucesso!`);
     } catch (error) {
       console.error('Erro ao excluir série recorrente:', error);
-      alert(`❌ Erro ao excluir série: ${error.message}`);
+      toast.error(`Erro ao excluir série: ${error.message}`);
     }
   };
 
@@ -358,7 +366,7 @@ const SchedulingPage = () => {
       const occurrences = result.occurrences || [];
 
       if (occurrences.length === 0) {
-        alert('Não há mais ocorrências futuras para esta série.');
+        toast('Não há mais ocorrências futuras para esta série.', { icon: 'ℹ️' });
         return;
       }
 
@@ -369,10 +377,12 @@ const SchedulingPage = () => {
         return `• ${date} às ${time}`;
       }).join('\n');
 
-      alert(`📅 Próximas ${occurrences.length} Ocorrências:\n\n${occurrencesList}`);
+      toast.success(`Próximas ${occurrences.length} Ocorrências:\n\n${occurrencesList}`, {
+        duration: 7000
+      });
     } catch (error) {
       console.error('Erro ao buscar próximas ocorrências:', error);
-      alert(`❌ Erro: ${error.message}`);
+      toast.error(`Erro: ${error.message}`);
     }
   };
 
@@ -389,10 +399,10 @@ const SchedulingPage = () => {
       });
 
       await loadAppointments();
-      alert('✅ Justificativa adicionada com sucesso!');
+      toast.success('Justificativa adicionada com sucesso!');
     } catch (error) {
       console.error('Erro ao justificar ausência:', error);
-      alert(`❌ Erro ao justificar: ${error.message}`);
+      toast.error(`Erro ao justificar: ${error.message}`);
     }
   };
 
@@ -409,10 +419,10 @@ const SchedulingPage = () => {
       await loadAppointments();
       setShowCancelModal(false);
       setSelectedAppointment(null);
-      alert('✅ Agendamento cancelado com sucesso!');
+      toast.success('Agendamento cancelado com sucesso!');
     } catch (error) {
       console.error('Erro ao cancelar agendamento:', error);
-      alert(`❌ Erro ao cancelar: ${error.message}`);
+      toast.error(`Erro ao cancelar: ${error.message}`);
     } finally {
       setIsCancelling(false);
     }
@@ -432,18 +442,41 @@ const SchedulingPage = () => {
     try {
       const result = await markMissedAppointments(24); // 24 horas após o agendamento
       await loadAppointments();
-      
 
-      alert(`${result.marked_count || 0} agendamentos foram marcados como perdidos.`);
+      toast.success(`${result.marked_count || 0} agendamentos foram marcados como perdidos.`);
     } catch (error) {
       console.error('Erro ao marcar agendamentos perdidos');
-      alert('Erro ao processar agendamentos perdidos. Tente novamente.');
+      toast.error('Erro ao processar agendamentos perdidos. Tente novamente.');
     }
   };
 
   const handleRefresh = () => {
     loadAppointments();
-    
+
+  };
+
+  // ✅ SOLUÇÃO 4: Handler para criar sessão retroativa (plano Agendamento)
+  const handleCreateRetroactiveSession = async (sessionData) => {
+    try {
+      setIsSubmitting(true);
+
+      // Usar a mesma API de criação de agendamento, mas marcado como retroativo
+      const retroactiveData = {
+        ...sessionData,
+        status: 'completed' // Já criar como completo
+      };
+
+      await createAppointment(retroactiveData);
+      await loadAppointments();
+
+      setShowRetroactiveSessionModal(false);
+      toast.success('Sessão retroativa registrada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao criar sessão retroativa:', error);
+      throw error;
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleGenerateReport = async (config) => {
@@ -461,7 +494,7 @@ const SchedulingPage = () => {
 
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);
-      alert('Erro ao gerar relatório. Tente novamente.');
+      toast.error('Erro ao gerar relatório. Tente novamente.');
     } finally {
       setIsGeneratingReport(false);
     }
@@ -492,6 +525,23 @@ const SchedulingPage = () => {
     });
 
     return Array.from(therapistsMap.values());
+  };
+
+  // ✅ NOVO: Extrair pacientes únicos dos appointments
+  const getPatients = () => {
+    const patientsMap = new Map();
+
+    // Buscar pacientes dos appointments
+    appointments.forEach(appointment => {
+      if (appointment.patient_id && appointment.patient_name) {
+        patientsMap.set(appointment.patient_id, {
+          id: appointment.patient_id,
+          name: appointment.patient_name
+        });
+      }
+    });
+
+    return Array.from(patientsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   };
 
 
@@ -550,6 +600,16 @@ const SchedulingPage = () => {
                 <FontAwesomeIcon icon={faFilePdf} className="mr-2 w-4 h-4" />
                 Gerar Relatório
               </button>
+              {/* ✅ SOLUÇÃO 4: Botão Registrar Sessão Passada (apenas plano Agendamento) */}
+              {user?.subscription_plan === 'scheduling' && !user?.trial_pro_enabled && (
+                <button
+                  onClick={() => setShowRetroactiveSessionModal(true)}
+                  className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-red-600 border border-transparent rounded-lg shadow-sm hover:from-orange-600 hover:to-red-700 hover:shadow transition-all duration-200 flex items-center"
+                >
+                  <FontAwesomeIcon icon={faCalendarPlus} className="mr-2 w-4 h-4" />
+                  Sessão Passada
+                </button>
+              )}
               <button
                 onClick={() => setShowAppointmentForm(true)}
                 className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 border border-transparent rounded-lg shadow-sm hover:from-blue-600 hover:to-indigo-700 hover:shadow-md transition-all duration-200 flex items-center transform hover:scale-105"
@@ -582,22 +642,27 @@ const SchedulingPage = () => {
         )}
 
 
-        {/* NOVO: Painel de Ações Pendentes */}
-        <div className="mb-8">
-          <PendingActionsPanel
-            onResolveOrphans={() => setActiveTab('orphans')}
-            onResolveAll={() => setActiveTab('orphans')}
-            onViewAppointmentDetails={handleViewAppointment}
-            onJustifyAppointment={handleJustifyAppointment}
-            onCreateRetroactive={handleCreateRetroactive}
-            onCreateBatchRetroactive={(sessions) => {
-              // Handler para criar múltiplos retroativos
-              console.log('Criar retroativos em lote:', sessions);
-              alert(`Funcionalidade de criação em lote de ${sessions.length} retroativos será implementada em breve.`);
-            }}
-            refreshTrigger={orphanRefreshTrigger}
-          />
-        </div>
+        {/* ✅ CORREÇÃO: Painel de Ações Pendentes apenas no plano Pro */}
+        {(user?.subscription_plan === 'pro' || user?.trial_pro_enabled) && (
+          <div className="mb-8">
+            <PendingActionsPanel
+              onResolveOrphans={() => setActiveTab('orphans')}
+              onResolveAll={() => setActiveTab('orphans')}
+              onViewAppointmentDetails={handleViewAppointment}
+              onJustifyAppointment={handleJustifyAppointment}
+              onCreateRetroactive={handleCreateRetroactive}
+              onCreateBatchRetroactive={(sessions) => {
+                // Handler para criar múltiplos retroativos
+                console.log('Criar retroativos em lote:', sessions);
+                toast(`Funcionalidade de criação em lote de ${sessions.length} retroativos será implementada em breve.`, {
+                  icon: '🚀',
+                  duration: 4000
+                });
+              }}
+              refreshTrigger={orphanRefreshTrigger}
+            />
+          </div>
+        )}
 
         {/* Abas de Navegação */}
         <div className="mb-6">
@@ -625,17 +690,20 @@ const SchedulingPage = () => {
                 <FontAwesomeIcon icon={faCalendarWeek} className="mr-2" />
                 Calendário
               </button>
-              <button
-                onClick={() => setActiveTab('orphans')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'orphans'
-                    ? 'border-orange-500 text-orange-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
-                Sessões Órfãs
-              </button>
+              {/* ✅ CORREÇÃO: Mostrar "Sessões Órfãs" apenas no plano Pro */}
+              {(user?.subscription_plan === 'pro' || user?.trial_pro_enabled) && (
+                <button
+                  onClick={() => setActiveTab('orphans')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'orphans'
+                      ? 'border-orange-500 text-orange-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
+                  Sessões Órfãs
+                </button>
+              )}
               {/* ✅ FASE 3: Aba "Recorrentes" removida - funcionalidade integrada na lista principal */}
             </nav>
           </div>
@@ -709,6 +777,7 @@ const SchedulingPage = () => {
         onClose={() => setShowReportModal(false)}
         onGenerate={handleGenerateReport}
         therapists={getTherapists()}
+        patients={getPatients()}
         isGenerating={isGeneratingReport}
       />
 
@@ -756,6 +825,16 @@ const SchedulingPage = () => {
         isLoading={isCancelling}
       />
 
+      {/* ✅ SOLUÇÃO 4: Modal para Registrar Sessão Retroativa (Plano Agendamento) */}
+      <RetroactiveSessionModal
+        isOpen={showRetroactiveSessionModal}
+        onClose={() => setShowRetroactiveSessionModal(false)}
+        onSubmit={handleCreateRetroactiveSession}
+        patients={getPatients()}
+        therapists={getTherapists()}
+        isLoading={isSubmitting}
+      />
+
       {/* Modal de Ações - Mobile */}
       {showActionsMenu && (
         <div className="sm:hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end" onClick={() => setShowActionsMenu(false)}>
@@ -791,6 +870,20 @@ const SchedulingPage = () => {
               <FontAwesomeIcon icon={faFilePdf} className="mr-3 text-lg" />
               Gerar Relatório
             </button>
+
+            {/* ✅ SOLUÇÃO 4: Botão mobile para Sessão Passada (apenas plano Agendamento) */}
+            {user?.subscription_plan === 'scheduling' && !user?.trial_pro_enabled && (
+              <button
+                onClick={() => {
+                  setShowRetroactiveSessionModal(true);
+                  setShowActionsMenu(false);
+                }}
+                className="w-full py-3 px-4 bg-gradient-to-r from-orange-50 to-red-50 text-orange-700 rounded-lg font-medium hover:from-orange-100 hover:to-red-100 active:scale-95 transition-all flex items-center"
+              >
+                <FontAwesomeIcon icon={faCalendarPlus} className="mr-3 text-lg" />
+                Sessão Passada (Últimos 7 dias)
+              </button>
+            )}
 
             <button
               onClick={() => {

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom'; // ✅ NOVO: Para receber state da navegação
 import { usePatients } from '../context/PatientContext';
 import { usePrograms } from '../context/ProgramContext';
 import { useAuth } from '../context/AuthContext';
@@ -6,6 +7,7 @@ import { assignProgramToPatient } from '../api/patientApi';
 import ProgramLibrary from '../components/program/ProgramLibrary';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faExclamationTriangle, faBook, faUserCircle, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import toast from 'react-hot-toast'; // ✅ NOVO: Para mostrar toast informativo
 
 // Estilos de animação para a página
 const fadeInStyle = `
@@ -27,6 +29,7 @@ if (typeof document !== 'undefined' && !document.querySelector('#programs-page-s
 }
 
 const ProgramsPage = () => {
+  const location = useLocation(); // ✅ NOVO: Para receber state da navegação
   const { selectedPatient, refreshPatientData } = usePatients();
   const { isLoading, error: contextError } = usePrograms();
 
@@ -36,6 +39,33 @@ const ProgramsPage = () => {
   const [assigningId, setAssigningId] = useState(null);
   // O estado 'removingId' não é mais necessário.
   const [actionError, setActionError] = useState('');
+  const [highlightedAssignments, setHighlightedAssignments] = useState([]); // ✅ NOVO: Assignments a destacar
+  const [showWithoutProgress, setShowWithoutProgress] = useState(false); // ✅ NOVO: Filtro para mostrar apenas sem progresso
+
+  // ✅ NOVO: Processar state da navegação (vindo de TodayPriorities)
+  useEffect(() => {
+    if (location.state) {
+      const { highlightAssignments, showWithoutProgress: filterWithoutProgress } = location.state;
+
+      // Se veio das prioridades para ver programas sem progresso
+      if (highlightAssignments && Array.isArray(highlightAssignments)) {
+        setHighlightedAssignments(highlightAssignments);
+
+        // Mostrar toast informativo
+        toast.success(`Exibindo ${highlightAssignments.length} programa${highlightAssignments.length > 1 ? 's' : ''} sem registro de progresso há mais de 7 dias`, {
+          icon: '📋',
+          duration: 4000
+        });
+      }
+
+      if (filterWithoutProgress) {
+        setShowWithoutProgress(true);
+      }
+
+      // Limpar o state após processar para evitar reprocessamento
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const handleAssign = async (programId) => {
     if (!selectedPatient) {
@@ -185,6 +215,8 @@ const ProgramsPage = () => {
               isPatientSelected={!!selectedPatient}
               assigningId={assigningId}
               assignedPrograms={selectedPatient?.assigned_programs || []}
+              highlightedAssignments={highlightedAssignments}
+              showWithoutProgress={showWithoutProgress}
             />
           ) : (
             /* Estado vazio apenas para terapeutas sem cliente */

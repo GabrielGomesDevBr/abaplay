@@ -1,12 +1,23 @@
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { usePatients } from '../context/PatientContext';
 import CaseDiscussionChat from '../components/chat/CaseDiscussionChat';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faExclamationCircle, faUserMd } from '@fortawesome/free-solid-svg-icons';
 
 const CaseDiscussionPage = () => {
+  const navigate = useNavigate();
+  const { hasProAccess } = useAuth();
   const [searchParams] = useSearchParams();
   const { selectedPatient } = usePatients();
+
+  // FASE 2: Proteção adicional - redireciona se não tiver acesso Pro
+  useEffect(() => {
+    if (!hasProAccess()) {
+      navigate('/clients');
+    }
+  }, [hasProAccess, navigate]);
 
   // Pegar parâmetros da URL (caso venha de link externo)
   const patientId = searchParams.get('patient') || selectedPatient?.id;

@@ -9,7 +9,7 @@ import NotificationPanel from '../notifications/NotificationPanel';
 import ProgressAlert from '../notifications/ProgressAlert';
 
 const Navbar = ({ isNotificationPanelOpen, setNotificationPanelOpen }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, hasProAccess } = useAuth();
   const { selectedPatient, refreshPatientData } = usePatients();
   const { totalUnread, refresh: refreshNotifications } = useNotifications();
   const [showProgressAlert, setShowProgressAlert] = useState(false);
@@ -85,19 +85,26 @@ const Navbar = ({ isNotificationPanelOpen, setNotificationPanelOpen }) => {
                 <FontAwesomeIcon icon={faUserShield} className="fa-fw mr-2" /> Admin
             </NavLink>
         )}
-        <NavLink to="/dashboard" className={() => getLinkClass("/dashboard")} onClick={onLinkClick}><FontAwesomeIcon icon={faTachometerAlt} className="fa-fw mr-2" /> Dashboard</NavLink>
-        
+
+        {/* Dashboard - APENAS PLANO PRO */}
+        {hasProAccess() && (
+          <NavLink to="/dashboard" className={() => getLinkClass("/dashboard")} onClick={onLinkClick}>
+            <FontAwesomeIcon icon={faTachometerAlt} className="fa-fw mr-2" /> Dashboard
+          </NavLink>
+        )}
+
         {!user?.is_admin && (
           <NavLink to="/clients" className={() => getLinkClass("/clients")} onClick={onLinkClick}>
             <FontAwesomeIcon icon={faUsers} className="fa-fw mr-2" /> Clientes
           </NavLink>
         )}
 
-        {/* --- CORREÇÃO PRINCIPAL --- */}
-        {/* A lógica de mapeamento foi removida e substituída por um único link estático. */}
-        <NavLink to="/programs" className={() => getLinkClass("/programs")} onClick={onLinkClick}>
-            <FontAwesomeIcon icon={faFolderOpen} className="fa-fw mr-2" /> Programas
-        </NavLink>
+        {/* Programas - APENAS PLANO PRO */}
+        {hasProAccess() && (
+          <NavLink to="/programs" className={() => getLinkClass("/programs")} onClick={onLinkClick}>
+              <FontAwesomeIcon icon={faFolderOpen} className="fa-fw mr-2" /> Programas
+          </NavLink>
+        )}
 
         {/* --- LINKS DO SISTEMA DE AGENDAMENTO --- */}
         {user?.is_admin && (

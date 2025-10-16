@@ -1,13 +1,13 @@
 // frontend/src/pages/TherapistSchedulePage.js
 
 import React, { useState, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCalendarAlt,
   faClock,
   faUser,
   faStethoscope,
-  faChartBar,
   faExclamationTriangle,
   faCheckCircle,
   faRefresh,
@@ -15,24 +15,25 @@ import {
   faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../context/AuthContext';
+import { useLocation } from 'react-router-dom'; // ✅ NOVO: Para receber state da navegação
 import {
   getPersonalSchedule,
   getUpcomingAppointments,
   getTodaySchedule,
   getMissedAppointments,
-  getPersonalStatistics,
   getAppointmentDetails,
   justifyMissedAppointment,
+  cancelTherapistAppointment,
   completeSessionWithNotes,
   groupAppointmentsByDate,
   getNextAppointment,
   calculateSummaryStats,
   isAppointmentOverdue,
-  getTimeUntilAppointment,
-  getPerformanceColor
+  getTimeUntilAppointment
 } from '../api/therapistScheduleApi';
 import AppointmentDetailsModal from '../components/scheduling/AppointmentDetailsModal';
 import SessionNoteModal from '../components/scheduling/SessionNoteModal';
+import TherapistCancelAppointmentModal from '../components/scheduling/TherapistCancelAppointmentModal';
 
 /**
  * Página de agenda pessoal para terapeutas
@@ -40,15 +41,16 @@ import SessionNoteModal from '../components/scheduling/SessionNoteModal';
  */
 const TherapistSchedulePage = () => {
   const { user } = useAuth();
+  const location = useLocation(); // ✅ NOVO: Para receber state da navegação
 
   // Estados principais
   const [schedule, setSchedule] = useState([]);
   const [todaySchedule, setTodaySchedule] = useState([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [missedAppointments, setMissedAppointments] = useState([]);
-  const [statistics, setStatistics] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [highlightedAppointments, setHighlightedAppointments] = useState([]); // ✅ NOVO: Para destacar appointments
 
   // Estados dos modais
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
@@ -57,12 +59,15 @@ const TherapistSchedulePage = () => {
   const [justifyingAppointment, setJustifyingAppointment] = useState(null);
   const [showSessionNoteModal, setShowSessionNoteModal] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellingAppointment, setCancellingAppointment] = useState(null);
+  const [isSubmittingCancellation, setIsSubmittingCancellation] = useState(false);
 
   // Estados de visualização
-  const [currentView, setCurrentView] = useState('today'); // today, upcoming, schedule, missed, stats
+  const [currentView, setCurrentView] = useState('today'); // today, upcoming, schedule, missed
   const [scheduleFilters, setScheduleFilters] = useState({
     start_date: new Date().toISOString().split('T')[0],
-    end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 7 dias à frente
+    end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 30 dias à frente (incluindo recorrentes)
   });
 
   // Estados de justificativa
@@ -71,6 +76,50 @@ const TherapistSchedulePage = () => {
     missed_by: 'patient'
   });
   const [isSubmittingJustification, setIsSubmittingJustification] = useState(false);
+
+  // ✅ CORREÇÃO: Definir funções de carregamento ANTES de loadAllData para evitar erro de inicialização
+  const loadSchedule = useCallback(async () => {
+    try {
+      const response = await getPersonalSchedule(scheduleFilters);
+      setSchedule(response.appointments || []);
+    } catch (error) {
+      console.error('Erro ao carregar agenda');
+    }
+  }, [scheduleFilters]);
+
+  const loadTodaySchedule = useCallback(async () => {
+    try {
+      const response = await getTodaySchedule();
+      setTodaySchedule(response.appointments || []);
+    } catch (error) {
+      console.error('Erro ao carregar agenda de hoje');
+    }
+  }, []);
+
+  const loadUpcomingAppointments = useCallback(async () => {
+    try {
+      const response = await getUpcomingAppointments(30); // próximos 30 dias (incluindo agendamentos recorrentes)
+      const appointments = response.appointments || [];
+
+      // Deduplicate appointments by ID (safeguard)
+      const uniqueAppointments = Array.from(
+        new Map(appointments.map(apt => [apt.id, apt])).values()
+      );
+
+      setUpcomingAppointments(uniqueAppointments);
+    } catch (error) {
+      console.error('Erro ao carregar próximos agendamentos');
+    }
+  }, []);
+
+  const loadMissedAppointments = useCallback(async () => {
+    try {
+      const response = await getMissedAppointments(false); // apenas não justificados
+      setMissedAppointments(response.appointments || []);
+    } catch (error) {
+      console.error('Erro ao carregar agendamentos perdidos');
+    }
+  }, []);
 
   const loadAllData = useCallback(async () => {
     try {
@@ -81,7 +130,6 @@ const TherapistSchedulePage = () => {
         loadTodaySchedule(),
         loadUpcomingAppointments(),
         loadMissedAppointments(),
-        loadStatistics(),
         loadSchedule()
       ]);
     } catch (error) {
@@ -90,16 +138,7 @@ const TherapistSchedulePage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  const loadSchedule = useCallback(async () => {
-    try {
-      const response = await getPersonalSchedule(scheduleFilters);
-      setSchedule(response.appointments || []);
-    } catch (error) {
-      console.error('Erro ao carregar agenda');
-    }
-  }, [scheduleFilters]);
+  }, [loadTodaySchedule, loadUpcomingAppointments, loadMissedAppointments, loadSchedule]);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -108,55 +147,37 @@ const TherapistSchedulePage = () => {
     }
   }, [user, loadAllData]);
 
+  // ✅ NOVO: Processar state da navegação (vindo de TodayPriorities)
+  useEffect(() => {
+    if (location.state) {
+      const { filterByMissed, highlightAppointments, showMissedOnly } = location.state;
+
+      // Se veio das prioridades para ver sessões perdidas
+      if (filterByMissed || showMissedOnly) {
+        setCurrentView('missed'); // Mudar para aba de perdidos
+
+        if (highlightAppointments && Array.isArray(highlightAppointments)) {
+          setHighlightedAppointments(highlightAppointments);
+
+          // Mostrar toast informativo
+          toast.success(`Exibindo ${highlightAppointments.length} sessão${highlightAppointments.length > 1 ? 'ões' : ''} que precisa${highlightAppointments.length > 1 ? 'm' : ''} de justificativa`, {
+            icon: '📋',
+            duration: 3000
+          });
+        }
+      }
+
+      // Limpar o state após processar para evitar reprocessamento
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+
   // Recarregar agenda quando filtros mudarem
   useEffect(() => {
     if (currentView === 'schedule') {
       loadSchedule();
     }
   }, [currentView, loadSchedule]);
-
-  const loadTodaySchedule = async () => {
-    try {
-      const response = await getTodaySchedule();
-      setTodaySchedule(response.appointments || []);
-    } catch (error) {
-      console.error('Erro ao carregar agenda de hoje');
-    }
-  };
-
-  const loadUpcomingAppointments = async () => {
-    try {
-      const response = await getUpcomingAppointments(7); // próximos 7 dias
-      setUpcomingAppointments(response.appointments || []);
-    } catch (error) {
-      console.error('Erro ao carregar próximos agendamentos');
-    }
-  };
-
-  const loadMissedAppointments = async () => {
-    try {
-      const response = await getMissedAppointments(false); // apenas não justificados
-      setMissedAppointments(response.appointments || []);
-    } catch (error) {
-      console.error('Erro ao carregar agendamentos perdidos');
-    }
-  };
-
-  const loadStatistics = async () => {
-    try {
-      const endDate = new Date().toISOString().split('T')[0];
-      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-      const response = await getPersonalStatistics({
-        start_date: startDate,
-        end_date: endDate,
-        period: 'month'
-      });
-      setStatistics(response);
-    } catch (error) {
-      console.error('Erro ao carregar estatísticas');
-    }
-  };
 
 
   const handleViewAppointment = async (appointment) => {
@@ -166,7 +187,7 @@ const TherapistSchedulePage = () => {
       setShowAppointmentDetails(true);
     } catch (error) {
       console.error('Erro ao carregar detalhes do agendamento');
-      alert('Erro ao carregar detalhes do agendamento');
+      toast.error('Erro ao carregar detalhes do agendamento');
     }
   };
 
@@ -186,6 +207,40 @@ const TherapistSchedulePage = () => {
     }
   };
 
+  // Quick Win #2: Registro rápido sem modal
+  const handleQuickComplete = async (appointment) => {
+    try {
+      // ✅ VALIDAÇÃO: Verificar se o agendamento não está no futuro
+      const appointmentDateTime = new Date(`${appointment.scheduled_date}T${appointment.scheduled_time}`);
+      const now = new Date();
+
+      if (appointmentDateTime > now) {
+        toast.error('Não é possível registrar uma sessão que ainda não aconteceu. A data/hora do agendamento está no futuro.', {
+          icon: '⏰',
+          duration: 4000
+        });
+        return;
+      }
+
+      const defaultNote = `Sessão realizada - ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+
+      await completeSessionWithNotes(appointment.id, defaultNote);
+      await loadAllData();
+
+      toast.success('Sessão marcada como realizada!', {
+        icon: '✓',
+        duration: 2000
+      });
+    } catch (error) {
+      console.error('Erro ao registrar sessão:', error);
+      // Mostrar mensagem de erro do backend se disponível
+      const errorMessage = error.response?.data?.errors?.[0]?.msg || error.message || 'Erro ao registrar sessão. Tente novamente.';
+      toast.error(errorMessage, {
+        duration: 4000
+      });
+    }
+  };
+
   const handleJustifyAppointment = (appointment) => {
     setJustifyingAppointment(appointment);
     setJustificationData({
@@ -197,7 +252,7 @@ const TherapistSchedulePage = () => {
 
   const handleSubmitJustification = async () => {
     if (!justificationData.missed_reason.trim()) {
-      alert('Por favor, forneça um motivo para a ausência.');
+      toast.error('Por favor, forneça um motivo para a ausência.');
       return;
     }
 
@@ -207,22 +262,60 @@ const TherapistSchedulePage = () => {
 
       // Recarregar dados
       await loadMissedAppointments();
-      await loadStatistics();
 
       setShowJustificationModal(false);
       setJustifyingAppointment(null);
-      alert('Justificativa adicionada com sucesso.');
+      toast.success('Justificativa adicionada com sucesso.');
     } catch (error) {
       console.error('Erro ao justificar agendamento');
-      alert('Erro ao adicionar justificativa. Tente novamente.');
+      toast.error('Erro ao adicionar justificativa. Tente novamente.');
     } finally {
       setIsSubmittingJustification(false);
+    }
+  };
+
+  const handleCancelAppointment = (appointment) => {
+    setCancellingAppointment(appointment);
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancellation = async (cancellationData) => {
+    try {
+      setIsSubmittingCancellation(true);
+      await cancelTherapistAppointment(cancellingAppointment.id, cancellationData);
+
+      // Recarregar todos os dados
+      await loadAllData();
+
+      setShowCancelModal(false);
+      setCancellingAppointment(null);
+      toast.success('Agendamento cancelado com sucesso. Os administradores foram notificados.');
+    } catch (error) {
+      console.error('Erro ao cancelar agendamento');
+      toast.error(error.message || 'Erro ao cancelar agendamento. Tente novamente.');
+    } finally {
+      setIsSubmittingCancellation(false);
     }
   };
 
   const getQuickStatsCards = () => {
     const stats = calculateSummaryStats([...todaySchedule, ...upcomingAppointments]);
     const nextAppointment = getNextAppointment([...todaySchedule, ...upcomingAppointments]);
+
+    // Quick Win #3: Calcular horas trabalhadas (sessões completed)
+    const completedToday = todaySchedule.filter(a => a.status === 'completed');
+    const totalMinutesToday = completedToday.reduce((sum, a) => sum + (a.duration_minutes || 0), 0);
+    const hoursWorked = Math.floor(totalMinutesToday / 60);
+    const minutesRemaining = totalMinutesToday % 60;
+    const hoursDisplay = hoursWorked > 0
+      ? `${hoursWorked}h${minutesRemaining > 0 ? minutesRemaining + 'm' : ''}`
+      : `${minutesRemaining}min`;
+
+    // Calcular pendentes de registro hoje
+    const scheduledToday = todaySchedule.filter(a =>
+      a.status === 'scheduled' &&
+      new Date(`${a.scheduled_date}T${a.scheduled_time}`) < new Date()
+    );
 
     return [
       {
@@ -232,23 +325,25 @@ const TherapistSchedulePage = () => {
         color: 'bg-blue-500'
       },
       {
-        title: 'Próximos 7 Dias',
-        value: upcomingAppointments.length,
-        icon: faCalendarAlt,
-        color: 'bg-green-500'
+        title: 'Horas Trabalhadas Hoje',
+        value: hoursDisplay,
+        icon: faClock,
+        color: 'bg-indigo-500',
+        subtitle: `${completedToday.length} sessões realizadas`
       },
       {
-        title: 'Aguardando Justificativa',
-        value: missedAppointments.length,
+        title: 'Pendentes de Registro',
+        value: scheduledToday.length,
         icon: faExclamationTriangle,
-        color: 'bg-red-500'
+        color: scheduledToday.length > 0 ? 'bg-orange-500' : 'bg-green-500',
+        subtitle: scheduledToday.length > 0 ? 'Sessões atrasadas' : 'Tudo em dia!'
       },
       {
         title: 'Próximo Agendamento',
         value: nextAppointment
           ? getTimeUntilAppointment(nextAppointment)
           : 'Nenhum',
-        icon: faClock,
+        icon: faCalendarAlt,
         color: 'bg-purple-500',
         subtitle: nextAppointment
           ? `${nextAppointment.patient_name} - ${nextAppointment.scheduled_time}`
@@ -259,17 +354,83 @@ const TherapistSchedulePage = () => {
 
   const renderAppointmentCard = (appointment, showDate = false) => {
     const isOverdue = isAppointmentOverdue(appointment);
+    const hasNote = appointment.notes && appointment.notes.trim() !== '';
+    const isHighlighted = highlightedAppointments.includes(appointment.id); // ✅ NOVO: Verificar se está destacado
+
+    // Determinar status visual
+    const getStatusConfig = () => {
+      if (appointment.status === 'completed') {
+        return {
+          bgColor: 'bg-green-50 border-green-200',
+          icon: faCheckCircle,
+          iconColor: 'text-green-600',
+          label: 'Sessão realizada'
+        };
+      }
+      if (appointment.status === 'missed') {
+        return {
+          bgColor: 'bg-red-50 border-red-300',
+          icon: faExclamationTriangle,
+          iconColor: 'text-red-600',
+          label: 'Perdido'
+        };
+      }
+      if (appointment.status === 'cancelled') {
+        return {
+          bgColor: 'bg-gray-50 border-gray-300',
+          icon: faTimes,
+          iconColor: 'text-gray-600',
+          label: 'Cancelado'
+        };
+      }
+      if (isOverdue) {
+        return {
+          bgColor: 'bg-orange-50 border-orange-300',
+          icon: faClock,
+          iconColor: 'text-orange-600',
+          label: 'Atrasado'
+        };
+      }
+      return {
+        bgColor: 'bg-blue-50 border-blue-200',
+        icon: faClock,
+        iconColor: 'text-blue-600',
+        label: 'Agendado'
+      };
+    };
+
+    const statusConfig = getStatusConfig();
 
     return (
       <div
         key={appointment.id}
-        className={`p-3 sm:p-4 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 active:bg-gray-100 ${
-          isOverdue ? 'border-red-300 bg-red-50' : 'border-gray-200'
+        className={`relative p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md active:bg-gray-100 ${statusConfig.bgColor} ${
+          isHighlighted ? 'ring-4 ring-yellow-400 ring-opacity-60 shadow-lg' : ''
         }`}
         onClick={() => handleViewAppointment(appointment)}
       >
+        {/* ✅ NOVO: Badge de destaque */}
+        {isHighlighted && (
+          <div className="absolute top-2 left-2 z-10">
+            <span className="inline-flex items-center gap-1 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
+              <FontAwesomeIcon icon={faExclamationTriangle} className="w-3 h-3" />
+              REQUER JUSTIFICATIVA
+            </span>
+          </div>
+        )}
+
+        {/* Ícone de status no canto superior direito */}
+        <div className="absolute top-2 right-2">
+          <div className={`flex items-center gap-1 ${statusConfig.iconColor}`} title={statusConfig.label}>
+            <FontAwesomeIcon icon={statusConfig.icon} className="w-4 h-4" />
+            {hasNote && appointment.status === 'completed' && (
+              <span className="text-[10px] font-medium bg-green-600 text-white px-1.5 py-0.5 rounded-full">COM NOTA</span>
+            )}
+          </div>
+        </div>
+
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pr-8">
             {showDate && (
               <div className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">
                 {new Date(appointment.scheduled_date).toLocaleDateString('pt-BR')}
@@ -288,16 +449,40 @@ const TherapistSchedulePage = () => {
                 </span>
               )}
               {appointment.status === 'scheduled' && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddSessionNote(appointment);
-                  }}
-                  className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded hover:bg-green-200 active:bg-green-300 flex items-center gap-1"
-                >
-                  <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
-                  Registrar
-                </button>
+                <>
+                  {/* Quick Win #2: Botão de check rápido */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleQuickComplete(appointment);
+                    }}
+                    className="px-2 py-1 text-xs font-medium bg-green-500 text-white rounded hover:bg-green-600 active:bg-green-700 flex items-center gap-1 shadow-sm"
+                    title="Marcar como realizada (sem nota)"
+                  >
+                    <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
+                    ✓ Realizado
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddSessionNote(appointment);
+                    }}
+                    className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded hover:bg-blue-200 active:bg-blue-300 flex items-center gap-1"
+                    title="Registrar com nota"
+                  >
+                    + Nota
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCancelAppointment(appointment);
+                    }}
+                    className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded hover:bg-red-200 active:bg-red-300 flex items-center gap-1"
+                    title="Cancelar agendamento"
+                  >
+                    <FontAwesomeIcon icon={faTimes} className="w-3 h-3" />
+                  </button>
+                </>
               )}
               {appointment.notes && (
                 <button
@@ -349,36 +534,77 @@ const TherapistSchedulePage = () => {
     );
   };
 
-  const renderTodayView = () => (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <FontAwesomeIcon icon={faCalendarCheck} className="mr-3 text-blue-600" />
-          Agenda de Hoje - {new Date().toLocaleDateString('pt-BR')}
-        </h2>
-        {todaySchedule.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">
-            Nenhum agendamento para hoje
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {todaySchedule.map(appointment => renderAppointmentCard(appointment))}
+  const renderTodayView = () => {
+    // Quick Win #4: Calcular sessões pendentes de registro
+    const pendingRegistration = todaySchedule.filter(a =>
+      a.status === 'scheduled' &&
+      new Date(`${a.scheduled_date}T${a.scheduled_time}`) < new Date()
+    );
+
+    return (
+      <div className="space-y-6">
+        {/* Quick Win #4: Banner de pendentes */}
+        {pendingRegistration.length > 0 && (
+          <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg shadow-lg p-4 sm:p-5 border-2 border-orange-600">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <FontAwesomeIcon icon={faExclamationTriangle} className="w-6 h-6 animate-pulse" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg font-bold mb-1">
+                  ⚠️ {pendingRegistration.length} {pendingRegistration.length === 1 ? 'sessão precisa' : 'sessões precisam'} de registro
+                </h3>
+                <p className="text-sm sm:text-base text-orange-50 mb-3">
+                  {pendingRegistration.length === 1
+                    ? 'Há uma sessão de hoje que já foi realizada mas ainda não foi registrada.'
+                    : `Há ${pendingRegistration.length} sessões de hoje que já foram realizadas mas ainda não foram registradas.`}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {pendingRegistration.slice(0, 3).map(apt => (
+                    <span key={apt.id} className="text-xs bg-white/20 backdrop-blur-sm px-2 py-1 rounded-full">
+                      {apt.scheduled_time} - {apt.patient_name}
+                    </span>
+                  ))}
+                  {pendingRegistration.length > 3 && (
+                    <span className="text-xs bg-white/20 backdrop-blur-sm px-2 py-1 rounded-full">
+                      +{pendingRegistration.length - 3} mais
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         )}
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <FontAwesomeIcon icon={faCalendarCheck} className="mr-3 text-blue-600" />
+            Agenda de Hoje - {new Date().toLocaleDateString('pt-BR')}
+          </h2>
+          {todaySchedule.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">
+              Nenhum agendamento para hoje
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {todaySchedule.map(appointment => renderAppointmentCard(appointment))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderUpcomingView = () => (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
           <FontAwesomeIcon icon={faCalendarAlt} className="mr-3 text-green-600" />
-          Próximos Agendamentos (7 dias)
+          Próximos Agendamentos (30 dias)
         </h2>
         {upcomingAppointments.length === 0 ? (
           <p className="text-gray-500 text-center py-8">
-            Nenhum agendamento nos próximos 7 dias
+            Nenhum agendamento nos próximos 30 dias
           </p>
         ) : (
           <div className="space-y-3">
@@ -463,54 +689,6 @@ const TherapistSchedulePage = () => {
           <div className="space-y-3">
             {missedAppointments.map(appointment => renderAppointmentCard(appointment, true))}
           </div>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderStatsView = () => (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-          <FontAwesomeIcon icon={faChartBar} className="mr-3 text-indigo-600" />
-          Estatísticas Pessoais (Últimos 30 dias)
-        </h2>
-
-        {statistics ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            <div className="bg-blue-50 p-4 sm:p-5 rounded-lg">
-              <h3 className="text-xs sm:text-sm font-medium text-blue-800 mb-1.5 sm:mb-2">Total de Agendamentos</h3>
-              <p className="text-xl sm:text-2xl font-bold text-blue-600">{statistics.total_appointments || 0}</p>
-            </div>
-            <div className="bg-green-50 p-4 sm:p-5 rounded-lg">
-              <h3 className="text-xs sm:text-sm font-medium text-green-800 mb-1.5 sm:mb-2">Agendamentos Realizados</h3>
-              <p className="text-xl sm:text-2xl font-bold text-green-600">{statistics.completed_appointments || 0}</p>
-            </div>
-            <div className="bg-red-50 p-4 sm:p-5 rounded-lg">
-              <h3 className="text-xs sm:text-sm font-medium text-red-800 mb-1.5 sm:mb-2">Agendamentos Perdidos</h3>
-              <p className="text-xl sm:text-2xl font-bold text-red-600">{statistics.missed_appointments || 0}</p>
-            </div>
-            <div className="bg-purple-50 p-4 sm:p-5 rounded-lg">
-              <h3 className="text-xs sm:text-sm font-medium text-purple-800 mb-1.5 sm:mb-2">Taxa de Comparecimento</h3>
-              <p className={`text-xl sm:text-2xl font-bold ${getPerformanceColor(statistics.attendance_rate || 0)}`}>
-                {statistics.attendance_rate || 0}%
-              </p>
-            </div>
-            <div className="bg-yellow-50 p-4 sm:p-5 rounded-lg">
-              <h3 className="text-xs sm:text-sm font-medium text-yellow-800 mb-1.5 sm:mb-2">Taxa de Conclusão</h3>
-              <p className={`text-xl sm:text-2xl font-bold ${getPerformanceColor(statistics.completion_rate || 0)}`}>
-                {statistics.completion_rate || 0}%
-              </p>
-            </div>
-            <div className="bg-indigo-50 p-4 sm:p-5 rounded-lg">
-              <h3 className="text-xs sm:text-sm font-medium text-indigo-800 mb-1.5 sm:mb-2">Pacientes Atendidos</h3>
-              <p className="text-xl sm:text-2xl font-bold text-indigo-600">{statistics.unique_patients || 0}</p>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm sm:text-base text-gray-500 text-center py-8">
-            Carregando estatísticas...
-          </p>
         )}
       </div>
     </div>
@@ -610,8 +788,7 @@ const TherapistSchedulePage = () => {
                 { id: 'today', name: 'Hoje', icon: faCalendarCheck },
                 { id: 'upcoming', name: 'Próximos', icon: faCalendarAlt },
                 { id: 'schedule', name: 'Agenda Completa', icon: faCalendarAlt },
-                { id: 'missed', name: 'Perdidos', icon: faExclamationTriangle, badge: missedAppointments.length },
-                { id: 'stats', name: 'Estatísticas', icon: faChartBar }
+                { id: 'missed', name: 'Perdidos', icon: faExclamationTriangle, badge: missedAppointments.length }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -629,7 +806,6 @@ const TherapistSchedulePage = () => {
                     {tab.id === 'upcoming' && 'Próx.'}
                     {tab.id === 'schedule' && 'Agenda'}
                     {tab.id === 'missed' && 'Perdidos'}
-                    {tab.id === 'stats' && 'Stats'}
                   </span>
                   {tab.badge > 0 && (
                     <span className="ml-1.5 sm:ml-2 bg-red-100 text-red-600 py-0.5 px-1.5 sm:px-2 rounded-full text-xs font-medium">
@@ -646,7 +822,6 @@ const TherapistSchedulePage = () => {
             {currentView === 'upcoming' && renderUpcomingView()}
             {currentView === 'schedule' && renderScheduleView()}
             {currentView === 'missed' && renderMissedView()}
-            {currentView === 'stats' && renderStatsView()}
           </div>
         </div>
       </div>
@@ -750,6 +925,18 @@ const TherapistSchedulePage = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Cancelamento */}
+      <TherapistCancelAppointmentModal
+        isOpen={showCancelModal}
+        onClose={() => {
+          setShowCancelModal(false);
+          setCancellingAppointment(null);
+        }}
+        appointment={cancellingAppointment}
+        onConfirm={handleConfirmCancellation}
+        isSubmitting={isSubmittingCancellation}
+      />
     </div>
   );
 };

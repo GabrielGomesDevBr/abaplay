@@ -118,6 +118,20 @@ router.post(
 );
 
 /**
+ * Cancelar agendamento pelo terapeuta
+ * POST /api/therapist/schedule/cancel/:id
+ */
+router.post(
+    '/cancel/:id',
+    [
+        param('id', 'ID do agendamento deve ser um número válido.').isInt(),
+        body('cancellation_reason', 'Motivo do cancelamento é obrigatório.').notEmpty().isLength({ max: 200 }),
+        body('cancellation_notes', 'Justificativa adicional deve ter no máximo 300 caracteres.').optional().isLength({ max: 300 })
+    ],
+    therapistScheduleController.cancelAppointment
+);
+
+/**
  * Marcar sessão como completa com anotações (Plano Agendamento)
  * PUT /api/therapist/schedule/sessions/:id/complete
  * ⚠️ Esta rota NÃO tem requireProPlan - é exclusiva do plano agendamento
@@ -129,6 +143,24 @@ router.put(
         body('notes', 'Anotações são obrigatórias e devem ter entre 10 e 5000 caracteres.').isLength({ min: 10, max: 5000 })
     ],
     schedulingController.completeSessionWithNotes
+);
+
+/**
+ * Criar e completar sessão em uma única chamada (Plano Agendamento - Sessão sem agendamento prévio)
+ * POST /api/therapist/schedule/sessions/create-and-complete
+ * ⚠️ Permite terapeuta registrar sessão mesmo sem agendamento prévio
+ */
+router.post(
+    '/sessions/create-and-complete',
+    [
+        body('patient_id', 'ID do paciente é obrigatório').isInt(),
+        body('scheduled_date', 'Data da sessão é obrigatória (YYYY-MM-DD)').isISO8601(),
+        body('scheduled_time', 'Horário da sessão é obrigatório (HH:MM)').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
+        body('notes', 'Anotações são obrigatórias e devem ter entre 3 e 5000 caracteres.').isLength({ min: 3, max: 5000 }),
+        body('duration_minutes', 'Duração deve ser um número válido').optional().isInt({ min: 15, max: 240 }),
+        body('discipline_id').optional({ nullable: true, checkFalsy: true }).isInt()
+    ],
+    schedulingController.createAndCompleteSession
 );
 
 module.exports = router;

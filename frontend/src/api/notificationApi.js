@@ -35,6 +35,10 @@ export const markAsRead = async (patientId, chatType) => {
       }
     );
     console.log('[NOTIFICATION-LOG] markAsRead: Sucesso');
+
+    // Dispara evento para atualizar outros componentes (como badges no Sidebar)
+    window.dispatchEvent(new CustomEvent('notificationUpdate'));
+
     return response.data;
   } catch (error) {
     console.error('[NOTIFICATION-LOG] markAsRead: Erro -', error.response?.data || error.message);
@@ -56,6 +60,10 @@ export const markAllAsRead = async () => {
       }
     );
     console.log('[NOTIFICATION-LOG] markAllAsRead: Sucesso');
+
+    // Dispara evento para atualizar outros componentes (como badges no Sidebar)
+    window.dispatchEvent(new CustomEvent('notificationUpdate'));
+
     return response.data;
   } catch (error) {
     console.error('[NOTIFICATION-LOG] markAllAsRead: Erro -', error.response?.data || error.message);

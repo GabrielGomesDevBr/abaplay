@@ -1075,6 +1075,98 @@ const SchedulingController = {
             console.error('[SCHEDULING] Erro ao validar assignment:', error);
             next(error);
         }
+    },
+
+    /**
+     * Criar e completar sessão em uma única chamada (Plano Agendamento)
+     * POST /api/therapist/schedule/sessions/create-and-complete
+     * Permite terapeuta registrar sessão mesmo sem agendamento prévio
+     */
+    async createAndCompleteSession(req, res, next) {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json(formatValidationErrors(errors));
+        }
+
+        try {
+            const {
+                patient_id,
+                scheduled_date,
+                scheduled_time,
+                notes,
+                duration_minutes = 60,
+                discipline_id = null
+            } = req.body;
+
+            const { clinic_id, id: therapistId, subscription_plan } = req.user;
+
+            // Verificar que o usuário está no plano agendamento
+            if (subscription_plan === 'pro') {
+                return res.status(400).json({
+                    errors: [{
+                        msg: 'Esta função é apenas para o plano agendamento. Use o registro detalhado de programas.',
+                        code: 'PRO_PLAN_USE_PROGRAM_RECORDING'
+                    }]
+                });
+            }
+
+            // Validar data/hora usando utilitário robusto
+            const dateTimeValidation = validateAppointmentDateTime(scheduled_date, scheduled_time);
+            if (!dateTimeValidation.isValid) {
+                return res.status(400).json({
+                    errors: [{ msg: dateTimeValidation.message }]
+                });
+            }
+
+            // Validar que terapeuta está atribuído ao paciente
+            const validation = await ScheduledSessionModel.validatePatientTherapistAssignment(
+                patient_id,
+                therapistId,
+                clinic_id
+            );
+
+            if (!validation.isValid) {
+                return res.status(403).json({
+                    errors: [{
+                        msg: validation.message,
+                        code: 'NOT_ASSIGNED'
+                    }]
+                });
+            }
+
+            // Criar agendamento
+            const sessionData = {
+                patient_id: parseInt(patient_id),
+                therapist_id: therapistId,
+                discipline_id: discipline_id ? parseInt(discipline_id) : null,
+                scheduled_date: normalizeToDateString(scheduled_date),
+                scheduled_time,
+                duration_minutes: parseInt(duration_minutes),
+                created_by: therapistId,
+                notes: 'Agendamento criado durante registro de sessão',
+                detection_source: 'manual_unscheduled' // Flag especial
+            };
+
+            const newAppointment = await ScheduledSessionModel.create(sessionData);
+
+            // Marcar imediatamente como completo com as notas
+            const completedSession = await ScheduledSessionModel.completeWithNotes(
+                newAppointment.id,
+                notes,
+                clinic_id
+            );
+
+            res.status(201).json({
+                message: 'Sessão registrada com sucesso!',
+                session: completedSession
+            });
+
+        } catch (error) {
+            console.error('[SCHEDULING-CONTROLLER] Erro ao criar e completar sessão:', error);
+            res.status(500).json({
+                errors: [{ msg: error.message || 'Erro ao registrar sessão.' }]
+            });
+        }
     }
 };
 

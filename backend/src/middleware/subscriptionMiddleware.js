@@ -3,16 +3,29 @@ const pool = require('../models/db');
 /**
  * Middleware para verificar se a clínica tem acesso ao plano Pro
  * Considera trial ativo como acesso Pro temporário
+ * ✅ Super admins têm acesso automático (bypass de verificação)
  */
 const requireProPlan = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const userRole = req.user?.role;
 
     if (!userId) {
       return res.status(401).json({
         error: 'Usuário não autenticado',
         requiresAuth: true
       });
+    }
+
+    // ✅ Super admins têm acesso irrestrito a todas as features Pro
+    if (userRole === 'super_admin') {
+      req.subscription = {
+        plan: 'pro',
+        isTrialActive: false,
+        trialExpiresAt: null,
+        isSuperAdmin: true
+      };
+      return next();
     }
 
     // Buscar dados de assinatura da clínica do usuário

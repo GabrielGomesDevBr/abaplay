@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PatientProvider } from './context/PatientContext';
@@ -67,6 +68,30 @@ const ProgramsRoute = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <Router>
         <div className="bg-gray-100 min-h-screen">
           <Routes>
@@ -96,7 +121,17 @@ function App() {
                   <Route path="clients" element={<ClientsPage />} />
                   <Route path="parent-dashboard" element={<ParentDashboardPage />} />
                   <Route path="colleagues" element={<ColleaguesPage />} />
-                  <Route path="case-discussion" element={<CaseDiscussionPage />} />
+
+                  {/* --- ROTA PROTEGIDA (FASE 2) --- */}
+                  {/* Discussões de caso: apenas plano Pro */}
+                  <Route
+                    path="case-discussion"
+                    element={
+                      <ProRoute>
+                        <CaseDiscussionPage />
+                      </ProRoute>
+                    }
+                  />
                   <Route 
                     path="admin" 
                     element={
@@ -158,8 +193,16 @@ function App() {
                   {/* Página de notificações */}
                   <Route path="notifications" element={<NotificationsPage />} />
 
-                  {/* Página de chat para pais */}
-                  <Route path="parent-chat" element={<ParentChatPage />} />
+                  {/* --- ROTA PROTEGIDA (FASE 2) --- */}
+                  {/* Chat com pais: apenas plano Pro */}
+                  <Route
+                    path="parent-chat"
+                    element={
+                      <ProRoute>
+                        <ParentChatPage />
+                      </ProRoute>
+                    }
+                  />
 
                 </Route>
 

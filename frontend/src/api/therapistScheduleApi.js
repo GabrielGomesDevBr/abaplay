@@ -171,6 +171,45 @@ export const completeSessionWithNotes = async (sessionId, notes) => {
   }
 };
 
+/**
+ * Criar e completar sessão em uma única chamada (sem agendamento prévio)
+ * @param {Object} sessionData - Dados da sessão
+ * @param {number} sessionData.patient_id - ID do paciente
+ * @param {string} sessionData.scheduled_date - Data da sessão (YYYY-MM-DD)
+ * @param {string} sessionData.scheduled_time - Horário da sessão (HH:MM)
+ * @param {string} sessionData.notes - Anotações da sessão
+ * @param {number} [sessionData.duration_minutes] - Duração em minutos (padrão: 60)
+ * @param {number} [sessionData.discipline_id] - ID da disciplina (opcional)
+ * @returns {Promise<Object>} Sessão criada e completada
+ */
+export const createAndCompleteSession = async (sessionData) => {
+  try {
+    const response = await apiClient.post('/therapist/schedule/sessions/create-and-complete', sessionData);
+    return response.data;
+  } catch (error) {
+    console.error('[THERAPIST-SCHEDULE-API] Erro ao criar e completar sessão');
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao registrar sessão');
+  }
+};
+
+/**
+ * Cancelar agendamento pelo terapeuta
+ * @param {number} appointmentId - ID do agendamento
+ * @param {Object} cancellationData - Dados do cancelamento
+ * @param {string} cancellationData.cancellation_reason - Motivo do cancelamento
+ * @param {string} [cancellationData.cancellation_notes] - Justificativa adicional
+ * @returns {Promise<Object>} Agendamento cancelado
+ */
+export const cancelTherapistAppointment = async (appointmentId, cancellationData) => {
+  try {
+    const response = await apiClient.post(`/therapist/schedule/cancel/${appointmentId}`, cancellationData);
+    return response.data;
+  } catch (error) {
+    console.error(`[THERAPIST-SCHEDULE-API] Erro ao cancelar agendamento ID ${appointmentId}`);
+    throw new Error(error.response?.data?.errors?.[0]?.msg || 'Erro ao cancelar agendamento');
+  }
+};
+
 // --- HELPERS E UTILITÁRIOS ---
 
 /**
@@ -363,6 +402,7 @@ const therapistScheduleApi = {
   getPersonalStatistics,
   getAppointmentDetails,
   justifyMissedAppointment,
+  cancelTherapistAppointment,
   groupAppointmentsByDate,
   getNextAppointment,
   calculateSummaryStats,

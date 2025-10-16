@@ -1,6 +1,6 @@
 // frontend/src/components/scheduling/AppointmentsList.js
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faEdit,
@@ -15,16 +15,88 @@ import {
   faChevronDown,
   faChevronUp,
   faSync,
-  faEllipsisV
+  faEllipsisV,
+  faStickyNote
 } from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatTime, getStatusBadgeClass, getStatusText } from '../../api/schedulingApi';
 import { translateStatus } from '../../utils/statusTranslator';
 import AppointmentActions from './AppointmentActions';
+import { X } from 'lucide-react';
+
+/**
+ * Hook para detectar se estamos em modo tablet/mobile
+ */
+const useIsTablet = () => {
+  const [isTablet, setIsTablet] = useState(window.innerWidth < 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsTablet(window.innerWidth < 1024);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isTablet;
+};
+
+/**
+ * Modal para visualizar anotações completas
+ */
+const NotesModal = ({ isOpen, onClose, appointment }) => {
+  if (!isOpen || !appointment) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-800">Anotações da Sessão</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <h3 className="font-semibold text-blue-900 mb-2 text-sm">Detalhes da Sessão</h3>
+            <div className="space-y-1 text-xs text-blue-800">
+              <p><strong>Paciente:</strong> {appointment.patient_name}</p>
+              <p><strong>Data:</strong> {formatDate(appointment.scheduled_date)}</p>
+              <p><strong>Horário:</strong> {formatTime(appointment.scheduled_time)}</p>
+              <p><strong>Terapeuta:</strong> {appointment.therapist_name}</p>
+              {appointment.discipline_name && (
+                <p><strong>Disciplina:</strong> {appointment.discipline_name}</p>
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Anotações</label>
+            <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-wrap">
+              {appointment.notes || 'Nenhuma anotação registrada para esta sessão.'}
+            </div>
+          </div>
+        </div>
+        <div className="p-4 border-t border-gray-200 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /**
  * Componente para exibir lista de agendamentos
  * Implementação da Fase 1 - MVP do Sistema de Agendamento
  * ✅ FASE 3: Coluna de recorrência adicionada
+ * ✅ MELHORIAS: Visualização de anotações responsiva (coluna desktop + ícone mobile)
  */
 const AppointmentsList = ({
   appointments = [],
@@ -41,6 +113,9 @@ const AppointmentsList = ({
   onPageChange = null,
   showFilters = true
 }) => {
+  const isTablet = useIsTablet();
+  const [notesModal, setNotesModal] = useState({ isOpen: false, appointment: null });
+
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -56,6 +131,15 @@ const AppointmentsList = ({
 
   // Lista de terapeutas únicos dos agendamentos
   const uniqueTherapists = [...new Set(appointments.map(apt => apt.therapist_name))].sort();
+
+  // Função para abrir modal de anotações
+  const openNotesModal = (appointment) => {
+    setNotesModal({ isOpen: true, appointment });
+  };
+
+  const closeNotesModal = () => {
+    setNotesModal({ isOpen: false, appointment: null });
+  };
 
   // ✅ FASE 3: Helper para texto de recorrência
   const getRecurrenceText = (appointment) => {
@@ -522,6 +606,15 @@ const AppointmentsList = ({
                     Recorrência
                   </div>
                 </th>
+                {/* ✅ MELHORIA: Coluna de Anotações (apenas desktop) */}
+                {!isTablet && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center">
+                      <FontAwesomeIcon icon={faStickyNote} className="mr-2" />
+                      Anotações
+                    </div>
+                  </th>
+                )}
                 <th
                   onClick={() => handleSort('status')}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
@@ -589,6 +682,23 @@ const AppointmentsList = ({
                       <span className="text-gray-400 text-xs">-</span>
                     )}
                   </td>
+                  {/* ✅ MELHORIA: Célula de Anotações (apenas desktop) */}
+                  {!isTablet && (
+                    <td className="px-6 py-4 max-w-xs">
+                      {appointment.notes ? (
+                        <div
+                          className="text-sm text-gray-600 truncate cursor-pointer hover:text-blue-600 transition-colors"
+                          onClick={() => openNotesModal(appointment)}
+                          title="Clique para ver anotação completa"
+                        >
+                          {appointment.notes.substring(0, 50)}
+                          {appointment.notes.length > 50 && '...'}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
+                    </td>
+                  )}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(appointment.status)}`}>
                       {translateStatus(appointment.status, appointment.justified_at)}
@@ -596,6 +706,16 @@ const AppointmentsList = ({
                   </td>
                   {/* ✅ FASE 3: Menu contextual de ações */}
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    {/* ✅ MELHORIA: Ícone de anotações no mobile */}
+                    {isTablet && appointment.notes && (
+                      <button
+                        onClick={() => openNotesModal(appointment)}
+                        className="mr-2 text-blue-600 hover:text-blue-800 transition-colors"
+                        title="Ver anotações"
+                      >
+                        <FontAwesomeIcon icon={faStickyNote} className="w-4 h-4" />
+                      </button>
+                    )}
                     <AppointmentActions
                       appointment={appointment}
                       onEdit={onEdit}
@@ -652,6 +772,13 @@ const AppointmentsList = ({
           </div>
         </div>
       )}
+
+      {/* ✅ MELHORIA: Modal para visualizar anotações completas */}
+      <NotesModal
+        isOpen={notesModal.isOpen}
+        onClose={closeNotesModal}
+        appointment={notesModal.appointment}
+      />
     </div>
   );
 };

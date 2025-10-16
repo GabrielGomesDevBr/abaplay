@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePatients } from '../context/PatientContext';
+import { useAuth } from '../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserCircle, faSpinner } from '@fortawesome/free-solid-svg-icons';
 
@@ -29,8 +30,8 @@ if (typeof document !== 'undefined' && !document.querySelector('#clients-page-st
 }
 
 const ClientsPage = () => {
-  const { 
-    selectedPatient, 
+  const {
+    selectedPatient,
     isLoading,
     isPatientFormOpen,
     closePatientForm,
@@ -40,6 +41,8 @@ const ClientsPage = () => {
     isReportModalOpen,
     closeReportModal
   } = usePatients();
+
+  const { hasProAccess } = useAuth();
 
   // 1. Adiciona um estado para rastrear o programa selecionado na lista
   const [selectedProgram, setSelectedProgram] = useState(null);
@@ -84,68 +87,70 @@ const ClientsPage = () => {
               <PatientDetails />
             </div>
             
-            {/* Seção de programas e progresso */}
-            <div className="animate-fade-in">
-              <div className="mb-6">
-                <div className="flex items-center mb-4">
-                  <div className="w-1 h-8 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-full mr-4"></div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-800">🎯 Gestão de Programas</h2>
-                    <p className="text-gray-600 text-sm">Selecione um programa à esquerda para visualizar o progresso detalhado</p>
+            {/* Seção de programas e progresso - APENAS PLANO PRO */}
+            {hasProAccess() && (
+              <div className="animate-fade-in">
+                <div className="mb-6">
+                  <div className="flex items-center mb-4">
+                    <div className="w-1 h-8 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-full mr-4"></div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-800">🎯 Gestão de Programas</h2>
+                      <p className="text-gray-600 text-sm">Selecione um programa à esquerda para visualizar o progresso detalhado</p>
+                    </div>
                   </div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
-                {/* Lista de programas - 2 colunas */}
-                <div className="lg:col-span-2">
-                  <AssignedProgramsList
-                    onProgramSelect={handleProgramSelect}
-                    selectedProgramId={selectedProgram?.assignment_id}
-                  />
                 </div>
 
-                {/* Progresso do programa selecionado - 3 colunas */}
-                <div className="lg:col-span-3">
-                  <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden min-h-[600px]">
-                    {selectedProgram ? (
-                      <>
-                        {/* Cabeçalho do progresso */}
-                        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4">
-                          <h3 className="text-xl font-bold text-white flex items-center">
-                            📈 Progresso do Programa
-                          </h3>
-                          <p className="text-blue-100 text-sm mt-1 truncate">{selectedProgram.program_name}</p>
-                        </div>
-                        
-                        {/* Conteúdo do progresso */}
-                        <div className="p-6">
-                          <SessionProgress program={selectedProgram} assignment={selectedProgram} />
-                        </div>
-                      </>
-                    ) : (
-                      /* Estado vazio quando nenhum programa está selecionado */
-                      <div className="flex items-center justify-center h-full text-center p-8">
-                        <div>
-                          <div className="bg-gradient-to-br from-blue-100 to-indigo-100 p-6 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-                            <span className="text-4xl">📈</span>
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
+                  {/* Lista de programas - 2 colunas */}
+                  <div className="lg:col-span-2">
+                    <AssignedProgramsList
+                      onProgramSelect={handleProgramSelect}
+                      selectedProgramId={selectedProgram?.assignment_id}
+                    />
+                  </div>
+
+                  {/* Progresso do programa selecionado - 3 colunas */}
+                  <div className="lg:col-span-3">
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden min-h-[600px]">
+                      {selectedProgram ? (
+                        <>
+                          {/* Cabeçalho do progresso */}
+                          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4">
+                            <h3 className="text-xl font-bold text-white flex items-center">
+                              📈 Progresso do Programa
+                            </h3>
+                            <p className="text-blue-100 text-sm mt-1 truncate">{selectedProgram.program_name}</p>
                           </div>
-                          <h3 className="text-xl font-semibold text-gray-700 mb-3">Selecione um Programa</h3>
-                          <p className="text-gray-500 leading-relaxed max-w-md mx-auto">
-                            Escolha um programa na lista ao lado para visualizar gráficos de progresso, 
-                            histórico de sessões e dados detalhados de desempenho.
-                          </p>
-                          <div className="mt-6 flex items-center justify-center space-x-2 text-sm text-gray-400">
-                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                            <span>Aguardando seleção</span>
+
+                          {/* Conteúdo do progresso */}
+                          <div className="p-6">
+                            <SessionProgress program={selectedProgram} assignment={selectedProgram} />
+                          </div>
+                        </>
+                      ) : (
+                        /* Estado vazio quando nenhum programa está selecionado */
+                        <div className="flex items-center justify-center h-full text-center p-8">
+                          <div>
+                            <div className="bg-gradient-to-br from-blue-100 to-indigo-100 p-6 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                              <span className="text-4xl">📈</span>
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-700 mb-3">Selecione um Programa</h3>
+                            <p className="text-gray-500 leading-relaxed max-w-md mx-auto">
+                              Escolha um programa na lista ao lado para visualizar gráficos de progresso,
+                              histórico de sessões e dados detalhados de desempenho.
+                            </p>
+                            <div className="mt-6 flex items-center justify-center space-x-2 text-sm text-gray-400">
+                              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                              <span>Aguardando seleção</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       ) : (

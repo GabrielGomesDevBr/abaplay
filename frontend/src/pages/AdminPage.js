@@ -7,6 +7,7 @@ import { updateAssignmentStatus } from '../api/programApi';
 import { removeProgramAssignment } from '../api/patientApi';
 import UserFormModal from '../components/admin/UserFormModal';
 import ExpandedPatientForm from '../components/patient/ExpandedPatientForm';
+import PatientForm from '../components/patient/PatientForm'; // ✅ Formulário básico
 import AssignmentModal from '../components/admin/AssignmentModal';
 import TransferAssignmentsModal from '../components/admin/TransferAssignmentsModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -639,7 +640,7 @@ const AssignmentList = ({ assignments, onArchiveClick, onDeleteClick, onRestoreC
 
 
 const AdminPage = () => {
-  const { token, canAccessPrograms, subscription } = useAuth();
+  const { token, canAccessPrograms, subscription, hasProAccess } = useAuth();
   const [users, setUsers] = useState([]);
   const [patients, setPatients] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -652,7 +653,8 @@ const AdminPage = () => {
   const [error, setError] = useState('');
 
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
+  const [isPatientModalOpen, setIsPatientModalOpen] = useState(false); // ✅ Modal básico (PatientForm)
+  const [isExpandedPatientModalOpen, setIsExpandedPatientModalOpen] = useState(false); // ✅ Modal expandido (Pro)
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false); // ✅ NOVO: Modal de ações
@@ -723,7 +725,8 @@ const AdminPage = () => {
 
   const handleEditPatient = useCallback((patient) => {
     setPatientToEdit(patient);
-    setIsPatientModalOpen(true);
+    // ✅ Edição sempre usa modal expandido (admin tem acesso aos dados completos)
+    setIsExpandedPatientModalOpen(true);
   }, []);
   
   const handleDeleteUser = useCallback(async (userToDelete) => {
@@ -884,7 +887,18 @@ const AdminPage = () => {
             </div>
             {showAddButton && (
               <button
-                  onClick={() => isUsersTab ? handleOpenCreateUserModal() : setIsPatientModalOpen(true)}
+                  onClick={() => {
+                    if (isUsersTab) {
+                      handleOpenCreateUserModal();
+                    } else {
+                      // ✅ Cadastro de paciente: básico (Agendamento) ou expandido (Pro)
+                      if (hasProAccess && hasProAccess()) {
+                        setIsExpandedPatientModalOpen(true);
+                      } else {
+                        setIsPatientModalOpen(true);
+                      }
+                    }
+                  }}
                   className="hidden sm:flex bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors shadow hover:shadow-md items-center"
               >
                   <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
@@ -1020,21 +1034,35 @@ const AdminPage = () => {
       </div>
       
       {/* <<< ATUALIZADO: Passa a lista de pacientes para o modal >>> */}
-      <UserFormModal 
+      <UserFormModal
         isOpen={isUserModalOpen}
         onClose={() => setIsUserModalOpen(false)}
         onSave={handleSaveUser}
         userToEdit={userToEdit}
-        patients={patients} 
+        patients={patients}
       />
-      <ExpandedPatientForm
+
+      {/* ✅ Modal BÁSICO - Plano Agendamento (apenas dados essenciais) */}
+      <PatientForm
         isOpen={isPatientModalOpen}
         onClose={() => {
           setIsPatientModalOpen(false);
           setPatientToEdit(null);
         }}
+        onSave={handleSavePatient}
+        patientToEdit={patientToEdit}
+      />
+
+      {/* ✅ Modal EXPANDIDO - Plano Pro (prontuário completo) */}
+      <ExpandedPatientForm
+        isOpen={isExpandedPatientModalOpen}
+        onClose={() => {
+          setIsExpandedPatientModalOpen(false);
+          setPatientToEdit(null);
+        }}
         patient={patientToEdit}
       />
+
       <AssignmentModal isOpen={isAssignmentModalOpen} onClose={() => setIsAssignmentModalOpen(false)} patient={patientToManage} allTherapists={allTherapists} />
 
       {/* <<< NOVO MODAL DE TRANSFERÊNCIA >>> */}
@@ -1076,7 +1104,12 @@ const AdminPage = () => {
 
             <button
               onClick={() => {
-                setIsPatientModalOpen(true);
+                // ✅ Cadastro de paciente: básico (Agendamento) ou expandido (Pro)
+                if (hasProAccess && hasProAccess()) {
+                  setIsExpandedPatientModalOpen(true);
+                } else {
+                  setIsPatientModalOpen(true);
+                }
                 setIsActionsMenuOpen(false);
               }}
               className="w-full py-3 px-4 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 rounded-lg font-medium hover:from-green-100 hover:to-emerald-100 active:scale-95 transition-all flex items-center"

@@ -1,11 +1,48 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom'; // ✅ NOVO: useLocation
+import { useEffect, useState } from 'react'; // ✅ NOVO: useState
+import { useAuth } from '../context/AuthContext';
 import { usePatients } from '../context/PatientContext';
 import ParentTherapistChat from '../components/chat/ParentTherapistChat';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faComments, faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
+import toast from 'react-hot-toast'; // ✅ NOVO: Para mostrar toast informativo
 
 const ParentChatPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation(); // ✅ NOVO: Para receber state da navegação
+  const { hasProAccess } = useAuth();
   const { selectedPatient } = usePatients();
+  const [highlightUnread, setHighlightUnread] = useState(false); // ✅ NOVO: Para destacar não lidas
+
+  // FASE 2: Proteção adicional - redireciona se não tiver acesso Pro
+  useEffect(() => {
+    if (!hasProAccess()) {
+      navigate('/');
+    }
+  }, [hasProAccess, navigate]);
+
+  // ✅ NOVO: Processar state da navegação (vindo de TodayPriorities)
+  useEffect(() => {
+    if (location.state) {
+      const { openChatPatientId, highlightUnread: shouldHighlight } = location.state;
+
+      // Se veio das prioridades para ver mensagens não lidas
+      if (openChatPatientId && selectedPatient && openChatPatientId === selectedPatient.id) {
+        if (shouldHighlight) {
+          setHighlightUnread(true);
+
+          // Mostrar toast informativo
+          toast.success('Chat aberto para visualizar mensagens não lidas', {
+            icon: '💬',
+            duration: 3000
+          });
+        }
+      }
+
+      // Limpar o state após processar para evitar reprocessamento
+      window.history.replaceState({}, document.title);
+    }
+  }, [location, selectedPatient]);
 
   if (!selectedPatient) {
     return (
@@ -79,6 +116,7 @@ const ParentChatPage = () => {
             <ParentTherapistChat
               patientId={selectedPatient.id}
               patientName={selectedPatient.name}
+              highlightUnread={highlightUnread}
             />
           </div>
         </div>

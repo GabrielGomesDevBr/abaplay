@@ -15,8 +15,9 @@ import {
   getTodaySchedule,
   getMissedAppointments
 } from '../../api/therapistScheduleApi';
-import { getUnreadMessagesCount } from '../../api/parentChatApi';
+import { getUnreadMessagesCount, getUnreadChats } from '../../api/parentChatApi';
 import { fetchAssignmentsWithoutProgress } from '../../api/patientApi';
+import { usePatients } from '../../context/PatientContext'; // ✅ NOVO: Para selecionar paciente
 
 /**
  * Componente de Prioridades do Dia para Terapeutas
@@ -24,12 +25,16 @@ import { fetchAssignmentsWithoutProgress } from '../../api/patientApi';
  */
 const TodayPriorities = () => {
   const navigate = useNavigate();
+  const { selectPatient } = usePatients(); // ✅ NOVO: Para selecionar paciente antes de navegar
 
   const [priorities, setPriorities] = useState({
     nextAppointment: null,
     missedCount: 0,
+    missedAppointments: [], // ✅ NOVO: Array completo
     programsWithoutProgress: 0,
-    unreadMessages: 0
+    programsList: [], // ✅ NOVO: Array completo
+    unreadMessages: 0,
+    unreadChats: [] // ✅ NOVO: Array completo
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -41,10 +46,11 @@ const TodayPriorities = () => {
       setError(null);
 
       // Buscar todos os dados em paralelo
-      const [todayResponse, missedResponse, messagesCount, programsData] = await Promise.all([
+      const [todayResponse, missedResponse, messagesCount, unreadChatsData, programsData] = await Promise.all([
         getTodaySchedule().catch(() => ({ appointments: [] })),
         getMissedAppointments(false).catch(() => ({ appointments: [] })),
         getUnreadMessagesCount().catch(() => 0),
+        getUnreadChats().catch(() => []), // ✅ NOVO: Buscar lista de conversas
         fetchAssignmentsWithoutProgress(7).catch(() => []) // Programas sem progresso há 7+ dias
       ]);
 
@@ -61,11 +67,19 @@ const TodayPriorities = () => {
           return timeA - timeB;
         });
 
+      // ✅ NOVO: Armazenar dados completos para navegação contextual
+      const missedAppointments = missedResponse.appointments || [];
+      const programsList = Array.isArray(programsData) ? programsData : [];
+      const unreadChats = Array.isArray(unreadChatsData) ? unreadChatsData : [];
+
       setPriorities({
         nextAppointment: upcomingAppointments[0] || null,
-        missedCount: missedResponse.appointments?.length || 0,
-        programsWithoutProgress: Array.isArray(programsData) ? programsData.length : 0,
-        unreadMessages: messagesCount || 0
+        missedCount: missedAppointments.length,
+        missedAppointments, // ✅ NOVO: Array completo
+        programsWithoutProgress: programsList.length,
+        programsList, // ✅ NOVO: Array completo
+        unreadMessages: messagesCount || 0,
+        unreadChats // ✅ NOVO: Array completo
       });
 
     } catch (error) {
@@ -154,7 +168,11 @@ const TodayPriorities = () => {
         {/* Próxima Sessão */}
         {priorities.nextAppointment && (
           <div
-            onClick={() => navigate('/therapist-schedule')}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigate('/my-schedule');
+            }}
             className="bg-white rounded-lg p-4 border-l-4 border-blue-500 hover:shadow-md transition-shadow cursor-pointer group"
           >
             <div className="flex items-center justify-between">
@@ -186,7 +204,19 @@ const TodayPriorities = () => {
         {/* Sessões Perdidas Aguardando Justificativa */}
         {priorities.missedCount > 0 && (
           <div
-            onClick={() => navigate('/therapist-schedule')}
+            onClick={(e) => {
+              e.preventDefault(); // ✅ NOVO: Prevenir comportamento padrão
+              e.stopPropagation(); // ✅ NOVO: Impedir propagação de eventos
+
+              // Navegar diretamente sem selecionar paciente (são sessões do terapeuta)
+              navigate('/my-schedule', {
+                state: {
+                  filterByMissed: true,
+                  highlightAppointments: priorities.missedAppointments.map(a => a.id),
+                  showMissedOnly: true
+                }
+              });
+            }}
             className="bg-white rounded-lg p-4 border-l-4 border-yellow-500 hover:shadow-md transition-shadow cursor-pointer group"
           >
             <div className="flex items-center justify-between">
@@ -199,6 +229,9 @@ const TodayPriorities = () => {
                 </div>
                 <p className="text-sm text-gray-600 ml-6">
                   Aguardando justificativa
+                  {priorities.missedAppointments && priorities.missedAppointments.length > 0 && (
+                    <span className="text-yellow-600 font-medium"> • {priorities.missedAppointments[0].patient_name}</span>
+                  )}
                 </p>
               </div>
               <FontAwesomeIcon
@@ -212,7 +245,29 @@ const TodayPriorities = () => {
         {/* Programas Sem Registro de Progresso */}
         {priorities.programsWithoutProgress > 0 && (
           <div
-            onClick={() => navigate('/clients')}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+
+              // ✅ CORRIGIDO: Navegar para /programs com paciente selecionado
+              if (priorities.programsList && priorities.programsList.length > 0) {
+                const firstProgram = priorities.programsList[0];
+                // Selecionar paciente primeiro
+                if (firstProgram.patient_id) {
+                  selectPatient(firstProgram.patient_id);
+                }
+                // Navegar com state para destacar programas
+                navigate('/programs', {
+                  state: {
+                    highlightAssignments: priorities.programsList.map(p => p.assignment_id),
+                    showWithoutProgress: true
+                  }
+                });
+              } else {
+                // Fallback: apenas navegar para programs
+                navigate('/programs');
+              }
+            }}
             className="bg-white rounded-lg p-4 border-l-4 border-orange-500 hover:shadow-md transition-shadow cursor-pointer group"
           >
             <div className="flex items-center justify-between">
@@ -225,6 +280,9 @@ const TodayPriorities = () => {
                 </div>
                 <p className="text-sm text-gray-600 ml-6">
                   Sem registro de progresso há mais de 7 dias
+                  {priorities.programsList && priorities.programsList.length > 0 && (
+                    <span className="text-orange-600 font-medium"> • {priorities.programsList[0].patient_name}</span>
+                  )}
                 </p>
               </div>
               <FontAwesomeIcon
@@ -238,7 +296,29 @@ const TodayPriorities = () => {
         {/* Mensagens Não Lidas */}
         {priorities.unreadMessages > 0 && (
           <div
-            onClick={() => navigate('/clients')} // Ajustar rota se houver página específica de chat
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+
+              // ✅ CORRIGIDO: Navegar para /parent-chat com primeiro chat aberto
+              if (priorities.unreadChats && priorities.unreadChats.length > 0) {
+                const firstChat = priorities.unreadChats[0];
+                // Selecionar paciente primeiro
+                if (firstChat.patient_id) {
+                  selectPatient(firstChat.patient_id);
+                }
+                // Navegar com state para abrir chat específico
+                navigate('/parent-chat', {
+                  state: {
+                    openChatPatientId: firstChat.patient_id,
+                    highlightUnread: true
+                  }
+                });
+              } else {
+                // Fallback: apenas navegar para parent-chat
+                navigate('/parent-chat');
+              }
+            }}
             className="bg-white rounded-lg p-4 border-l-4 border-purple-500 hover:shadow-md transition-shadow cursor-pointer group"
           >
             <div className="flex items-center justify-between">
@@ -251,6 +331,9 @@ const TodayPriorities = () => {
                 </div>
                 <p className="text-sm text-gray-600 ml-6">
                   Dos pais/responsáveis
+                  {priorities.unreadChats && priorities.unreadChats.length > 0 && (
+                    <span className="text-purple-600 font-medium"> • {priorities.unreadChats[0].patient_name}</span>
+                  )}
                 </p>
               </div>
               <FontAwesomeIcon

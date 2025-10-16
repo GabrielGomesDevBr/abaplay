@@ -23,6 +23,7 @@ const ReportConfigModal = ({
   onClose,
   onGenerate,
   therapists = [],
+  patients = [], // ✅ NOVO: Lista de pacientes para filtro
   isGenerating = false
 }) => {
   // Estados do formulário
@@ -34,7 +35,8 @@ const ReportConfigModal = ({
 
   const [scope, setScope] = useState({
     type: 'all',
-    therapistId: null
+    therapistId: null,
+    patientId: null // ✅ NOVO: Filtro de paciente
   });
 
   const [errors, setErrors] = useState({});
@@ -77,7 +79,8 @@ const ReportConfigModal = ({
       });
       setScope({
         type: 'all',
-        therapistId: null
+        therapistId: null,
+        patientId: null // ✅ NOVO: Reset filtro de paciente
       });
     }
   }, [isOpen]);
@@ -148,7 +151,8 @@ const ReportConfigModal = ({
       },
       scope: {
         type: scope.type,
-        therapistId: scope.therapistId
+        therapistId: scope.therapistId,
+        patientId: scope.patientId // ✅ NOVO: Incluir filtro de paciente
       }
     };
 
@@ -329,23 +333,51 @@ const ReportConfigModal = ({
 
                 {/* Seleção de terapeuta específico */}
                 {scope.type === 'individual' && (
-                  <div className="mt-4">
-                    <select
-                      value={scope.therapistId || ''}
-                      onChange={(e) => setScope(prev => ({ ...prev, therapistId: e.target.value || null }))}
-                      disabled={isGenerating}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                      <option value="">Selecione um terapeuta...</option>
-                      {therapists.map(therapist => (
-                        <option key={therapist.id} value={therapist.id}>
-                          {therapist.full_name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.therapist && (
-                      <p className="text-red-500 text-xs mt-2">{errors.therapist}</p>
-                    )}
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-2 font-medium">
+                        Terapeuta *
+                      </label>
+                      <select
+                        value={scope.therapistId || ''}
+                        onChange={(e) => setScope(prev => ({ ...prev, therapistId: e.target.value || null }))}
+                        disabled={isGenerating}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      >
+                        <option value="">Selecione um terapeuta...</option>
+                        {therapists.map(therapist => (
+                          <option key={therapist.id} value={therapist.id}>
+                            {therapist.full_name}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.therapist && (
+                        <p className="text-red-500 text-xs mt-2">{errors.therapist}</p>
+                      )}
+                    </div>
+
+                    {/* ✅ NOVO: Filtro de Paciente (opcional) */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-2 font-medium">
+                        Filtrar por Paciente (opcional)
+                      </label>
+                      <select
+                        value={scope.patientId || ''}
+                        onChange={(e) => setScope(prev => ({ ...prev, patientId: e.target.value || null }))}
+                        disabled={isGenerating}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white"
+                      >
+                        <option value="">Todos os pacientes</option>
+                        {patients.map(patient => (
+                          <option key={patient.id} value={patient.id}>
+                            {patient.name}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Deixe em branco para incluir todos os pacientes do terapeuta
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>

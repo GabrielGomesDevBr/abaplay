@@ -74,8 +74,8 @@ const RecurringAppointmentModel = {
             throw new Error(`Paciente com ID ${patient_id} não encontrado`);
         }
 
-        // Validar terapeuta
-        const therapistQuery = 'SELECT id FROM users WHERE id = $1 AND role IN (\'therapist\', \'admin\')';
+        // Validar terapeuta (aceita tanto 'therapist' quanto 'terapeuta' para compatibilidade)
+        const therapistQuery = 'SELECT id FROM users WHERE id = $1 AND (role IN (\'therapist\', \'terapeuta\', \'admin\') OR is_admin = true)';
         const therapistResult = await pool.query(therapistQuery, [therapist_id]);
         if (therapistResult.rows.length === 0) {
             throw new Error(`Terapeuta com ID ${therapist_id} não encontrado`);

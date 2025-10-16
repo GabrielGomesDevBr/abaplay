@@ -3,6 +3,10 @@ import autoTable from 'jspdf-autotable';
 import Chart from 'chart.js/auto';
 import { getLegendLevels } from './promptLevelColors';
 
+
+// Site oficial do ABAplay para branding
+const ABAPLAY_WEBSITE = 'www.abaplay.app.br';
+
 // Função auxiliar para formatar a data
 const formatDate = (dateString, format = 'long') => {
   if (!dateString) return 'Não informado';
@@ -55,11 +59,20 @@ export const generateProgramGradePDF = async (patient) => {
         let pageCount = 1;
 
         const addFooter = (currentPage) => {
+            const footerY = doc.internal.pageSize.getHeight() - margin / 2;
+
             doc.setFontSize(8);
             doc.setTextColor(100);
-            const footerText = `Página ${currentPage}`;
-            doc.text(footerText, pageWidth / 2, doc.internal.pageSize.getHeight() - margin / 2, { align: 'center' });
-            doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, margin, doc.internal.pageSize.getHeight() - margin / 2);
+
+            // Esquerda: Data de geração
+            doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, margin, footerY);
+
+            // Centro: Página
+            doc.text(`Página ${currentPage}`, pageWidth / 2, footerY, { align: 'center' });
+
+            // Direita: Site
+            doc.text(ABAPLAY_WEBSITE, pageWidth - margin, footerY, { align: 'right' });
+
             doc.setTextColor(0);
         };
 
@@ -224,6 +237,27 @@ export const generateWeeklyRecordSheetPDF = async (patient) => {
             }
         });
 
+        // Adicionar rodapé na Folha de Registro
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            const footerY = doc.internal.pageSize.getHeight() - margin / 2;
+
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+
+            // Esquerda: Data de geração
+            doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, margin, footerY);
+
+            // Centro: Página
+            doc.text(`Página ${i} de ${pageCount}`, pageWidth / 2, footerY, { align: 'center' });
+
+            // Direita: Site
+            doc.text(ABAPLAY_WEBSITE, pageWidth - margin, footerY, { align: 'right' });
+
+            doc.setTextColor(0);
+        }
+
         const filename = `Folha_Registro_${patient.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
         doc.save(filename);
     } catch (error) {
@@ -281,10 +315,20 @@ export const generateConsolidatedReportPDF = async (patient, reportText, profess
         let pageCount = 1;
 
         const addFooter = (currentPage) => {
+            const footerY = doc.internal.pageSize.getHeight() - margin / 2;
+
             doc.setFontSize(8);
             doc.setTextColor(100);
-            doc.text(`Página ${currentPage}`, pageWidth / 2, doc.internal.pageSize.getHeight() - margin / 2, { align: 'center' });
-            doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, margin, doc.internal.pageSize.getHeight() - margin / 2);
+
+            // Esquerda: Data de geração
+            doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, margin, footerY);
+
+            // Centro: Página
+            doc.text(`Página ${currentPage}`, pageWidth / 2, footerY, { align: 'center' });
+
+            // Direita: Site
+            doc.text(ABAPLAY_WEBSITE, pageWidth - margin, footerY, { align: 'right' });
+
             doc.setTextColor(0);
         };
 
@@ -865,12 +909,20 @@ export const generateEvolutionReportPDF = async (data) => {
         let pageCount = 1;
 
         const addFooter = (currentPage) => {
+            const footerY = doc.internal.pageSize.getHeight() - margin / 2;
+
             doc.setFontSize(8);
             doc.setTextColor(100);
-            const footerText = `Página ${currentPage}`;
-            doc.text(footerText, pageWidth / 2, doc.internal.pageSize.getHeight() - margin / 2, { align: 'center' });
-            doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, margin, doc.internal.pageSize.getHeight() - margin / 2);
-            doc.text('Relatório Profissional Detalhado', pageWidth - margin, doc.internal.pageSize.getHeight() - margin / 2, { align: 'right' });
+
+            // Esquerda: Data de geração
+            doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, margin, footerY);
+
+            // Centro: Página
+            doc.text(`Página ${currentPage}`, pageWidth / 2, footerY, { align: 'center' });
+
+            // Direita: Site
+            doc.text(ABAPLAY_WEBSITE, pageWidth - margin, footerY, { align: 'right' });
+
             doc.setTextColor(0);
         };
 

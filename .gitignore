@@ -24,3 +24,8 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 Thumbs.db
+
+# Arquivos de backup
+*.backup
+*.bak
+programs.json.backup

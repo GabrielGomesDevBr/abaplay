@@ -1024,8 +1024,8 @@ const DashboardPage = () => {
     <div>
       {selectedPatient ? (
         <>
-          {/* Prioridades do Dia - Apenas para Terapeutas */}
-          {user?.role === 'terapeuta' && (
+          {/* Prioridades do Dia - Apenas para Terapeutas (não admins) */}
+          {user?.role === 'terapeuta' && !user?.is_admin && (
             <div className="mb-8">
               <TodayPriorities />
             </div>

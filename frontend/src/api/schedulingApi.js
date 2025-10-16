@@ -220,12 +220,40 @@ export const justifyAbsence = async (appointmentId, justificationData) => {
 
 /**
  * Formatar data para exibição
- * @param {string} dateString - Data em formato ISO
+ * @param {string} dateString - Data em formato ISO (YYYY-MM-DD)
  * @returns {string} Data formatada (DD/MM/YYYY)
  */
 export const formatDate = (dateString) => {
   if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('pt-BR');
+
+  try {
+    // Se for um objeto Date, usar diretamente
+    if (dateString instanceof Date) {
+      return dateString.toLocaleDateString('pt-BR');
+    }
+
+    // Se a string contém 'T' (ISO completo), extrair apenas a parte da data
+    const dateOnly = typeof dateString === 'string' && dateString.includes('T')
+      ? dateString.split('T')[0]
+      : dateString;
+
+    // Parse manual para evitar problemas de timezone
+    // Formato esperado: YYYY-MM-DD
+    const [year, month, day] = dateOnly.split('-').map(Number);
+
+    if (!year || !month || !day) return '-';
+
+    // Criar data no fuso horário local (evita problemas de UTC)
+    const date = new Date(year, month - 1, day);
+
+    // Verificar se a data é válida
+    if (isNaN(date.getTime())) return '-';
+
+    return date.toLocaleDateString('pt-BR');
+  } catch (error) {
+    console.error('Erro ao formatar data:', error, 'Data recebida:', dateString);
+    return '-';
+  }
 };
 
 /**
