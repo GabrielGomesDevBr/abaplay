@@ -334,12 +334,28 @@ const Assignment = {
      */
     async getPromptLevelByPatientAndProgram(patientId, programId) {
         const query = `
-            SELECT current_prompt_level 
-            FROM patient_program_assignments 
+            SELECT current_prompt_level
+            FROM patient_program_assignments
             WHERE patient_id = $1 AND program_id = $2;
         `;
         const { rows } = await pool.query(query, [patientId, programId]);
         return rows[0] ? rows[0].current_prompt_level : null;
+    },
+
+    /**
+     * Busca o nível de prompting e timestamp para um programa específico de um paciente.
+     * @param {number} patientId - O ID do paciente.
+     * @param {number} programId - O ID do programa.
+     * @returns {Promise<object|null>} Objeto com level e updated_at ou null se não encontrado.
+     */
+    async getPromptLevelByPatientAndProgramWithTimestamp(patientId, programId) {
+        const query = `
+            SELECT current_prompt_level as level, updated_at
+            FROM patient_program_assignments
+            WHERE patient_id = $1 AND program_id = $2;
+        `;
+        const { rows } = await pool.query(query, [patientId, programId]);
+        return rows[0] || null;
     },
 
     /**

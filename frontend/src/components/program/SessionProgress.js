@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -32,6 +32,7 @@ import { recordProgress, getAssignmentEvolution } from '../../api/programApi';
 import { useAuth } from '../../context/AuthContext';
 import { usePatients } from '../../context/PatientContext';
 import PromptLevelSelector from './PromptLevelSelector';
+import Toast from '../shared/Toast';
 
 // Opções para Modalidade de Ensino
 const TEACHING_MODALITIES = [
@@ -81,6 +82,14 @@ const SessionProgress = ({ program, assignment }) => {
   // Nível de prompting - SEMPRE carregado do banco (sem cache)
   const [promptLevel, setPromptLevel] = useState(null); // null = ainda carregando
   const [isLoadingPromptLevel, setIsLoadingPromptLevel] = useState(true);
+  const [isSavingPromptLevel, setIsSavingPromptLevel] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null); // 'saving', 'saved', 'error'
+
+  // Estados para Toast
+  const [toast, setToast] = useState(null);
+
+  // Timer para debounce
+  const debounceTimer = useRef(null);
 
   // Carrega o nível de prompting SEMPRE do banco de dados
   useEffect(() => {
@@ -92,6 +101,7 @@ const SessionProgress = ({ program, assignment }) => {
           try {
             console.log(`[SESSION-PROGRESS] Carregando prompt level para paciente ${selectedPatient.id}, programa ${programId}`);
             const level = await getPromptLevelForProgram(selectedPatient.id, programId);
+
             setPromptLevel(level);
             console.log(`[SESSION-PROGRESS] Prompt level carregado: ${level}`);
           } catch (error) {
@@ -167,37 +177,104 @@ const SessionProgress = ({ program, assignment }) => {
     }
   }, [assignment]);
 
-  // Função para atualizar o nível de prompting - SALVA IMEDIATAMENTE
-  const handlePromptLevelChange = useCallback(async (newLevel) => {
+  // Função auxiliar para mostrar toast
+  const showToast = useCallback((type, message) => {
+    setToast({ type, message });
+  }, []);
+
+  // Função para fechar toast
+  const closeToast = useCallback(() => {
+    setToast(null);
+  }, []);
+
+  // Função interna que realmente salva (usada pelo debounce)
+  const savePromptLevelInternal = useCallback(async (newLevel) => {
     const programId = program?.program_id || program?.id;
     const assignmentId = assignment?.assignment_id || assignment?.id;
 
     if (!selectedPatient || !program || !programId || !assignmentId) {
-      console.error('[SESSION-PROGRESS] Dados insuficientes para atualizar prompt level');
+      console.error('[SessionProgress] Dados insuficientes para atualizar o nível de prompt.');
+      showToast('error', 'Dados insuficientes para salvar o nível de prompting.');
+      setIsSavingPromptLevel(false);
+      setSaveStatus(null);
       return;
     }
 
-    // Atualiza UI imediatamente
-    setPromptLevel(newLevel);
+    setIsSavingPromptLevel(true);
+    setSaveStatus('saving');
 
     try {
-      console.log(`[SESSION-PROGRESS] Atualizando prompt level para ${newLevel}`);
-      await setPromptLevelForProgram(selectedPatient.id, programId, newLevel, assignmentId);
-      console.log(`[SESSION-PROGRESS] Prompt level ${newLevel} salvo com sucesso`);
-    } catch (error) {
-      console.error(`[SESSION-PROGRESS] Erro ao salvar prompt level:`, error);
+      const result = await setPromptLevelForProgram(selectedPatient.id, programId, newLevel, assignmentId);
 
-      // Em caso de erro, recarrega o valor real do banco
-      try {
-        const realLevel = await getPromptLevelForProgram(selectedPatient.id, programId);
-        setPromptLevel(realLevel);
-        console.log(`[SESSION-PROGRESS] Prompt level revertido para valor do banco: ${realLevel}`);
-      } catch (reloadError) {
-        console.error(`[SESSION-PROGRESS] Erro ao recarregar prompt level:`, reloadError);
-        setPromptLevel(5); // Último fallback
+      if (result && result.success) {
+        // Sucesso! Mostra badge "Salvo!" e toast verde
+        setSaveStatus('saved');
+        showToast('success', 'Nível de prompting alterado com sucesso!');
+
+        // Remove badge "Salvo!" após 1 segundo
+        setTimeout(() => {
+          setSaveStatus(null);
+        }, 1000);
+      } else if (result && result.reason === 'locked') {
+        // Operação já em andamento - estado raro mas possível
+        setSaveStatus(null);
+        showToast('info', 'Aguarde... salvamento em andamento.');
+      } else {
+        // Erro genérico
+        setSaveStatus('error');
+        showToast('error', result?.error || 'Erro ao salvar o nível de prompting. Tente novamente.');
+
+        // Remove badge de erro após 2 segundos
+        setTimeout(() => {
+          setSaveStatus(null);
+        }, 2000);
       }
+    } catch (error) {
+      console.error(`[SessionProgress] Falha ao salvar o nível de prompt:`, error);
+      setSaveStatus('error');
+      showToast('error', 'Erro ao salvar. Verifique sua conexão e tente novamente.');
+
+      // Remove badge de erro após 2 segundos
+      setTimeout(() => {
+        setSaveStatus(null);
+      }, 2000);
+    } finally {
+      setIsSavingPromptLevel(false);
     }
-  }, [selectedPatient, program, assignment, setPromptLevelForProgram, getPromptLevelForProgram]);
+  }, [selectedPatient, program, assignment, setPromptLevelForProgram, showToast]);
+
+  // Função para atualizar o nível de prompting - COM DEBOUNCE
+  const handlePromptLevelChange = useCallback((newLevel) => {
+    const programId = program?.program_id || program?.id;
+    const assignmentId = assignment?.assignment_id || assignment?.id;
+
+    if (!selectedPatient || !program || !programId || !assignmentId) {
+      console.error('[SessionProgress] Dados insuficientes para atualizar o nível de prompt.');
+      return;
+    }
+
+    // Atualiza a UI imediatamente para feedback rápido (Atualização Otimista)
+    setPromptLevel(newLevel);
+
+    // Cancela o timer anterior se existir
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    // Configura novo timer com debounce de 500ms
+    debounceTimer.current = setTimeout(() => {
+      savePromptLevelInternal(newLevel);
+    }, 500);
+  }, [selectedPatient, program, assignment, savePromptLevelInternal]);
+
+  // Cleanup do debounce ao desmontar
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!program || !assignment) {
@@ -528,6 +605,16 @@ const SessionProgress = ({ program, assignment }) => {
 
   return (
     <div>
+      {/* Toast de Feedback */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={closeToast}
+          duration={4000}
+        />
+      )}
+
       {/* 📋 PROTOCOLO DO PROGRAMA - Seções Expansíveis */}
       <div className="mb-6 space-y-3">
         {/* 🎯 OBJETIVO */}
@@ -820,11 +907,32 @@ const SessionProgress = ({ program, assignment }) => {
                     </div>
                   </div>
                 ) : (
-                  <PromptLevelSelector
-                    selectedLevel={promptLevel}
-                    onLevelChange={handlePromptLevelChange}
-                    disabled={isSubmitting}
-                  />
+                  <div className="space-y-2">
+                    <PromptLevelSelector
+                      selectedLevel={promptLevel}
+                      onLevelChange={handlePromptLevelChange}
+                      disabled={isSubmitting || isSavingPromptLevel}
+                    />
+                    {/* Indicadores de Status de Salvamento - Responsivo */}
+                    {saveStatus === 'saving' && (
+                      <div className="lg:absolute lg:-right-2 lg:top-1/2 lg:transform lg:-translate-y-1/2 bg-blue-500 text-white px-3 py-1 rounded-full shadow-lg flex items-center space-x-2 animate-pulse">
+                        <FontAwesomeIcon icon={faSpinner} className="fa-spin text-sm" />
+                        <span className="text-xs font-medium">Salvando...</span>
+                      </div>
+                    )}
+                    {saveStatus === 'saved' && (
+                      <div className="lg:absolute lg:-right-2 lg:top-1/2 lg:transform lg:-translate-y-1/2 bg-green-500 text-white px-3 py-1 rounded-full shadow-lg flex items-center space-x-2 animate-slide-in-right">
+                        <FontAwesomeIcon icon={faCheck} className="text-sm" />
+                        <span className="text-xs font-medium">Salvo!</span>
+                      </div>
+                    )}
+                    {saveStatus === 'error' && (
+                      <div className="lg:absolute lg:-right-2 lg:top-1/2 lg:transform lg:-translate-y-1/2 bg-red-500 text-white px-3 py-1 rounded-full shadow-lg flex items-center space-x-2">
+                        <FontAwesomeIcon icon={faBullseye} className="text-sm" />
+                        <span className="text-xs font-medium">Erro</span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
               
