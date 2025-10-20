@@ -40,19 +40,22 @@ const SessionNoteModal = ({
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const [quickRegister, setQuickRegister] = useState(false);
   const isMobile = useIsMobile();
 
   // Preenche notas existentes ao abrir modal
   useEffect(() => {
     if (isOpen && session) {
       setNotes(session.notes || '');
+      setQuickRegister(false);
       setError('');
     }
   }, [isOpen, session]);
 
   const handleSave = async () => {
-    if (!notes.trim()) {
-      setError('Por favor, adicione uma anotação sobre a sessão.');
+    // Validação: nota é obrigatória apenas se quick register não estiver marcado
+    if (!quickRegister && !notes.trim()) {
+      setError('Por favor, adicione uma anotação ou marque "Registrar sem nota".');
       return;
     }
 
@@ -60,7 +63,12 @@ const SessionNoteModal = ({
     setError('');
 
     try {
-      await onSave(session.id, notes.trim());
+      // Se quick register, envia nota padrão
+      const noteToSave = quickRegister
+        ? `Sessão realizada - ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+        : notes.trim();
+
+      await onSave(session.id, noteToSave);
       onClose();
     } catch (err) {
       setError(err.message || 'Erro ao salvar anotação. Tente novamente.');
@@ -71,6 +79,7 @@ const SessionNoteModal = ({
 
   const handleCancel = () => {
     setNotes(session?.notes || '');
+    setQuickRegister(false);
     setError('');
     onClose();
   };
@@ -121,20 +130,45 @@ const SessionNoteModal = ({
           {/* Campo de Anotações - Altura otimizada para teclado mobile */}
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Anotações da Sessão <span className="text-red-500">*</span>
+              Anotações da Sessão {!quickRegister && <span className="text-red-500">*</span>}
+              {quickRegister && <span className="text-gray-500 text-xs ml-2">(opcional quando registro rápido ativado)</span>}
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Descreva o que foi trabalhado na sessão, comportamentos observados, progressos ou dificuldades..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              rows={isMobile ? 10 : 8}
-              disabled={isSaving}
-              style={isMobile ? { minHeight: '200px' } : {}}
+              className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
+                quickRegister ? 'bg-gray-100 cursor-not-allowed' : ''
+              }`}
+              rows={isMobile ? 8 : 8}
+              disabled={isSaving || quickRegister}
+              style={isMobile ? { minHeight: '180px' } : {}}
             />
             <p className={`text-gray-500 mt-1 ${isMobile ? 'text-xs' : 'text-xs'}`}>
               Esta anotação será salva no registro da sessão e poderá ser visualizada posteriormente.
             </p>
+          </div>
+
+          {/* Checkbox de Registro Rápido */}
+          <div className="flex items-start">
+            <div className="flex items-center h-5">
+              <input
+                id="quick-register"
+                type="checkbox"
+                checked={quickRegister}
+                onChange={(e) => setQuickRegister(e.target.checked)}
+                disabled={isSaving}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+              />
+            </div>
+            <div className="ml-3 text-sm">
+              <label htmlFor="quick-register" className="font-medium text-gray-700 cursor-pointer">
+                ✓ Registrar sem nota (rápido)
+              </label>
+              <p className="text-gray-500 text-xs mt-1">
+                Use esta opção para registrar rapidamente a sessão sem adicionar detalhes. Uma nota padrão será criada automaticamente.
+              </p>
+            </div>
           </div>
 
           {/* Mensagem de Erro */}
@@ -167,7 +201,7 @@ const SessionNoteModal = ({
             }`}
             disabled={isSaving}
           >
-            {isSaving ? 'Salvando...' : 'Salvar Anotação'}
+            {isSaving ? 'Salvando...' : 'Salvar Registro'}
           </button>
         </div>
       </div>

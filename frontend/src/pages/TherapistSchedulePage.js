@@ -27,7 +27,6 @@ import {
   completeSessionWithNotes,
   groupAppointmentsByDate,
   getNextAppointment,
-  calculateSummaryStats,
   isAppointmentOverdue,
   getTimeUntilAppointment
 } from '../api/therapistScheduleApi';
@@ -207,39 +206,9 @@ const TherapistSchedulePage = () => {
     }
   };
 
-  // Quick Win #2: Registro rápido sem modal
-  const handleQuickComplete = async (appointment) => {
-    try {
-      // ✅ VALIDAÇÃO: Verificar se o agendamento não está no futuro
-      const appointmentDateTime = new Date(`${appointment.scheduled_date}T${appointment.scheduled_time}`);
-      const now = new Date();
-
-      if (appointmentDateTime > now) {
-        toast.error('Não é possível registrar uma sessão que ainda não aconteceu. A data/hora do agendamento está no futuro.', {
-          icon: '⏰',
-          duration: 4000
-        });
-        return;
-      }
-
-      const defaultNote = `Sessão realizada - ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-
-      await completeSessionWithNotes(appointment.id, defaultNote);
-      await loadAllData();
-
-      toast.success('Sessão marcada como realizada!', {
-        icon: '✓',
-        duration: 2000
-      });
-    } catch (error) {
-      console.error('Erro ao registrar sessão:', error);
-      // Mostrar mensagem de erro do backend se disponível
-      const errorMessage = error.response?.data?.errors?.[0]?.msg || error.message || 'Erro ao registrar sessão. Tente novamente.';
-      toast.error(errorMessage, {
-        duration: 4000
-      });
-    }
-  };
+  // ✅ REMOVIDO: handleQuickComplete - Agora todos os registros passam pelo modal SessionNoteModal
+  // Isso resolve a confusão do botão "✓ Realizado" e garante que o terapeuta possa escolher
+  // se deseja adicionar uma nota detalhada ou fazer um registro rápido via checkbox no modal
 
   const handleJustifyAppointment = (appointment) => {
     setJustifyingAppointment(appointment);
@@ -299,7 +268,6 @@ const TherapistSchedulePage = () => {
   };
 
   const getQuickStatsCards = () => {
-    const stats = calculateSummaryStats([...todaySchedule, ...upcomingAppointments]);
     const nextAppointment = getNextAppointment([...todaySchedule, ...upcomingAppointments]);
 
     // Quick Win #3: Calcular horas trabalhadas (sessões completed)
@@ -450,27 +418,17 @@ const TherapistSchedulePage = () => {
               )}
               {appointment.status === 'scheduled' && (
                 <>
-                  {/* Quick Win #2: Botão de check rápido */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleQuickComplete(appointment);
-                    }}
-                    className="px-2 py-1 text-xs font-medium bg-green-500 text-white rounded hover:bg-green-600 active:bg-green-700 flex items-center gap-1 shadow-sm"
-                    title="Marcar como realizada (sem nota)"
-                  >
-                    <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
-                    ✓ Realizado
-                  </button>
+                  {/* Botão primário: Registrar Sessão */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleAddSessionNote(appointment);
                     }}
-                    className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded hover:bg-blue-200 active:bg-blue-300 flex items-center gap-1"
-                    title="Registrar com nota"
+                    className="px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 active:bg-blue-800 flex items-center gap-1 shadow-sm"
+                    title="Registrar sessão (com ou sem nota)"
                   >
-                    + Nota
+                    <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
+                    Registrar Sessão
                   </button>
                   <button
                     onClick={(e) => {
@@ -484,15 +442,15 @@ const TherapistSchedulePage = () => {
                   </button>
                 </>
               )}
-              {appointment.notes && (
+              {appointment.notes && appointment.status === 'completed' && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleAddSessionNote(appointment);
                   }}
-                  className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded hover:bg-blue-200 active:bg-blue-300"
+                  className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded hover:bg-blue-200 active:bg-blue-300 flex items-center gap-1"
                 >
-                  Editar nota
+                  Editar registro
                 </button>
               )}
             </div>

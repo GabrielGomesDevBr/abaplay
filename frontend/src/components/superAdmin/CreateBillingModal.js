@@ -47,12 +47,12 @@ const CreateBillingModal = ({ isOpen, onClose, onSubmit }) => {
   const handleClinicChange = (e) => {
     const clinicId = e.target.value;
     const clinic = clinics.find(c => c.id === parseInt(clinicId));
-    
+
     setFormData(prev => ({ ...prev, clinic_id: clinicId }));
     setSelectedClinic(clinic);
-    
+
     if (clinic) {
-      const pricePerPatient = 34.90;
+      const pricePerPatient = 15.00;
       const amount = (clinic.current_patients || 0) * pricePerPatient;
       setCalculatedAmount(amount);
     } else {
@@ -198,7 +198,7 @@ const CreateBillingModal = ({ isOpen, onClose, onSubmit }) => {
               </h4>
               <div className="text-sm text-green-800">
                 <div className="flex justify-between items-center">
-                  <span>{selectedClinic?.current_patients || 0} pacientes × R$ 34,90</span>
+                  <span>{selectedClinic?.current_patients || 0} pacientes × R$ 15,00</span>
                   <span className="font-bold text-lg">{formatCurrency(calculatedAmount)}</span>
                 </div>
                 <p className="text-xs text-green-600 mt-2">
