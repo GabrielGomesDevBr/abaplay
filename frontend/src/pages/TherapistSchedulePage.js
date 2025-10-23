@@ -418,18 +418,21 @@ const TherapistSchedulePage = () => {
               )}
               {appointment.status === 'scheduled' && (
                 <>
-                  {/* Botão primário: Registrar Sessão */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddSessionNote(appointment);
-                    }}
-                    className="px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 active:bg-blue-800 flex items-center gap-1 shadow-sm"
-                    title="Registrar sessão (com ou sem nota)"
-                  >
-                    <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
-                    Registrar Sessão
-                  </button>
+                  {/* Botão primário: Registrar Sessão - APENAS para plano Scheduling */}
+                  {/* Plano Pro usa registro detalhado na página de clientes */}
+                  {user?.subscription_plan === 'scheduling' && !user?.trial_pro_enabled && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddSessionNote(appointment);
+                      }}
+                      className="px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 active:bg-blue-800 flex items-center gap-1 shadow-sm"
+                      title="Registrar sessão (com ou sem nota)"
+                    >
+                      <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
+                      Registrar Sessão
+                    </button>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -442,7 +445,11 @@ const TherapistSchedulePage = () => {
                   </button>
                 </>
               )}
-              {appointment.notes && appointment.status === 'completed' && (
+              {/* Editar registro - APENAS para plano Scheduling */}
+              {appointment.notes &&
+               appointment.status === 'completed' &&
+               user?.subscription_plan === 'scheduling' &&
+               !user?.trial_pro_enabled && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

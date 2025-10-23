@@ -23,4 +23,7 @@ router.put('/patient-data/:patientId', reportController.updatePatientData);
 // Rota para gerar análise automática baseada nos dados das sessões
 router.get('/automatic-analysis/:patientId', reportController.getAutomaticAnalysis);
 
+// Rota para buscar dados de atendimentos/presenças do paciente
+router.get('/patient-attendance/:patientId', reportController.getPatientAttendanceData);
+
 module.exports = router;

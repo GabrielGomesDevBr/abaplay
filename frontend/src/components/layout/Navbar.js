@@ -119,6 +119,13 @@ const Navbar = ({ isNotificationPanelOpen, setNotificationPanelOpen }) => {
           </NavLink>
         )}
 
+        {/* Link para gestão de disponibilidade (terapeutas) */}
+        {user?.role === 'terapeuta' && (
+          <NavLink to="/availability" className={() => getLinkClass("/availability")} onClick={onLinkClick}>
+            <FontAwesomeIcon icon={faCalendarCheck} className="fa-fw mr-2" /> Disponibilidade
+          </NavLink>
+        )}
+
         <NavLink to="/notes" className={() => getLinkClass("/notes")} onClick={onLinkClick}><FontAwesomeIcon icon={faPencilAlt} className="fa-fw mr-2" /> Anotações</NavLink>
       </>
     );

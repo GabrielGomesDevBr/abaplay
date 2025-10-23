@@ -86,6 +86,63 @@ const SessionNoteModal = ({
 
   if (!isOpen || !session) return null;
 
+  // Calcular horário de término baseado no scheduled_time e duration_minutes
+  const calculateEndTime = (startTime, durationMinutes) => {
+    if (!startTime || !durationMinutes) return '-';
+    try {
+      const [hours, minutes] = startTime.split(':').map(Number);
+      const startDate = new Date();
+      startDate.setHours(hours, minutes, 0);
+      const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
+      return endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Formatar data corretamente - usar scheduled_date ao invés de scheduled_at
+  const formatSessionDate = () => {
+    try {
+      // Se scheduled_date existe, usar ele
+      if (session.scheduled_date) {
+        // scheduled_date pode vir como 'YYYY-MM-DD' ou 'YYYY-MM-DDTHH:mm:ss.sssZ'
+        // Extrair apenas a parte da data (antes do 'T' se houver)
+        const dateOnly = session.scheduled_date.split('T')[0];
+
+        // Parse manual para evitar problemas de timezone
+        const [year, month, day] = dateOnly.split('-').map(Number);
+        const date = new Date(year, month - 1, day); // mês em JS é 0-indexed
+
+        if (isNaN(date.getTime())) {
+          console.error('[SessionNoteModal] Data inválida:', session.scheduled_date);
+          return 'Data não disponível';
+        }
+
+        return date.toLocaleDateString('pt-BR', {
+          weekday: isMobile ? 'short' : 'long',
+          day: '2-digit',
+          month: isMobile ? 'short' : 'long',
+          year: 'numeric'
+        });
+      }
+      // Fallback para scheduled_at se existir
+      if (session.scheduled_at) {
+        return new Date(session.scheduled_at).toLocaleDateString('pt-BR', {
+          weekday: isMobile ? 'short' : 'long',
+          day: '2-digit',
+          month: isMobile ? 'short' : 'long',
+          year: 'numeric'
+        });
+      }
+      return 'Data não disponível';
+    } catch (error) {
+      console.error('[SessionNoteModal] Erro ao formatar data:', error);
+      return 'Data não disponível';
+    }
+  };
+
+  const endTime = calculateEndTime(session.scheduled_time || session.start_time, session.duration_minutes);
+
   return (
     <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 ${isMobile ? '' : 'flex items-center justify-center p-4'}`}>
       <div className={`bg-white shadow-xl overflow-y-auto ${
@@ -114,13 +171,8 @@ const SessionNoteModal = ({
             <h3 className={`font-semibold text-blue-900 mb-2 ${isMobile ? 'text-sm' : ''}`}>Detalhes da Sessão</h3>
             <div className={`space-y-1 text-blue-800 ${isMobile ? 'text-xs' : 'text-sm'}`}>
               <p><strong>Paciente:</strong> {session.patient_name}</p>
-              <p><strong>Data:</strong> {new Date(session.scheduled_at).toLocaleDateString('pt-BR', {
-                weekday: isMobile ? 'short' : 'long',
-                day: '2-digit',
-                month: isMobile ? 'short' : 'long',
-                year: 'numeric'
-              })}</p>
-              <p><strong>Horário:</strong> {session.start_time} - {session.end_time}</p>
+              <p><strong>Data:</strong> {formatSessionDate()}</p>
+              <p><strong>Horário:</strong> {session.scheduled_time || session.start_time || '-'} - {endTime}</p>
               {session.discipline_name && (
                 <p><strong>Disciplina:</strong> {session.discipline_name}</p>
               )}

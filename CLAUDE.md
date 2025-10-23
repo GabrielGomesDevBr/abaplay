@@ -105,7 +105,7 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
 - **Communication**: Case discussions and parent-therapist chats with Socket.IO real-time messaging
 - **Notifications**: Real-time notification system with status management and badge indicators
 
-### Scheduling System V2.0 (NEW - January 2025)
+### Scheduling System V2.1 (Complete - October 2025)
 - **Recurring Appointments**: Complete recurring appointment system with automatic generation
   - Patterns: Weekly, bi-weekly, monthly (by day of week, not day of month)
   - Automatic generation up to 4 weeks in advance
@@ -129,13 +129,26 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
   - Sends notifications to therapists for justification
   - Environment variable: `ENABLE_AUTO_DETECTION=true`
 
+- **Intelligent Availability System**:
+  - **Therapist Availability Management**: Weekly recurring schedules per therapist
+  - **Absence Management**: Record absences with justifications and approval workflow
+  - **Specialty Matching**: Therapist specialties for intelligent slot searches
+  - **Smart Slot Search**: `search_available_slots()` SQL function considering:
+    - Therapist availability and schedules
+    - Specialties and patient preferences
+    - Existing appointments and conflicts
+    - Absence periods
+  - **Room Management**: Track rooms, capacities, and assignments
+  - **Bulk Rescheduling**: Automatic rescheduling algorithm for multiple patients
+  - **Tables**: `therapist_availability`, `therapist_absences`, `therapist_specialties`, `rooms`, `patient_preferences`
+
 - **Notifications for Scheduling**:
   - **appointment_created**: New appointment notifications
   - **appointment_cancelled**: Cancellation alerts with reasons
   - **scheduling_reminder**: Session reminders (future)
   - Integration with `NotificationsPage` fullscreen view
 
-### Mobile-First Notification System (NEW - January 2025)
+### Mobile-First Design System
 - **NotificationsPage**: Dedicated fullscreen notification page
   - Replaces bottom sheet modal for better UX on mobile
   - Date-grouped notifications (Today, Yesterday, This Week, Older)
@@ -145,12 +158,19 @@ Additional SQL file `NORMALIZE_STATUS.sql` for status standardization.
   - Direct navigation to relevant pages on click
   - File: `frontend/src/pages/NotificationsPage.js`
 
-- **Enhanced Navigation**: Mobile bottom navigation improvements
-  - Admin button moved to BottomNavigation (from Sidebar Tools)
-  - Programs removed from Sidebar Tools (already in BottomNavigation)
-  - Sidebar Tools now contains: Dashboard, Notes, Logout
-  - Better organization for admin users on mobile devices
-  - Files: `frontend/src/components/layout/BottomNavigation.js`, `Sidebar.js`
+- **Bottom Navigation "Mais" Menu**: Mobile navigation optimization
+  - 7 functional items: Dashboard, Programas, Notificações, Administração, Ausências, Anotações, Sair
+  - Removed non-functional items (Relatórios, Configurações, Meu Perfil)
+  - "Ferramentas" button removed from Sidebar (duplicated functionality)
+  - Component: `frontend/src/components/layout/MoreMenu.js`
+
+- **WCAG 2.1 AA Compliance**: Touch targets and responsive design
+  - Minimum 44px touch targets across all interactive elements
+  - Responsive padding: `px-3 py-2 sm:px-4 sm:py-3`
+  - Responsive fonts: `text-xs sm:text-sm` / `text-sm sm:text-base`
+  - Breakpoints: `sm:` (640px) instead of `md:` (768px) for earlier mobile optimization
+  - Grid responsiveness: `grid-cols-1 sm:grid-cols-2`
+  - Applied to: AppointmentForm, SessionProgress, SchedulingPage, and all major forms
 
 ### Comprehensive Report System
 - **Consolidated Reports** with intelligent pre-filling:
@@ -292,7 +312,10 @@ Flexible system allowing clinics to override default trial numbers for specific 
   - `patientController.js` - Patient management and data access
   - `programController.js` - **ENHANCED**: Program operations, library management, and custom program creation
   - `reportController.js` - Evolution report system with automatic analysis and professional data management
-  - `schedulingController.js` - **NEW**: Scheduling and recurring appointment management
+  - `schedulingController.js` - Scheduling and recurring appointment management
+  - `availabilitySearchController.js` - Intelligent slot search, room management, patient preferences
+  - `therapistAvailabilityController.js` - Availability schedules, absences, specialties, bulk rescheduling
+  - `therapistScheduleController.js` - Therapist personal schedule view
 - `src/jobs/` - **NEW**: Background jobs and cron tasks
   - `sessionMaintenanceJob.js` - Orphan session detection and automatic maintenance (runs daily at 2 AM)
 - `src/models/` - Database query functions with enhanced error handling
@@ -306,6 +329,9 @@ Flexible system allowing clinics to override default trial numbers for specific 
   - `reportModel.js` - Evolution report with automatic analysis and insights
   - `contactModel.js` - Contact management system
   - `userModel.js` - **ENHANCED**: User authentication and profile management with professional data synchronization
+  - `availabilityModel.js` - Slot search queries, room queries, preference queries
+  - `therapistAvailabilityModel.js` - Availability schedules, absences, specialties queries
+  - `scheduledSessionModel.js` - Session scheduling and recurring appointment queries
 - `src/routes/` - API endpoint definitions with middleware integration
   - `authRoutes.js` - **ENHANCED**: Authentication routes including new user profile endpoint (`GET /auth/profile`)
 - `src/middleware/authMiddleware.js` - JWT authentication and role verification
@@ -313,6 +339,8 @@ Flexible system allowing clinics to override default trial numbers for specific 
   - `statusNormalizer.js` - Status normalization for program consistency
   - `promptLevels.js` - ABA prompt level definitions and calculations
   - `progressAlerts.js` - Progress monitoring and alert generation
+  - `automaticRescheduling.js` - Bulk rescheduling algorithm based on availability
+  - `availabilityNotifications.js` - Notification system for availability changes
 
 ### Frontend Structure
 - `src/App.js` - React app routing with role-based access and authentication guards
@@ -326,7 +354,8 @@ Flexible system allowing clinics to override default trial numbers for specific 
   - `contacts/` - Contact management components (ContactList)
   - `layout/` - Layout components (MainLayout, Navbar, Sidebar, BottomNavigation)
   - `notifications/` - Notification system (NotificationBadge, NotificationPanel, PatientNotificationBadge, ProgressAlert)
-  - `scheduling/` - **NEW**: Scheduling components (AppointmentForm, AppointmentsList, RecurringAppointmentModal)
+  - `scheduling/` - Scheduling components (AppointmentForm, AppointmentsList, RecurringAppointmentModal, OrphanSessionsList, AvailabilitySearchModal, AppointmentWizard, AvailabilitySearchStandalone)
+  - `availability/` - Availability management (TherapistAvailabilityManager, WeeklyScheduleGrid, AbsenceManager, TherapistCalendar, ReschedulingModal)
   - `patient/` - Patient components with enhanced reporting
     - `PatientDetails.js`, `PatientForm.js`, `PatientList.js`
     - `ConsolidatedReportModal.js` - **ENHANCED**: Consolidated reports with intelligent pre-filling and rich text editor
@@ -356,12 +385,15 @@ Flexible system allowing clinics to override default trial numbers for specific 
   - `HomePage.js` - Landing page with role-based redirection
   - `LoginPage.js` - Enhanced authentication with modern UI
   - `NotesPage.js` - Patient notes and documentation
-  - `NotificationsPage.js` - **NEW**: Dedicated fullscreen notifications page (mobile-first design)
+  - `NotificationsPage.js` - Dedicated fullscreen notifications page (mobile-first design)
   - `ParentDashboardPage.js` - Parent dashboard with progress visualization
   - `ProgramSessionPage.js` - Advanced session tracking with prompt levels
   - `ProgramsPage.js` - Program library and assignment interface
-  - `SchedulingPage.js` - **NEW**: Admin scheduling page with calendar and recurring appointments
-  - `TherapistSchedulePage.js` - **NEW**: Therapist personal schedule page
+  - `SchedulingPage.js` - Admin scheduling page with calendar and recurring appointments
+  - `TherapistSchedulePage.js` - Therapist personal schedule page
+  - `TherapistAvailabilityPage.js` - Therapist availability and absence management
+  - `AdminAvailabilityManagementPage.js` - Admin view of all therapists' availability
+  - `AvailabilitySettingsPage.js` - System-wide availability settings
 - `src/api/` - Centralized API communication with error handling and sanitized logging
   - `adminApi.js` - **ENHANCED**: Admin operations with sanitized logging
   - `authApi.js`, `caseDiscussionApi.js` - **ENHANCED**: With sanitized logging
@@ -369,7 +401,10 @@ Flexible system allowing clinics to override default trial numbers for specific 
   - `patientApi.js` - **ENHANCED**: Prompt level support and sanitized logging
   - `programApi.js` - **ENHANCED**: Program management, custom programs, and hierarchy management with sanitized logging
   - `reportApi.js` - **ENHANCED**: Complete report API with evolution reports, automatic analysis, and user profile synchronization
-  - `schedulingApi.js` - **NEW**: Scheduling and recurring appointment API
+  - `schedulingApi.js` - Scheduling and recurring appointment API
+  - `availabilityApi.js` - Slot search, room management, patient preferences API
+  - `therapistAvailabilityApi.js` - Availability schedules, absences, specialties API
+  - `availabilityAdminApi.js` - Admin-level availability management API
 - `src/services/` - **NEW**: Business logic services
   - `reportPreFillService.js` - Intelligent text generation service with professional responsibility disclaimers
 - `src/hooks/` - Custom React hooks

@@ -1729,3 +1729,659 @@ export const generatePatientRegistrationPDF = async (patientData, clinicData = n
         alert('Erro ao gerar o PDF de cadastro completo. Tente novamente.');
     }
 };
+
+/**
+ * Gera PDF profissional com horários disponíveis
+ * @param {Object} params - Parâmetros da geração
+ * @param {Array} params.selectedSlots - Array de horários selecionados
+ * @param {Object} params.filters - Filtros aplicados na busca
+ * @param {Array} params.disciplines - Lista de disciplinas disponíveis
+ * @param {string} params.clinicName - Nome da clínica (opcional)
+ */
+export const generateAvailabilityPDF = async ({ selectedSlots, filters, disciplines, clinicName = null }) => {
+    if (!selectedSlots || selectedSlots.length === 0) {
+        alert('Nenhum horário selecionado para gerar o PDF.');
+        return;
+    }
+
+    try {
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const margin = 15;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const contentWidth = pageWidth - margin * 2;
+        let y = margin;
+        let pageCount = 1;
+
+        // ========================================
+        // FUNÇÕES AUXILIARES
+        // ========================================
+
+        const addFooter = (currentPage) => {
+            const footerY = pageHeight - margin / 2;
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+
+            // Esquerda: Data de geração
+            doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, margin, footerY);
+
+            // Centro: Página
+            doc.text(`Página ${currentPage}`, pageWidth / 2, footerY, { align: 'center' });
+
+            // Direita: Site
+            doc.text(ABAPLAY_WEBSITE, pageWidth - margin, footerY, { align: 'right' });
+
+            doc.setTextColor(0);
+        };
+
+        const checkAndAddPage = (currentY, requiredHeight = 20) => {
+            if (currentY > pageHeight - margin - requiredHeight) {
+                addFooter(pageCount);
+                doc.addPage();
+                pageCount++;
+                return margin;
+            }
+            return currentY;
+        };
+
+        const translateDayName = (dayName) => {
+            const dayTranslations = {
+                'Monday': 'Segunda-feira',
+                'Tuesday': 'Terça-feira',
+                'Wednesday': 'Quarta-feira',
+                'Thursday': 'Quinta-feira',
+                'Friday': 'Sexta-feira',
+                'Saturday': 'Sábado',
+                'Sunday': 'Domingo'
+            };
+            return dayTranslations[dayName] || dayName;
+        };
+
+        // ========================================
+        // CABEÇALHO
+        // ========================================
+
+        // Logo/Nome ABAplay
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(60, 60, 180); // Azul ABAplay
+        doc.text('ABAplay', pageWidth / 2, y, { align: 'center' });
+        y += 8;
+
+        // Título
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text('Horários Disponíveis', pageWidth / 2, y, { align: 'center' });
+        y += 6;
+
+        // Subtítulo com data
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100);
+        doc.text(`Consulta realizada em ${formatDate(new Date().toISOString())}`, pageWidth / 2, y, { align: 'center' });
+        y += 10;
+
+        // Linha separadora
+        doc.setLineWidth(0.3);
+        doc.setDrawColor(200);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 8;
+
+        // ========================================
+        // TEXTO DE APRESENTAÇÃO
+        // ========================================
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0);
+
+        const introText = `Prezado(a),
+
+Identificamos os seguintes horários disponíveis que podem atender às suas necessidades terapêuticas. Nossa equipe está à disposição para auxiliar na escolha do melhor horário e esclarecer quaisquer dúvidas sobre os atendimentos.`;
+
+        const introLines = doc.splitTextToSize(introText, contentWidth);
+        doc.text(introLines, margin, y);
+        y += introLines.length * 5 + 5;
+
+        // ========================================
+        // INFORMAÇÕES DA BUSCA
+        // ========================================
+
+        y = checkAndAddPage(y, 30);
+
+        doc.setFillColor(245, 245, 250);
+        doc.rect(margin, y - 3, contentWidth, 25, 'F');
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Critérios da Consulta', margin + 3, y + 2);
+        y += 8;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+
+        // Especialidade
+        const disciplineName = filters.discipline_id
+            ? disciplines.find(d => d.id === parseInt(filters.discipline_id))?.name || 'Não especificada'
+            : 'Todas as especialidades';
+        doc.text(`• Especialidade: ${disciplineName}`, margin + 5, y);
+        y += 5;
+
+        // Duração
+        doc.text(`• Duração da sessão: ${filters.duration_minutes} minutos`, margin + 5, y);
+        y += 5;
+
+        // Período (se especificado)
+        if (filters.time_period && filters.time_period !== 'all') {
+            const periodMap = {
+                'morning': 'Manhã',
+                'afternoon': 'Tarde',
+                'evening': 'Noite'
+            };
+            doc.text(`• Período preferencial: ${periodMap[filters.time_period] || filters.time_period}`, margin + 5, y);
+            y += 5;
+        }
+
+        y += 8;
+
+        // ========================================
+        // HORÁRIOS DISPONÍVEIS
+        // ========================================
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Horários Disponíveis', margin, y);
+        y += 8;
+
+        // Ordenar por data e horário
+        const sortedSlots = [...selectedSlots].sort((a, b) => {
+            if (a.available_date !== b.available_date) {
+                return a.available_date.localeCompare(b.available_date);
+            }
+            return a.available_time.localeCompare(b.available_time);
+        });
+
+        // Agrupar por terapeuta
+        const groupedByTherapist = sortedSlots.reduce((acc, slot) => {
+            if (!acc[slot.therapist_id]) {
+                acc[slot.therapist_id] = {
+                    name: slot.therapist_name,
+                    slots: []
+                };
+            }
+            acc[slot.therapist_id].slots.push(slot);
+            return acc;
+        }, {});
+
+        // Renderizar cada terapeuta
+        Object.values(groupedByTherapist).forEach((group, groupIndex) => {
+            y = checkAndAddPage(y, 25);
+
+            // Header do terapeuta
+            doc.setFillColor(240, 240, 240);
+            doc.rect(margin, y - 3, contentWidth, 8, 'F');
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0);
+            doc.text(group.name, margin + 3, y + 2);
+
+            // Badge de especialista se aplicável
+            if (group.slots.some(s => s.has_specialty)) {
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'normal');
+                doc.setFillColor(220, 255, 220);
+                doc.setDrawColor(100, 180, 100);
+                doc.setLineWidth(0.2);
+                const badgeX = margin + 3 + doc.getTextWidth(group.name) + 5;
+                doc.roundedRect(badgeX, y - 2, 20, 4, 1, 1, 'FD');
+                doc.setTextColor(0, 100, 0);
+                doc.text('Especialista', badgeX + 2, y + 1);
+                doc.setTextColor(0);
+            }
+
+            y += 8;
+
+            // Tabela de horários
+            const tableData = group.slots.map(slot => {
+                const date = formatDate(slot.available_date);
+                const dayName = translateDayName(slot.day_name);
+                const time = slot.available_time.slice(0, 5);
+                const room = slot.suggested_room_name || '-';
+
+                return [
+                    `${date}\n(${dayName})`,
+                    time,
+                    `${filters.duration_minutes} min`,
+                    room
+                ];
+            });
+
+            autoTable(doc, {
+                startY: y,
+                head: [['Data', 'Horário', 'Duração', 'Sala']],
+                body: tableData,
+                theme: 'plain',
+                styles: {
+                    fontSize: 9,
+                    cellPadding: 3,
+                    lineColor: [220, 220, 220],
+                    lineWidth: 0.1
+                },
+                headStyles: {
+                    fillColor: [250, 250, 250],
+                    textColor: [80, 80, 80],
+                    fontStyle: 'bold',
+                    halign: 'left'
+                },
+                columnStyles: {
+                    0: { cellWidth: 50 },
+                    1: { cellWidth: 25, halign: 'center' },
+                    2: { cellWidth: 30, halign: 'center' },
+                    3: { cellWidth: contentWidth - 105 }
+                },
+                margin: { left: margin, right: margin },
+                didDrawPage: (data) => {
+                    if (data.pageNumber > pageCount) {
+                        pageCount = data.pageNumber;
+                    }
+                }
+            });
+
+            y = doc.lastAutoTable.finalY + 8;
+        });
+
+        // ========================================
+        // RESUMO E PRÓXIMOS PASSOS
+        // ========================================
+
+        y = checkAndAddPage(y, 35);
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Resumo', margin, y);
+        y += 6;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Total de horários disponíveis: ${selectedSlots.length}`, margin, y);
+        y += 5;
+        doc.text(`Profissionais disponíveis: ${Object.keys(groupedByTherapist).length}`, margin, y);
+        y += 10;
+
+        // Próximos passos
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text('Próximos Passos', margin, y);
+        y += 6;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        const nextStepsText = `Para agendar um dos horários listados ou obter mais informações, entre em contato conosco. Estamos prontos para atendê-lo e esclarecer todas as suas dúvidas sobre os atendimentos.`;
+        const nextStepsLines = doc.splitTextToSize(nextStepsText, contentWidth);
+        doc.text(nextStepsLines, margin, y);
+        y += nextStepsLines.length * 5;
+
+        // ========================================
+        // RODAPÉ FINAL
+        // ========================================
+
+        addFooter(pageCount);
+
+        // ========================================
+        // SALVAR PDF
+        // ========================================
+
+        const disciplineSlug = disciplineName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const dateSlug = new Date().toISOString().split('T')[0];
+        const filename = `Disponibilidade_ABAplay_${disciplineSlug}_${dateSlug}.pdf`;
+
+        doc.save(filename);
+
+        return true;
+
+    } catch (error) {
+        console.error('Erro ao gerar PDF de disponibilidade:', error);
+        alert('Erro ao gerar o PDF. Tente novamente.');
+        return false;
+    }
+};
+
+/**
+ * Gera PDF consolidado de atendimentos/presenças do paciente
+ * @param {Object} data - Dados do relatório retornados pelo backend
+ */
+export const generatePatientAttendanceReportPDF = async (data) => {
+    if (!data || !data.patient) {
+        alert('Dados insuficientes para gerar o relatório.');
+        return false;
+    }
+
+    try {
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const margin = 15;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const contentWidth = pageWidth - margin * 2;
+        let y = margin;
+        let pageCount = 1;
+
+        const { patient, period, summary, by_discipline, all_sessions } = data;
+
+        // ========================================
+        // FUNÇÕES AUXILIARES
+        // ========================================
+
+        const addFooter = (currentPage) => {
+            const footerY = pageHeight - margin / 2;
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+
+            doc.text(`Gerado em: ${formatDate(new Date().toISOString())}`, margin, footerY);
+            doc.text(`Página ${currentPage}`, pageWidth / 2, footerY, { align: 'center' });
+            doc.text(ABAPLAY_WEBSITE, pageWidth - margin, footerY, { align: 'right' });
+
+            doc.setTextColor(0);
+        };
+
+        const checkAndAddPage = (currentY, requiredHeight = 20) => {
+            if (currentY > pageHeight - margin - requiredHeight) {
+                addFooter(pageCount);
+                doc.addPage();
+                pageCount++;
+                return margin;
+            }
+            return currentY;
+        };
+
+        const translateStatus = (status) => {
+            const statusMap = {
+                'completed': 'Realizada',
+                'no_show': 'Falta',
+                'cancelled': 'Cancelada',
+                'scheduled': 'Agendada',
+                'rescheduled': 'Remarcada'
+            };
+            return statusMap[status] || status;
+        };
+
+        const getStatusColor = (status) => {
+            const colorMap = {
+                'completed': [34, 139, 34],      // Verde
+                'no_show': [220, 20, 60],        // Vermelho
+                'cancelled': [255, 140, 0],      // Laranja
+                'scheduled': [70, 130, 180],     // Azul
+                'rescheduled': [147, 112, 219]   // Roxo
+            };
+            return colorMap[status] || [100, 100, 100];
+        };
+
+        // ========================================
+        // CABEÇALHO
+        // ========================================
+
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(60, 60, 180);
+        doc.text('ABAplay', pageWidth / 2, y, { align: 'center' });
+        y += 8;
+
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text('Relatório de Presenças do Paciente', pageWidth / 2, y, { align: 'center' });
+        y += 10;
+
+        // Linha separadora
+        doc.setLineWidth(0.3);
+        doc.setDrawColor(200);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 8;
+
+        // ========================================
+        // INFORMAÇÕES DO PACIENTE
+        // ========================================
+
+        doc.setFillColor(245, 245, 250);
+        doc.rect(margin, y - 3, contentWidth, 20, 'F');
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Paciente', margin + 3, y + 2);
+        y += 7;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Nome: ${patient.name}`, margin + 5, y);
+        y += 5;
+        if (patient.dob) {
+            doc.text(`Data de Nascimento: ${formatDate(patient.dob)}`, margin + 5, y);
+            y += 5;
+        }
+        if (patient.diagnosis) {
+            doc.text(`Diagnóstico: ${patient.diagnosis}`, margin + 5, y);
+            y += 5;
+        }
+        doc.text(`Período: ${formatDate(period.start_date)} a ${formatDate(period.end_date)}`, margin + 5, y);
+        y += 10;
+
+        // ========================================
+        // RESUMO EXECUTIVO
+        // ========================================
+
+        y = checkAndAddPage(y, 40);
+
+        doc.setFillColor(240, 248, 255);
+        doc.rect(margin, y - 3, contentWidth, 35, 'F');
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Resumo Executivo', margin + 3, y + 2);
+        y += 8;
+
+        // Tabela de resumo
+        const summaryData = [
+            ['Total de Sessões', summary.total_sessions.toString()],
+            ['Sessões Realizadas', summary.completed_sessions.toString()],
+            ['Faltas', summary.no_show_sessions.toString()],
+            ['Cancelamentos', summary.cancelled_sessions.toString()],
+            ['Taxa de Comparecimento', `${summary.attendance_rate}%`],
+            ['Horas Totais de Atendimento', `${summary.total_hours}h`]
+        ];
+
+        autoTable(doc, {
+            startY: y,
+            head: [],
+            body: summaryData,
+            theme: 'plain',
+            styles: {
+                fontSize: 9,
+                cellPadding: 2
+            },
+            columnStyles: {
+                0: { fontStyle: 'bold', cellWidth: contentWidth * 0.6 },
+                1: { halign: 'right', cellWidth: contentWidth * 0.4 }
+            },
+            margin: { left: margin + 5, right: margin + 5 }
+        });
+
+        y = doc.lastAutoTable.finalY + 10;
+
+        // ========================================
+        // RESUMO POR ESPECIALIDADE
+        // ========================================
+
+        y = checkAndAddPage(y, 30);
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Resumo por Especialidade', margin, y);
+        y += 6;
+
+        const disciplineTableData = Object.values(by_discipline).map(disc => [
+            disc.discipline_name,
+            disc.total.toString(),
+            disc.completed.toString(),
+            disc.no_show.toString()
+        ]);
+
+        autoTable(doc, {
+            startY: y,
+            head: [['Especialidade', 'Total', 'Realizadas', 'Faltas']],
+            body: disciplineTableData,
+            theme: 'plain',
+            styles: {
+                fontSize: 9,
+                cellPadding: 3,
+                lineColor: [220, 220, 220],
+                lineWidth: 0.1
+            },
+            headStyles: {
+                fillColor: [250, 250, 250],
+                textColor: [80, 80, 80],
+                fontStyle: 'bold'
+            },
+            columnStyles: {
+                0: { cellWidth: contentWidth * 0.5 },
+                1: { halign: 'center', cellWidth: contentWidth * 0.17 },
+                2: { halign: 'center', cellWidth: contentWidth * 0.17 },
+                3: { halign: 'center', cellWidth: contentWidth * 0.16 }
+            },
+            margin: { left: margin, right: margin }
+        });
+
+        y = doc.lastAutoTable.finalY + 10;
+
+        // ========================================
+        // DETALHAMENTO POR ESPECIALIDADE
+        // ========================================
+
+        y = checkAndAddPage(y, 30);
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Detalhamento por Especialidade', margin, y);
+        y += 8;
+
+        Object.values(by_discipline).forEach((disc, index) => {
+            y = checkAndAddPage(y, 40);
+
+            // Header da disciplina
+            doc.setFillColor(240, 240, 240);
+            doc.rect(margin, y - 3, contentWidth, 8, 'F');
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0);
+            doc.text(`${disc.discipline_name} (${disc.completed} sessões realizadas)`, margin + 3, y + 2);
+            y += 6;
+
+            // Profissionais
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100);
+            doc.text(`Profissionais: ${disc.therapists.join(', ')}`, margin + 3, y);
+            doc.setTextColor(0);
+            y += 6;
+
+            // Tabela de sessões
+            const sessionTableData = disc.sessions.map(session => {
+                const date = formatDate(session.scheduled_date);
+                const time = session.scheduled_time.slice(0, 5);
+                const duration = `${session.duration_minutes} min`;
+                const status = translateStatus(session.status);
+
+                return [date, time, duration, status];
+            });
+
+            autoTable(doc, {
+                startY: y,
+                head: [['Data', 'Horário', 'Duração', 'Status']],
+                body: sessionTableData,
+                theme: 'plain',
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2,
+                    lineColor: [220, 220, 220],
+                    lineWidth: 0.1
+                },
+                headStyles: {
+                    fillColor: [250, 250, 250],
+                    textColor: [80, 80, 80],
+                    fontStyle: 'bold',
+                    fontSize: 8
+                },
+                columnStyles: {
+                    0: { cellWidth: 30 },
+                    1: { cellWidth: 20, halign: 'center' },
+                    2: { cellWidth: 25, halign: 'center' },
+                    3: { cellWidth: contentWidth - 75 }
+                },
+                margin: { left: margin, right: margin },
+                didParseCell: (data) => {
+                    // Colorir status
+                    if (data.column.index === 3 && data.section === 'body') {
+                        const session = disc.sessions[data.row.index];
+                        const color = getStatusColor(session.status);
+                        data.cell.styles.textColor = color;
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                },
+                didDrawPage: (data) => {
+                    if (data.pageNumber > pageCount) {
+                        pageCount = data.pageNumber;
+                    }
+                }
+            });
+
+            y = doc.lastAutoTable.finalY + 8;
+        });
+
+        // ========================================
+        // OBSERVAÇÕES
+        // ========================================
+
+        y = checkAndAddPage(y, 25);
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Observações', margin, y);
+        y += 6;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+
+        const totalProfessionals = new Set(all_sessions.map(s => s.therapist_name)).size;
+        const disciplines = Object.keys(by_discipline).length;
+
+        doc.text(`• Taxa de comparecimento: ${summary.attendance_rate}%`, margin, y);
+        y += 5;
+        doc.text(`• Profissionais envolvidos: ${totalProfessionals}`, margin, y);
+        y += 5;
+        doc.text(`• Especialidades: ${disciplines}`, margin, y);
+        y += 5;
+        doc.text(`• Horas totais de atendimento: ${summary.total_hours}h`, margin, y);
+
+        // ========================================
+        // RODAPÉ FINAL
+        // ========================================
+
+        addFooter(pageCount);
+
+        // ========================================
+        // SALVAR PDF
+        // ========================================
+
+        const patientSlug = patient.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const dateSlug = new Date().toISOString().split('T')[0];
+        const filename = `Relatorio_Presencas_${patientSlug}_${dateSlug}.pdf`;
+
+        doc.save(filename);
+
+        return true;
+
+    } catch (error) {
+        console.error('Erro ao gerar PDF de presenças:', error);
+        alert('Erro ao gerar o PDF. Tente novamente.');
+        return false;
+    }
+};

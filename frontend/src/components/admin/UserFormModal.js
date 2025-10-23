@@ -2,8 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faSave, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import {
+  faTimes,
+  faSave,
+  faSpinner,
+  faChevronDown,
+  faChevronUp,
+  faPlus,
+  faTrash,
+  faCertificate
+} from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../context/AuthContext';
+import therapistSpecialtyApi from '../../api/therapistSpecialtyApi';
+import { getDisciplineHierarchy } from '../../api/programApi';
 
 // O componente agora recebe a lista de `patients` da clínica
 const UserFormModal = ({ isOpen, onClose, onSave, userToEdit = null, patients = [] }) => {
@@ -18,8 +29,112 @@ const UserFormModal = ({ isOpen, onClose, onSave, userToEdit = null, patients = 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // Estados para especialidades
+  const [showSpecialties, setShowSpecialties] = useState(false);
+  const [specialties, setSpecialties] = useState([]);
+  const [disciplines, setDisciplines] = useState([]);
+  const [loadingSpecialties, setLoadingSpecialties] = useState(false);
+  const [newSpecialty, setNewSpecialty] = useState({
+    discipline_id: '',
+    certification_date: '',
+    notes: ''
+  });
+
   const isEditing = Boolean(userToEdit);
 
+  // Carregar lista de disciplinas disponíveis
+  const loadDisciplines = async () => {
+    try {
+      const disciplinesData = await getDisciplineHierarchy();
+
+      let disciplinesList = [];
+      if (disciplinesData && typeof disciplinesData === 'object') {
+        disciplinesList = Object.keys(disciplinesData).map(disciplineName => ({
+          id: disciplinesData[disciplineName].id,
+          name: disciplineName
+        }));
+      }
+
+      setDisciplines(disciplinesList);
+    } catch (error) {
+      console.error('Erro ao carregar disciplinas:', error);
+    }
+  };
+
+  // Carregar especialidades do terapeuta
+  const loadSpecialties = async () => {
+    if (!userToEdit?.id) return;
+
+    setLoadingSpecialties(true);
+    try {
+      const data = await therapistSpecialtyApi.getTherapistSpecialties(userToEdit.id);
+      setSpecialties(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar especialidades:', error);
+    } finally {
+      setLoadingSpecialties(false);
+    }
+  };
+
+  // Adicionar nova especialidade
+  const handleAddSpecialty = async () => {
+    if (!newSpecialty.discipline_id) {
+      setError('Selecione uma disciplina');
+      return;
+    }
+
+    // Se estiver editando, salva diretamente no backend
+    if (isEditing && userToEdit?.id) {
+      try {
+        await therapistSpecialtyApi.addTherapistSpecialty(userToEdit.id, newSpecialty);
+        setNewSpecialty({ discipline_id: '', certification_date: '', notes: '' });
+        setError('');
+        await loadSpecialties(); // Recarregar lista
+      } catch (error) {
+        setError(error.response?.data?.message || 'Erro ao adicionar especialidade');
+      }
+    } else {
+      // Se estiver criando, adiciona à lista temporária
+      const disciplineName = disciplines.find(d => d.id === parseInt(newSpecialty.discipline_id))?.name || '';
+
+      // Verifica se a disciplina já está na lista
+      if (specialties.some(s => s.discipline_id === parseInt(newSpecialty.discipline_id))) {
+        setError('Esta disciplina já foi adicionada');
+        return;
+      }
+
+      setSpecialties([...specialties, {
+        discipline_id: parseInt(newSpecialty.discipline_id),
+        discipline_name: disciplineName,
+        certification_date: newSpecialty.certification_date,
+        notes: newSpecialty.notes
+      }]);
+      setNewSpecialty({ discipline_id: '', certification_date: '', notes: '' });
+      setError('');
+    }
+  };
+
+  // Remover especialidade
+  const handleRemoveSpecialty = async (disciplineId) => {
+    if (!window.confirm('Tem certeza que deseja remover esta especialidade?')) {
+      return;
+    }
+
+    // Se estiver editando, remove do backend
+    if (isEditing && userToEdit?.id) {
+      try {
+        await therapistSpecialtyApi.removeTherapistSpecialty(userToEdit.id, disciplineId);
+        await loadSpecialties(); // Recarregar lista
+      } catch (error) {
+        setError(error.response?.data?.message || 'Erro ao remover especialidade');
+      }
+    } else {
+      // Se estiver criando, remove da lista temporária
+      setSpecialties(specialties.filter(s => s.discipline_id !== disciplineId));
+    }
+  };
+
+  // UseEffect para carregar dados quando o modal abre
   useEffect(() => {
     if (isEditing) {
       setFormData({
@@ -29,13 +144,23 @@ const UserFormModal = ({ isOpen, onClose, onSave, userToEdit = null, patients = 
         role: userToEdit.role || 'terapeuta',
         associated_patient_id: userToEdit.associated_patient_id || '',
       });
+
+      // Carregar especialidades e disciplinas se for terapeuta
+      if (userToEdit.role === 'terapeuta') {
+        loadDisciplines();
+        loadSpecialties();
+      }
     } else {
       setFormData({
         fullName: '', username: '', password: '', role: 'terapeuta', associated_patient_id: '',
       });
+      setSpecialties([]);
+      // Carregar disciplinas mesmo ao criar novo terapeuta
+      loadDisciplines();
     }
     setError('');
-  }, [isOpen, userToEdit, isEditing]);
+    setShowSpecialties(false);
+  }, [isOpen, userToEdit, isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -69,7 +194,19 @@ const UserFormModal = ({ isOpen, onClose, onSave, userToEdit = null, patients = 
 
     setIsSubmitting(true);
     try {
-        await onSave(formData);
+        // Se for um novo terapeuta e houver especialidades, incluir nos dados
+        const dataToSave = {
+          ...formData,
+          ...(formData.role === 'terapeuta' && !isEditing && specialties.length > 0 && {
+            specialties: specialties.map(s => ({
+              discipline_id: s.discipline_id,
+              certification_date: s.certification_date || null,
+              notes: s.notes || ''
+            }))
+          })
+        };
+
+        await onSave(dataToSave);
         onClose();
     } catch (err) {
         setError(err.message || 'Ocorreu um erro desconhecido.');
@@ -145,6 +282,149 @@ const UserFormModal = ({ isOpen, onClose, onSave, userToEdit = null, patients = 
                     <option disabled>Nenhum paciente cadastrado na clínica</option>
                 )}
               </select>
+            </div>
+          )}
+
+          {/* Seção de Especialidades - Para Terapeutas (criar ou editar) */}
+          {formData.role === 'terapeuta' && (
+            <div className="border border-gray-200 rounded-md overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowSpecialties(!showSpecialties)}
+                className="w-full bg-gray-50 hover:bg-gray-100 px-4 py-3 flex items-center justify-between transition-colors"
+              >
+                <div className="flex items-center">
+                  <FontAwesomeIcon icon={faCertificate} className="text-indigo-600 mr-2" />
+                  <span className="font-medium text-gray-700">
+                    Especialidades
+                    {specialties.length > 0 && (
+                      <span className="ml-2 text-sm text-gray-500">
+                        ({specialties.length})
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <FontAwesomeIcon
+                  icon={showSpecialties ? faChevronUp : faChevronDown}
+                  className="text-gray-400"
+                />
+              </button>
+
+              {showSpecialties && (
+                <div className="p-4 bg-white space-y-4">
+                  {loadingSpecialties ? (
+                    <div className="text-center py-4">
+                      <FontAwesomeIcon icon={faSpinner} spin className="text-gray-400 text-xl" />
+                      <p className="text-sm text-gray-500 mt-2">Carregando especialidades...</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Lista de Especialidades Existentes */}
+                      {specialties.length > 0 ? (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">
+                            Especialidades Atuais
+                          </h4>
+                          {specialties.map((specialty) => (
+                            <div
+                              key={specialty.discipline_id}
+                              className="flex items-center justify-between bg-gray-50 p-3 rounded-md border border-gray-200"
+                            >
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-800">
+                                  {specialty.discipline_name}
+                                </p>
+                                {specialty.certification_date && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Certificado em: {new Date(specialty.certification_date).toLocaleDateString('pt-BR')}
+                                  </p>
+                                )}
+                                {specialty.notes && (
+                                  <p className="text-xs text-gray-600 mt-1">
+                                    {specialty.notes}
+                                  </p>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSpecialty(specialty.discipline_id)}
+                                className="ml-3 text-red-500 hover:text-red-700 transition-colors"
+                                title="Remover especialidade"
+                              >
+                                <FontAwesomeIcon icon={faTrash} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 text-center py-2">
+                          Nenhuma especialidade cadastrada
+                        </p>
+                      )}
+
+                      {/* Formulário para Adicionar Nova Especialidade */}
+                      <div className="border-t border-gray-200 pt-4 mt-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">
+                          Adicionar Especialidade
+                        </h4>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Disciplina *
+                            </label>
+                            <select
+                              value={newSpecialty.discipline_id}
+                              onChange={(e) => setNewSpecialty(prev => ({ ...prev, discipline_id: e.target.value }))}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                            >
+                              <option value="">-- Selecione uma disciplina --</option>
+                              {disciplines.map((discipline) => (
+                                <option key={discipline.id} value={discipline.id}>
+                                  {discipline.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Data de Certificação (opcional)
+                            </label>
+                            <input
+                              type="date"
+                              value={newSpecialty.certification_date}
+                              onChange={(e) => setNewSpecialty(prev => ({ ...prev, certification_date: e.target.value }))}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Observações (opcional)
+                            </label>
+                            <textarea
+                              value={newSpecialty.notes}
+                              onChange={(e) => setNewSpecialty(prev => ({ ...prev, notes: e.target.value }))}
+                              rows="2"
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                              placeholder="Ex: Certificação em ABA, experiência com autismo..."
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleAddSpecialty}
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition-colors flex items-center justify-center text-sm"
+                          >
+                            <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                            Adicionar Especialidade
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

@@ -25,6 +25,12 @@ const therapistScheduleRoutes = require('./routes/therapistScheduleRoutes');
 const recurringAppointmentRoutes = require('./routes/recurringAppointmentRoutes');
 // --- Sistema de assinaturas e planos ---
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
+// --- Sistema de busca inteligente de disponibilidade ---
+const availabilitySearchRoutes = require('./routes/availabilitySearchRoutes');
+// --- Sistema de especialidades de terapeutas ---
+const therapistSpecialtyRoutes = require('./routes/therapistSpecialtyRoutes');
+// --- Sistema de gestão de disponibilidade de terapeutas ---
+const therapistAvailabilityRoutes = require('./routes/therapistAvailabilityRoutes');
 
 // --- Job unificado de manutenção de sessões (NOVO) ---
 const SessionMaintenanceJob = require('./jobs/sessionMaintenanceJob');
@@ -118,6 +124,12 @@ app.use('/api/scheduling', verifyToken, verifyClinicStatus, schedulingRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 // --- Sistema de assinaturas e planos ---
 app.use('/api/subscription', verifyToken, subscriptionRoutes);
+// --- Sistema de busca inteligente de disponibilidade ---
+app.use('/api/availability', verifyToken, verifyClinicStatus, availabilitySearchRoutes);
+// --- Sistema de especialidades de terapeutas ---
+app.use('/api/therapists', verifyToken, verifyClinicStatus, therapistSpecialtyRoutes);
+// --- Sistema de gestão de disponibilidade de terapeutas ---
+app.use('/api/therapist-availability', verifyToken, verifyClinicStatus, therapistAvailabilityRoutes);
 
 
 // Rota de autenticação (não precisa de token)

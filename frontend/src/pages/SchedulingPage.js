@@ -12,7 +12,9 @@ import {
   faFilePdf,
   faBrain,
   faCalendarWeek,  // ✅ NOVO: Ícone para visualização de calendário
-  faEllipsisV  // ✅ Ícone para menu mobile
+  faEllipsisV,  // ✅ Ícone para menu mobile
+  faSearch,  // ✅ AGENDAMENTO INTELIGENTE: Busca rápida
+  faMagic  // ✅ AGENDAMENTO INTELIGENTE: Assistente
 } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../context/AuthContext';
 import AppointmentForm from '../components/scheduling/AppointmentForm';
@@ -28,6 +30,8 @@ import EditRecurringSeriesModal from '../components/scheduling/EditRecurringSeri
 import CancelAppointmentModal from '../components/scheduling/CancelAppointmentModal'; // ✅ NOVO: Modal de cancelamento
 import WeekCalendarView from '../components/scheduling/WeekCalendarView'; // ✅ NOVO: Visualização de calendário
 import RetroactiveSessionModal from '../components/scheduling/RetroactiveSessionModal'; // ✅ SOLUÇÃO 4: Modal para registro retroativo
+import AvailabilitySearchModal from '../components/scheduling/AvailabilitySearchModal'; // ✅ AGENDAMENTO INTELIGENTE: Busca rápida
+import AppointmentWizard from '../components/scheduling/AppointmentWizard'; // ✅ AGENDAMENTO INTELIGENTE: Assistente
 import {
   getAppointments,
   createAppointment,
@@ -42,6 +46,9 @@ import {
 } from '../api/schedulingApi';
 import { fetchAllAssignments } from '../api/adminApi';
 import { generateAppointmentReport } from '../components/scheduling/AppointmentReportGenerator';
+import { getPatientAttendanceData } from '../api/reportApi';
+import { generatePatientAttendanceReportPDF } from '../utils/pdfGenerator';
+import usePendingActions from '../hooks/usePendingActions';
 
 /**
  * Página principal de agendamento para administradores
@@ -49,6 +56,9 @@ import { generateAppointmentReport } from '../components/scheduling/AppointmentR
  */
 const SchedulingPage = () => {
   const { user, token } = useAuth();
+
+  // Hook de ações pendentes (órfãs + perdidas)
+  const { orphansCount, missedCount, pendingCount } = usePendingActions();
 
   // Estados principais
   const [appointments, setAppointments] = useState([]);
@@ -66,6 +76,8 @@ const SchedulingPage = () => {
   const [showCancelModal, setShowCancelModal] = useState(false); // ✅ NOVO: Modal de cancelamento
   const [showActionsMenu, setShowActionsMenu] = useState(false); // ✅ NOVO: Menu de ações mobile
   const [showRetroactiveSessionModal, setShowRetroactiveSessionModal] = useState(false); // ✅ SOLUÇÃO 4: Modal retroativo
+  const [showAvailabilitySearch, setShowAvailabilitySearch] = useState(false); // ✅ AGENDAMENTO INTELIGENTE: Busca rápida
+  const [showAppointmentWizard, setShowAppointmentWizard] = useState(false); // ✅ AGENDAMENTO INTELIGENTE: Assistente
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [selectedOrphanSession, setSelectedOrphanSession] = useState(null);
@@ -452,7 +464,46 @@ const SchedulingPage = () => {
 
   const handleRefresh = () => {
     loadAppointments();
+  };
 
+  // ✅ AGENDAMENTO INTELIGENTE: Handlers para busca rápida e assistente
+  const handleAvailabilitySlotSelected = (slotData) => {
+    // Preencher formulário de agendamento com os dados do slot selecionado
+    setEditingAppointment({
+      therapist_id: slotData.therapist_id,
+      scheduled_date: slotData.scheduled_date,
+      scheduled_time: slotData.scheduled_time,
+      duration_minutes: slotData.duration_minutes,
+      room_id: slotData.room_id,
+      notes: slotData.notes || ''
+    });
+    setShowAppointmentForm(true);
+  };
+
+  const handleWizardScheduleAppointments = async (appointmentsToCreate) => {
+    try {
+      setIsSubmitting(true);
+
+      // Criar todos os agendamentos em sequência
+      const results = [];
+      for (const appointmentData of appointmentsToCreate) {
+        const result = await createAppointment(appointmentData);
+        results.push(result);
+      }
+
+      await loadAppointments();
+      setShowAppointmentWizard(false);
+
+      toast.success(
+        `${results.length} agendamento${results.length > 1 ? 's' : ''} criado${results.length > 1 ? 's' : ''} com sucesso!`,
+        { duration: 4000 }
+      );
+    } catch (error) {
+      console.error('Erro ao criar agendamentos via assistente:', error);
+      toast.error(`Erro ao criar agendamentos: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // ✅ SOLUÇÃO 4: Handler para criar sessão retroativa (plano Agendamento)
@@ -483,13 +534,33 @@ const SchedulingPage = () => {
     try {
       setIsGeneratingReport(true);
 
-      // Gerar relatório usando AppointmentReportGenerator
-      const result = await generateAppointmentReport(config);
+      // Verificar se é relatório de presenças do paciente
+      if (config.scope.type === 'patient-attendance') {
+        // Buscar dados do backend
+        const data = await getPatientAttendanceData(
+          config.scope.patientId,
+          config.period.startDate,
+          config.period.endDate
+        );
 
-      if (result.success) {
-        setShowReportModal(false);
+        // Gerar PDF
+        const success = await generatePatientAttendanceReportPDF(data);
+
+        if (success) {
+          toast.success('Relatório de presenças gerado com sucesso!');
+          setShowReportModal(false);
+        } else {
+          throw new Error('Falha na geração do relatório de presenças');
+        }
       } else {
-        throw new Error('Falha na geração do relatório');
+        // Gerar relatório de agendamentos usando AppointmentReportGenerator
+        const result = await generateAppointmentReport(config);
+
+        if (result.success) {
+          setShowReportModal(false);
+        } else {
+          throw new Error('Falha na geração do relatório');
+        }
       }
 
     } catch (error) {
@@ -585,26 +656,42 @@ const SchedulingPage = () => {
             </div>
 
             {/* Desktop: Botões normais */}
-            <div className="hidden sm:flex space-x-3">
+            <div className="hidden sm:flex space-x-2 sm:space-x-3">
               <button
                 onClick={handleRefresh}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:shadow transition-all duration-200 flex items-center"
+                className="px-3 py-2 sm:px-4 sm:py-2 min-h-[44px] text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:shadow transition-all duration-200 flex items-center"
               >
                 <FontAwesomeIcon icon={faRefresh} className="mr-2 w-4 h-4" />
                 Atualizar
               </button>
               <button
                 onClick={() => setShowReportModal(true)}
-                className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 border border-transparent rounded-lg shadow-sm hover:from-red-600 hover:to-red-700 hover:shadow transition-all duration-200 flex items-center"
+                className="px-3 py-2 sm:px-4 sm:py-2 min-h-[44px] text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 border border-transparent rounded-lg shadow-sm hover:from-red-600 hover:to-red-700 hover:shadow transition-all duration-200 flex items-center"
               >
                 <FontAwesomeIcon icon={faFilePdf} className="mr-2 w-4 h-4" />
                 Gerar Relatório
+              </button>
+              {/* ✅ AGENDAMENTO INTELIGENTE: Botão Busca Rápida */}
+              <button
+                onClick={() => setShowAvailabilitySearch(true)}
+                className="px-3 py-2 sm:px-4 sm:py-2 min-h-[44px] text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-green-500 to-teal-600 border border-transparent rounded-lg shadow-sm hover:from-green-600 hover:to-teal-700 hover:shadow transition-all duration-200 flex items-center"
+              >
+                <FontAwesomeIcon icon={faSearch} className="mr-2 w-4 h-4" />
+                Buscar Horários
+              </button>
+              {/* ✅ AGENDAMENTO INTELIGENTE: Botão Assistente */}
+              <button
+                onClick={() => setShowAppointmentWizard(true)}
+                className="px-3 py-2 sm:px-4 sm:py-2 min-h-[44px] text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-indigo-600 border border-transparent rounded-lg shadow-sm hover:from-purple-600 hover:to-indigo-700 hover:shadow transition-all duration-200 flex items-center"
+              >
+                <FontAwesomeIcon icon={faMagic} className="mr-2 w-4 h-4" />
+                Assistente
               </button>
               {/* ✅ SOLUÇÃO 4: Botão Registrar Sessão Passada (apenas plano Agendamento) */}
               {user?.subscription_plan === 'scheduling' && !user?.trial_pro_enabled && (
                 <button
                   onClick={() => setShowRetroactiveSessionModal(true)}
-                  className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-red-600 border border-transparent rounded-lg shadow-sm hover:from-orange-600 hover:to-red-700 hover:shadow transition-all duration-200 flex items-center"
+                  className="px-3 py-2 sm:px-4 sm:py-2 min-h-[44px] text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-red-600 border border-transparent rounded-lg shadow-sm hover:from-orange-600 hover:to-red-700 hover:shadow transition-all duration-200 flex items-center"
                 >
                   <FontAwesomeIcon icon={faCalendarPlus} className="mr-2 w-4 h-4" />
                   Sessão Passada
@@ -612,7 +699,7 @@ const SchedulingPage = () => {
               )}
               <button
                 onClick={() => setShowAppointmentForm(true)}
-                className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 border border-transparent rounded-lg shadow-sm hover:from-blue-600 hover:to-indigo-700 hover:shadow-md transition-all duration-200 flex items-center transform hover:scale-105"
+                className="px-3 py-2 sm:px-4 sm:py-2 min-h-[44px] text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 border border-transparent rounded-lg shadow-sm hover:from-blue-600 hover:to-indigo-700 hover:shadow-md transition-all duration-200 flex items-center transform hover:scale-105"
               >
                 <FontAwesomeIcon icon={faCalendarPlus} className="mr-2 w-4 h-4" />
                 Novo Agendamento
@@ -622,7 +709,7 @@ const SchedulingPage = () => {
             {/* Mobile: Botão Menu */}
             <button
               onClick={() => setShowActionsMenu(true)}
-              className="sm:hidden p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="sm:hidden p-2 min-h-[44px] min-w-[44px] text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center"
             >
               <FontAwesomeIcon icon={faEllipsisV} className="text-xl" />
             </button>
@@ -667,10 +754,10 @@ const SchedulingPage = () => {
         {/* Abas de Navegação */}
         <div className="mb-6">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+            <nav className="-mb-px flex space-x-4 sm:space-x-8" aria-label="Tabs">
               <button
                 onClick={() => setActiveTab('appointments')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                className={`py-2 px-1 min-h-[44px] border-b-2 font-medium text-xs sm:text-sm flex items-center ${
                   activeTab === 'appointments'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -681,7 +768,7 @@ const SchedulingPage = () => {
               </button>
               <button
                 onClick={() => setActiveTab('calendar')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                className={`py-2 px-1 min-h-[44px] border-b-2 font-medium text-xs sm:text-sm flex items-center ${
                   activeTab === 'calendar'
                     ? 'border-green-500 text-green-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -694,14 +781,28 @@ const SchedulingPage = () => {
               {(user?.subscription_plan === 'pro' || user?.trial_pro_enabled) && (
                 <button
                   onClick={() => setActiveTab('orphans')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-2 px-1 min-h-[44px] border-b-2 font-medium text-xs sm:text-sm relative group flex items-center ${
                     activeTab === 'orphans'
                       ? 'border-orange-500 text-orange-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
+                  title={orphansCount > 0 ? `${orphansCount} sessão(ões) órfã(s) detectada(s)` : 'Nenhuma sessão órfã detectada'}
                 >
                   <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
                   Sessões Órfãs
+                  {orphansCount > 0 && (
+                    <>
+                      {/* Badge de notificação */}
+                      <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-orange-500 rounded-full animate-pulse">
+                        {orphansCount}
+                      </span>
+                      {/* Tooltip personalizado */}
+                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-normal text-white bg-gray-900 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50 shadow-lg">
+                        {orphansCount} sessão(ões) realizada(s) sem agendamento prévio
+                        <span className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></span>
+                      </span>
+                    </>
+                  )}
                 </button>
               )}
               {/* ✅ FASE 3: Aba "Recorrentes" removida - funcionalidade integrada na lista principal */}
@@ -832,6 +933,21 @@ const SchedulingPage = () => {
         onSubmit={handleCreateRetroactiveSession}
         patients={getPatients()}
         therapists={getTherapists()}
+        isLoading={isSubmitting}
+      />
+
+      {/* ✅ AGENDAMENTO INTELIGENTE: Modal de Busca Rápida de Disponibilidade */}
+      <AvailabilitySearchModal
+        isOpen={showAvailabilitySearch}
+        onClose={() => setShowAvailabilitySearch(false)}
+        onSelectSlot={handleAvailabilitySlotSelected}
+      />
+
+      {/* ✅ AGENDAMENTO INTELIGENTE: Assistente de Agendamento */}
+      <AppointmentWizard
+        isOpen={showAppointmentWizard}
+        onClose={() => setShowAppointmentWizard(false)}
+        onScheduleAppointments={handleWizardScheduleAppointments}
         isLoading={isSubmitting}
       />
 

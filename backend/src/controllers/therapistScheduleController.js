@@ -243,9 +243,37 @@ const TherapistScheduleController = {
                 analysisData.appointments_by_hour[hour]++;
             });
 
+            // === NOVAS MÉTRICAS: Disponibilidade e Taxa de Utilização ===
+            let availabilityMetrics = null;
+            let absenceReport = null;
+
+            try {
+                const pool = require('../models/db');
+
+                // Buscar métricas de disponibilidade (taxa de utilização)
+                const availResult = await pool.query(
+                    'SELECT * FROM get_therapist_availability_stats($1, $2, $3)',
+                    [userId, calculatedStartDate, calculatedEndDate]
+                );
+                availabilityMetrics = availResult.rows[0] || null;
+
+                // Buscar relatório de ausências
+                const absenceResult = await pool.query(
+                    'SELECT * FROM get_absence_report($1, NULL, $2, $3)',
+                    [userId, calculatedStartDate, calculatedEndDate]
+                );
+                absenceReport = absenceResult.rows || [];
+            } catch (error) {
+                console.warn('[THERAPIST-SCHEDULE] Erro ao buscar métricas de disponibilidade:', error);
+                // Continuar mesmo se falhar (para não quebrar o sistema)
+            }
+
             res.status(200).json({
                 statistics: stats,
                 analysis: analysisData,
+                // === NOVAS SEÇÕES ===
+                availability: availabilityMetrics,
+                absences: absenceReport,
                 period: {
                     start_date: calculatedStartDate,
                     end_date: calculatedEndDate,

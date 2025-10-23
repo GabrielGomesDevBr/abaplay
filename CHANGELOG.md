@@ -5,6 +5,85 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-10-23
+
+### Adicionado
+- **Sistema Completo de Disponibilidade e Especialidades**
+  - Gestão de horários padrão por terapeuta (horários recorrentes semanais)
+  - Registro de ausências com justificativas e status (pendente/aprovada/recusada)
+  - Especialidades por terapeuta para matching inteligente de agendamentos
+  - Busca de slots disponíveis considerando especialidades, ausências e conflitos
+  - Gestão de salas e capacidades para otimização de recursos
+  - Preferências de pacientes (terapeuta preferido, horários, dias da semana)
+  - Reagendamento em lote automático baseado em disponibilidade
+  - Validação de disponibilidade ao criar agendamentos
+  - Controllers: `availabilitySearchController.js`, `therapistAvailabilityController.js`
+  - Models: `availabilityModel.js`, `therapistAvailabilityModel.js`, `therapistSpecialtyModel.js`
+  - Utils: `automaticRescheduling.js`, `availabilityNotifications.js`
+  - Páginas: `TherapistAvailabilityPage.js`, `AdminAvailabilityManagementPage.js`
+
+- **Landing Page - Atualização de Recursos de Agendamento**
+  - Card "Agendamento Recorrente Inteligente" expandido com 5 benefícios detalhados
+  - Destaque para detecção 24/7 de sessões órfãs
+  - Métrica quantificável adicionada ao Hero: "Economiza 80% do tempo"
+  - 3 novos recursos na tabela de comparação de planos:
+    - Detecção automática de sessões órfãs
+    - Busca inteligente de disponibilidade
+    - Reagendamento em lote
+  - Card "Problema - Agendamento Caótico" atualizado com "sessões esquecidas"
+
+- **Migrations de Banco de Dados**
+  - `009_add_intelligent_scheduling.sql` - Tabelas de disponibilidade e especialidades
+  - `010_add_search_available_slots_function.sql` - Função SQL de busca de slots
+  - `011_create_therapist_stats_function.sql` - Estatísticas de terapeutas
+  - `012_add_availability_permissions.sql` - Controle de acesso a disponibilidade
+  - `013_create_orphan_sessions_view.sql` - View de sessões órfãs
+  - `014_add_therapist_availability_validation.sql` - Validação de disponibilidade
+  - `015_add_status_to_therapist_absences.sql` - Campo de status em ausências
+
+### Melhorado
+- **Mobile-First Design Pattern Completo**
+  - Touch targets mínimos de 44px em TODOS os formulários (WCAG 2.1 AA compliant)
+  - Breakpoints corrigidos de `md:` para `sm:` (640px)
+  - Padding responsivo: `px-3 py-2 sm:px-4 sm:py-3`
+  - Fontes responsivas: `text-xs sm:text-sm` / `text-sm sm:text-base`
+  - Grid responsivo: `grid-cols-1 sm:grid-cols-2`
+  - Aplicado em: AppointmentForm.js, SessionProgress.js, SchedulingPage.js
+
+- **Menu "Mais" (Bottom Navigation Mobile)**
+  - Reorganização completa com 7 itens funcionais
+  - REMOVIDO: Relatórios, Configurações, Meu Perfil (não tinham função)
+  - ADICIONADO: Dashboard, Anotações (Discussões de Caso)
+  - MANTIDO: Programas, Notificações, Administração, Ausências, Sair
+  - Menu "Ferramentas" removido do Sidebar (duplicado)
+  - Componente: `MoreMenu.js`
+
+### Técnico
+- **Sanitização Completa de Documentação**
+  - 8 documentos temporários removidos (127KB):
+    - ANALISE_DISPONIBILIDADE_AGENDAMENTO.md
+    - AVAILABILITY_STANDALONE_GUIDE.md
+    - CONSOLIDACAO_FINAL.md
+    - EXEMPLOS_USO_DISPONIBILIDADE.md
+    - GUIA_DESENVOLVIMENTO.md
+    - MOBILE_OPTIMIZATION_COMPLETE.md
+    - MOBILE_OPTIMIZATION_GUIDE.md
+    - MOBILE_OTIMIZADO_RESUMO.md
+  - README.md completamente reescrito (de 447 para 433 linhas, foco em clareza)
+  - CLAUDE.md atualizado com sistemas nativos (sem "NOVO" ou "ENHANCED")
+  - frontend/public/test-api.html removido
+
+- **Reorganização de Migrations**
+  - Estrutura nova: `/backend/migrations/legacy/` (19 migrations históricas)
+  - Estrutura nova: `/backend/migrations/hotfixes/` (3 correções pontuais)
+  - Criado: `README_MIGRATIONS.md` com documentação completa
+  - Todas as migrations já aplicadas em produção - arquivadas para referência
+
+- **Arquivos Removidos**
+  - 9 arquivos temporários de implementação/debug
+  - Redução de 73% no tamanho total da documentação raiz
+  - Estrutura de projeto mais limpa e profissional
+
 ## [1.2.0] - 2025-01-04
 
 ### Adicionado

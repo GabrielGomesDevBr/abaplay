@@ -151,6 +151,18 @@ const OrphanSessionsList = ({
     return timeString.slice(0, 5);
   };
 
+  const formatSessionTime = (createdAtString) => {
+    if (!createdAtString) return null;
+    try {
+      const date = new Date(createdAtString);
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    } catch (error) {
+      return null;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
@@ -374,7 +386,7 @@ const OrphanSessionsList = ({
                         </div>
                         <div className="text-sm text-gray-500">
                           <FontAwesomeIcon icon={faClock} className="mr-1" />
-                          Horário aproximado da sessão
+                          {formatSessionTime(session.created_at || session.session_created_at) || 'Horário não registrado'}
                         </div>
                       </div>
                     </div>
@@ -391,18 +403,20 @@ const OrphanSessionsList = ({
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">
-                      {session.program_names ? (
+                      {session.program_name ? (
                         <div>
-                          <div className="font-medium">{session.programs_count} programa(s) trabalhados</div>
+                          <div className="font-medium">
+                            {session.programs_worked_in_session || 1} programa(s) trabalhado(s)
+                          </div>
                           <div className="text-xs text-gray-500 mt-1">
-                            {session.program_names.length > 100
-                              ? session.program_names.substring(0, 100) + '...'
-                              : session.program_names
+                            {session.program_name.length > 80
+                              ? session.program_name.substring(0, 80) + '...'
+                              : session.program_name
                             }
                           </div>
                         </div>
                       ) : (
-                        <span className="text-gray-500">Programas não identificados</span>
+                        <span className="text-gray-500">Programa não identificado</span>
                       )}
                     </div>
                   </td>

@@ -86,6 +86,18 @@ const SchedulingController = {
             });
 
         } catch (error) {
+            // Erro de disponibilidade do terapeuta
+            if (error.code === 'THERAPIST_UNAVAILABLE') {
+                return res.status(400).json({
+                    errors: [{
+                        msg: error.message,
+                        param: 'scheduled_time',
+                        availableSlots: error.availableSlots,
+                        dayName: error.dayName
+                    }]
+                });
+            }
+            // Erro de conflito de agendamento
             if (error.message.includes('Conflito de agendamento')) {
                 return res.status(409).json({
                     errors: [{ msg: error.message }]
@@ -224,6 +236,18 @@ const SchedulingController = {
             });
 
         } catch (error) {
+            // Erro de disponibilidade do terapeuta
+            if (error.code === 'THERAPIST_UNAVAILABLE') {
+                return res.status(400).json({
+                    errors: [{
+                        msg: error.message,
+                        param: 'scheduled_time',
+                        availableSlots: error.availableSlots,
+                        dayName: error.dayName
+                    }]
+                });
+            }
+            // Erro de conflito de agendamento
             if (error.message.includes('Conflito de agendamento')) {
                 return res.status(409).json({
                     errors: [{ msg: error.message }]

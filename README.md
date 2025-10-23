@@ -1,447 +1,433 @@
-# ABAplay: Plataforma de Intervenção Infantil (SaaS)
+# ABAPlay - Plataforma Completa para Clínicas de Intervenção Infantil
 
-O ABAplay é uma aplicação SaaS (Software as a Service) desenvolvida para clínicas de tratamento infantil, com foco em terapias de intervenção baseadas em ABA (Análise do Comportamento Aplicada). A plataforma visa otimizar o gerenciamento de pacientes, atribuição de programas de intervenção, registro de evolução e comunicação entre terapeutas e pais.
+> Software profissional para gestão de clínicas de ABA, fonoaudiologia, terapia ocupacional e psicologia infantil.
 
-## Visão Geral da Aplicação
+[![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](CHANGELOG.md)
+[![Node](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen.svg)](https://nodejs.org)
+[![PostgreSQL](https://img.shields.io/badge/postgresql-%3E%3D12.0-blue.svg)](https://www.postgresql.org)
 
-A aplicação é dividida em dois módulos principais:
+---
 
-- **Backend**: Construído com Node.js e Express, utilizando PostgreSQL como banco de dados. Gerencia dados de usuários, clínicas, pacientes, atribuições de programas e sessões de terapia.
-- **Frontend**: Desenvolvido com React 18, oferece interfaces intuitivas para diferentes perfis de usuário, consumindo a API do backend com comunicação em tempo real via Socket.IO.
+## 🚀 Sobre o ABAPlay
 
-## Principais Funcionalidades por Perfil
+ABAPlay é uma plataforma SaaS multi-tenant completa para clínicas de terapia infantil, focada em **eficiência operacional**, **registro profissional** e **engajamento familiar**. Desenvolvida para clínicas de ABA (Análise do Comportamento Aplicada), fonoaudiologia, terapia ocupacional, psicologia e outras especialidades de intervenção pediátrica.
 
-### Administrador
-- Cadastro e gerenciamento de clínicas
-- Cadastro e gerenciamento de usuários (terapeutas e pais)
-- Atribuição de pacientes a terapeutas
-- Visão consolidada de todos os pacientes e programas
-- Gerenciamento da biblioteca de programas de intervenção
-- Controle de acesso e permissões
+### ✨ Principais Recursos
 
-### Terapeuta
-- Gerenciamento completo de pacientes atribuídos
-- Atribuição inteligente de programas de intervenção com status normalizado
-- Registro avançado de sessões com sistema de níveis de prompting ABA
-- Pontuação automática de progresso baseada em níveis de prompting e taxa de sucesso
-- Anotações detalhadas e documentação de sessões
-- Visualização de gráficos interativos de progresso organizados por área de intervenção
-- **Sistema de Agendamentos Inteligente** (NOVO - Janeiro 2025):
-  - Agendamentos recorrentes automáticos (semanal, quinzenal, mensal)
-  - Calendário visual com visualização semanal e lista detalhada
-  - Notificações em tempo real de cancelamentos e mudanças
-  - Detecção automática de sessões órfãs
-  - Justificativa obrigatória para sessões não realizadas
-- **Sistema Completo de Relatórios de Evolução Terapêutica**:
-  - Relatórios profissionais personalizáveis para todas as disciplinas
-  - **Sincronização Multi-Dispositivo**: Dados profissionais (CRP, qualificações, assinatura) sincronizados automaticamente entre todos os dispositivos/navegadores
-  - Seletor de períodos flexível (30/60/90 dias ou personalizado)
-  - Análise automática com insights baseados em dados reais
-  - Preview editável antes da geração do PDF
-  - Geração de PDFs profissionais com formatação consistente
-- Geração automatizada de relatórios consolidados em PDF com gráficos e dados de sessão
-- Comunicação em tempo real com pais através de chat integrado
-- Sistema colaborativo de discussões de caso com outros profissionais
-- **Gerenciamento de Notificações Mobile-First** (NOVO - Janeiro 2025):
-  - Página dedicada fullscreen para notificações
-  - Agrupamento por data (Hoje, Ontem, Esta semana, Mais antigas)
-  - Navegação direta para chats e modais específicos
-  - Função "Marcar todas como lidas"
-  - Interface otimizada para mobile e desktop
-- Interface de contatos e networking profissional
+- **🗓️ Agendamento Inteligente**
+  - Recorrências automáticas (semanal, quinzenal, mensal)
+  - Busca inteligente de disponibilidade por especialidade
+  - Detecção automática de conflitos e sessões órfãs
+  - Reagendamento em lote
+  - Gestão de ausências e disponibilidade de terapeutas
+  - Economiza até 80% do tempo em tarefas administrativas
 
-### Pais/Responsáveis
-- Dashboard personalizado com dados do(s) filho(s) atribuído(s)
-- Visualização detalhada de anotações e observações do terapeuta
-- Acompanhamento visual do progresso através de gráficos interativos organizados por área de intervenção
-- Acesso aos dados de níveis de prompting e evolução das sessões
-- Chat integrado com comunicação direta e em tempo real com terapeutas
-- Download de relatórios consolidados em PDF com visualizações de progresso
-- Sistema inteligente de notificações sobre marcos, atualizações e alertas do tratamento
-- Interface responsiva otimizada para diferentes dispositivos
+- **📊 Registro de Sessões ABA-Compliant**
+  - Sistema de 6 níveis de prompting (Independente → Sem Resposta)
+  - Análise automática de progresso com indicadores visuais
+  - Gráficos interativos por área de intervenção
+  - Registro em tempo real via mobile
 
-## Tecnologias Utilizadas
+- **📄 Relatórios Profissionais**
+  - PDFs personalizáveis com gráficos e insights baseados em dados
+  - Relatórios consolidados para escolas, médicos e pais
+  - Relatórios de evolução terapêutica multidisciplinares
+  - Análise automática com sugestões inteligentes
+  - Preview editável antes da geração
 
-### Frontend
-- **React 18.3.1** - Framework principal com hooks avançados
-- **Tailwind CSS 3.4.7** - Estilização utilitária e responsividade
-- **Chart.js 4.4.3** com react-chartjs-2 5.2.0 - Gráficos interativos de evolução
-- **chartjs-plugin-annotation 3.0.1** - Anotações e marcadores em gráficos
-- **Axios 1.11.0** - Cliente HTTP com interceptadores
-- **React Router DOM 6.25.1** - Roteamento SPA com lazy loading
-- **Socket.IO Client 4.8.1** - Comunicação bidirecional em tempo real
-- **FontAwesome 6.5.2** e **Lucide React 0.417.0** - Biblioteca de ícones
-- **jsPDF 2.5.1** com jspdf-autotable 3.8.2 - Geração avançada de relatórios PDF
-- **JWT Decode 4.0.0** - Decodificação e validação de tokens
+- **💬 Comunicação em Tempo Real**
+  - Chat terapeuta-pais com notificações push
+  - Discussões de caso entre profissionais da equipe
+  - Sistema de notificações mobile-first
+  - Histórico completo de conversas
 
-### Backend (v1.0.0)
-- **Node.js** com **Express.js 4.21.2** - Framework de servidor robusto
-- **PostgreSQL** - Banco de dados relacional com constraints avançadas
-- **pg 8.15.5** - Driver Node.js para PostgreSQL com pool de conexões
-- **Socket.IO 4.8.1** - Comunicação em tempo real bidirecional
-- **jsonwebtoken 9.0.2** - Autenticação JWT stateless
-- **Bcrypt 5.1.1** - Hash seguro de senhas com salt
-- **Express-validator 7.2.1** - Validação e sanitização de dados de entrada
-- **Helmet 8.1.0** - Cabeçalhos de segurança HTTP
-- **CORS 2.8.5** - Configuração de políticas de origem cruzada
-- **Dotenv 16.5.0** - Gerenciamento seguro de variáveis de ambiente
-- **Nodemon 2.0.7** - Auto-reload durante desenvolvimento
+- **📚 Biblioteca de Programas**
+  - Acesso a 500+ programas de intervenção baseados em evidências
+  - Criação de programas personalizados por clínica
+  - Hierarquia organizada: Disciplinas → Áreas → Sub-áreas → Programas
+  - Materiais e procedimentos inclusos
 
-### Recursos Avançados
-- **Sistema de Níveis de Prompting ABA** - 6 níveis de prompting com indicadores visuais e pontuação automática de progresso
-- **Arquitetura de Status Normalizado** - Sistema consistente de status de programas com constraints de banco de dados
-- **Context API Avançado** - Gerenciamento de estado otimizado (AuthContext, PatientContext, ProgramContext)
-- **Sincronização Multi-Dispositivo** - Dados profissionais sincronizados automaticamente entre todos os dispositivos/navegadores
-- **Segurança de Produção** - Logs sanitizados sem exposição de dados sensíveis no console do navegador
-- **Estrutura Hierárquica** - Disciplinas → Áreas → Sub-áreas → Programas com navegação intuitiva
-- **Sistema de Notificações** - Badges, painéis e alertas de progresso em tempo real com Socket.IO
-- **Persistência de Seleção** - Manutenção inteligente do estado do paciente selecionado durante navegação
-- **Relatórios PDF Avançados** - Geração automática com gráficos interativos e dados de sessão detalhados
-- **Interface Modernizada** - UI aprimorada com animações e componentes responsivos
+- **👨‍👩‍👧 Portal dos Pais**
+  - Acompanhamento visual do progresso em tempo real
+  - Acesso a gráficos de evolução organizados por área
+  - Download de relatórios profissionais
+  - Chat direto com terapeutas
 
-## Configuração e Execução do Projeto
+- **📱 Mobile-First Design**
+  - Interface otimizada para tablets e smartphones
+  - Touch targets WCAG 2.1 AA compliant (mínimo 44px)
+  - Navegação bottom sheet para mobile
+  - Responsivo em todos os dispositivos
+
+---
+
+## 🏗️ Arquitetura
+
+### Stack Tecnológico
+
+**Backend:**
+- Node.js 16+ com Express.js
+- PostgreSQL 12+ (queries SQL diretas, sem ORM)
+- Socket.IO para comunicação em tempo real
+- JWT para autenticação stateless
+- Bcrypt para hashing de senhas
+
+**Frontend:**
+- React 18 com hooks avançados
+- Tailwind CSS 3.4.7 para estilização
+- Chart.js 4.4.3 para gráficos interativos
+- jsPDF 2.5.1 para geração de PDFs
+- Axios 1.11.0 para requisições HTTP
+- Socket.IO Client 4.8.1 para WebSocket
+
+**Infraestrutura:**
+- Multi-tenant com isolamento por `clinic_id`
+- Real-time updates via WebSocket
+- SSL/TLS para conexões seguras
+- Logs sanitizados (sem exposição de dados sensíveis)
+
+### Estrutura do Projeto
+
+```
+abaplay/
+├── backend/              # API REST + WebSocket Server
+│   ├── src/
+│   │   ├── controllers/  # Lógica de negócio
+│   │   ├── models/       # Queries ao banco de dados
+│   │   ├── routes/       # Definição de endpoints
+│   │   ├── middleware/   # Autenticação e validação
+│   │   ├── jobs/         # Background jobs (cron)
+│   │   └── utils/        # Utilitários e helpers
+│   ├── migrations/       # SQL migrations (versionamento de schema)
+│   └── package.json
+│
+├── frontend/             # Single Page Application (React)
+│   ├── src/
+│   │   ├── components/   # Componentes React organizados por feature
+│   │   ├── pages/        # Páginas principais da aplicação
+│   │   ├── context/      # Context API (state management)
+│   │   ├── api/          # Clientes HTTP para comunicação com backend
+│   │   ├── hooks/        # Custom React hooks
+│   │   └── utils/        # Utilitários e helpers
+│   └── package.json
+│
+└── landing/              # Landing page estática
+    ├── public/           # HTML, CSS, JS, assets
+    ├── api/              # API do chat especialista
+    └── package.json
+```
+
+---
+
+## ⚙️ Configuração e Instalação
 
 ### Pré-requisitos
-- Node.js (versão 14 ou superior)
-- npm (gerenciador de pacotes do Node.js)
-- PostgreSQL (servidor de banco de dados)
 
-### 1. Configuração do Banco de Dados (PostgreSQL)
-Crie um banco de dados PostgreSQL para a aplicação.
+- **Node.js** 16.0.0 ou superior
+- **PostgreSQL** 12.0 ou superior
+- **npm** ou **yarn** (gerenciador de pacotes)
+- **Git** (para clonar o repositório)
 
-No diretório `backend/`, crie um arquivo `.env` com as seguintes variáveis de ambiente:
+### 1. Configuração do Backend
 
 ```bash
-DB_USER=seu_usuario
-DB_HOST=seu_host_db
-DB_DATABASE=seu_nome_db
-DB_PASSWORD=sua_senha_db
+# Navegar para o diretório do backend
+cd backend
+
+# Instalar dependências
+npm install
+
+# Configurar variáveis de ambiente
+cp .env.example .env
+# Edite o arquivo .env com suas credenciais
+```
+
+**Variáveis de Ambiente (.env):**
+
+```bash
+# Banco de Dados
+DB_HOST=localhost
 DB_PORT=5432
-DATABASE_URL=postgresql://usuario:senha@host:5432/banco  # Alternativa para produção
-JWT_SECRET=sua_chave_secreta_jwt
-NODE_ENV=development  # ou production
+DB_USER=seu_usuario
+DB_PASSWORD=sua_senha
+DB_NAME=abaplay_db
+DATABASE_URL=postgresql://usuario:senha@host:5432/banco  # Alternativa
+
+# Autenticação
+JWT_SECRET=sua_chave_secreta_super_segura_aqui
+
+# Ambiente
+NODE_ENV=production  # ou development
+
+# Features
+ENABLE_AUTO_DETECTION=true          # Detecção automática de sessões órfãs
+DETECTION_INTERVAL_MINUTES=30       # Intervalo do job (minutos)
+DETECTION_LOOKBACK_HOURS=24         # Olhar quantas horas para trás
+MISSED_AFTER_HOURS=2                # Marcar como perdido após X horas
+ENABLE_SUBSCRIPTION_MODULES=true    # Módulos de assinatura
+
+# Frontend (para CORS)
+FRONTEND_URL=https://abaplay.app.br
 ```
 
-**Observação**: O arquivo `.env` não está incluído no repositório por conter dados sensíveis. Certifique-se de preenchê-lo corretamente.
-
-### 2. Configuração e Execução do Backend
-No diretório `backend/`:
+**Iniciar o servidor:**
 
 ```bash
-npm install
 npm start          # Produção
-# ou
-npm run dev        # Desenvolvimento com nodemon
+npm run dev        # Desenvolvimento (com nodemon)
 ```
 
-O servidor backend estará rodando em `http://localhost:3000`.
+Servidor rodando em `http://localhost:3000`
 
-### 3. Configuração e Execução do Frontend  
-No diretório `frontend/`:
+### 2. Configuração do Frontend
 
 ```bash
+# Navegar para o diretório do frontend
+cd frontend
+
+# Instalar dependências
 npm install
-npm start          # Servidor de desenvolvimento
-# ou
+
+# Iniciar servidor de desenvolvimento
+npm start          # http://localhost:3001
+
+# Ou build para produção
+npm run build
+```
+
+**Configuração de API (src/config.js):**
+
+O frontend detecta automaticamente o ambiente:
+- **Desenvolvimento:** `http://localhost:3000/api`
+- **Produção:** `https://abaplay-backendv2.onrender.com/api`
+
+### 3. Configuração da Landing Page (Opcional)
+
+```bash
+# Navegar para o diretório da landing page
+cd landing
+
+# Instalar dependências
+npm install
+
+# Configurar variáveis de ambiente (.env)
+OPENAI_API_KEY=sk-...
+RESEND_API_KEY=re_...
+PORT=3002
+
+# Iniciar API do chat
+npm start          # http://localhost:3002
+```
+
+---
+
+## 🗄️ Banco de Dados
+
+### Estrutura do Schema
+
+O ABAPlay utiliza **PostgreSQL** com queries SQL diretas (sem ORM) para máximo controle e performance.
+
+**Hierarquia de Programas:**
+```
+Disciplinas (ABA, Fono, T.O., Psico, etc.)
+    └── Áreas (Comunicação, Social, Motora, etc.)
+        └── Sub-áreas (Expressiva, Receptiva, etc.)
+            └── Programas (500+ programas individuais)
+```
+
+**Multi-tenancy:**
+- Isolamento completo por `clinic_id`
+- Programas globais acessíveis por todas as clínicas
+- Programas customizados isolados por clínica
+
+**Principais Entidades:**
+- `clinics`, `users`, `patients` - Entidades base
+- `therapist_patient_assignments` - Atribuição terapeuta-paciente
+- `patient_program_assignments` - Atribuição de programas
+- `scheduled_sessions`, `recurring_appointment_templates` - Agendamento
+- `therapist_availability`, `therapist_absences`, `therapist_specialties` - Disponibilidade
+- `patient_program_progress` - Registro de sessões
+- `case_discussions`, `parent_chats`, `notifications` - Comunicação
+
+### Migrations
+
+As migrations estão organizadas em:
+- `/backend/migrations/legacy/` - Migrations históricas (já aplicadas)
+- `/backend/migrations/hotfixes/` - Correções pontuais (já aplicadas)
+
+**⚠️ IMPORTANTE:** O banco de dados em produção já possui todas as migrations aplicadas. Consulte `/backend/migrations/README_MIGRATIONS.md` para detalhes.
+
+---
+
+## 👥 Perfis de Usuário
+
+### 🔧 Administrador
+- Gestão de clínicas e configurações globais
+- Cadastro e gerenciamento de usuários (terapeutas e pais)
+- Atribuição de pacientes a terapeutas
+- Gerenciamento da biblioteca de programas (global + customizados)
+- Controle de planos de assinatura e trials
+- Visão consolidada de métricas e relatórios
+- Gestão de disponibilidade e ausências da equipe
+
+### 👨‍⚕️ Terapeuta
+- Gerenciamento de pacientes atribuídos
+- Atribuição de programas de intervenção
+- Registro avançado de sessões com níveis de prompting ABA
+- Criação de agendamentos recorrentes automáticos
+- Busca inteligente de horários disponíveis
+- Geração de relatórios profissionais (consolidados e evolução)
+- Chat em tempo real com pais
+- Discussões de caso com equipe
+- Dashboard com métricas de progresso
+
+### 👨‍👩‍👧 Pais/Responsáveis
+- Dashboard personalizado com dados do(s) filho(s)
+- Visualização de gráficos de progresso por área
+- Acesso a anotações e observações do terapeuta
+- Download de relatórios profissionais em PDF
+- Chat direto com terapeutas
+- Notificações sobre marcos e atualizações do tratamento
+
+---
+
+## 🔒 Segurança
+
+O ABAPlay implementa múltiplas camadas de segurança:
+
+- **Autenticação JWT**: Tokens stateless com expiração configurável
+- **Hashing de Senhas**: Bcrypt com salt rounds configuráveis
+- **Validação de Entrada**: express-validator em todos os endpoints
+- **Headers de Segurança**: Helmet configurado para produção
+- **CORS**: Políticas de origem cruzada por ambiente
+- **Controle de Acesso**: Middleware role-based para autorização
+- **Logs Sanitizados**: Zero exposição de dados sensíveis no console
+- **SSL/TLS**: Conexões criptografadas com banco de dados
+- **Multi-device Sync**: Dados profissionais sincronizados com segurança
+
+---
+
+## 📚 Documentação
+
+- **[CLAUDE.md](CLAUDE.md)** - Guia técnico completo para desenvolvimento (arquitetura, padrões, convenções, estrutura de código)
+- **[CHANGELOG.md](CHANGELOG.md)** - Histórico detalhado de versões e mudanças
+- **[DEPLOY_LANDING_RENDER.md](DEPLOY_LANDING_RENDER.md)** - Instruções de deploy da landing page
+- **[/backend/migrations/README_MIGRATIONS.md](backend/migrations/README_MIGRATIONS.md)** - Documentação do schema e migrations
+
+---
+
+## 🚀 Deploy
+
+### Backend (Render.com)
+```bash
+# Build Command:
+npm install
+
+# Start Command:
+npm start
+
+# Environment Variables:
+DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+JWT_SECRET
+NODE_ENV=production
+FRONTEND_URL=https://abaplay.app.br
+ENABLE_AUTO_DETECTION=true
+ENABLE_SUBSCRIPTION_MODULES=true
+```
+
+### Frontend (Render.com ou Vercel)
+```bash
+# Build Command:
+npm install && npm run build
+
+# Publish Directory:
+build
+
+# Environment Variables:
+REACT_APP_API_URL=https://abaplay-backendv2.onrender.com/api
+REACT_APP_SOCKET_URL=https://abaplay-backendv2.onrender.com
+```
+
+### Landing Page
+Ver [DEPLOY_LANDING_RENDER.md](DEPLOY_LANDING_RENDER.md)
+
+---
+
+## 🛠️ Scripts Úteis
+
+### Backend
+```bash
+npm start          # Iniciar servidor em produção
+npm run dev        # Iniciar com nodemon (auto-reload)
+```
+
+### Frontend
+```bash
+npm start          # Servidor de desenvolvimento (port 3001)
 npm run build      # Build para produção
 npm test           # Executar testes
 ```
 
-O aplicativo frontend estará rodando em `http://localhost:3001`.
+---
 
-## Estrutura do Projeto
+## 📊 Planos e Módulos
 
-### Backend (`/backend`)
-```
-src/
-├── config/
-│   └── db.config.js        # Configurações do banco de dados
-├── controllers/            # Controladores da aplicação
-│   ├── adminController.js
-│   ├── assignmentController.js
-│   ├── authController.js       # APRIMORADO: Com sincronização de perfil do usuário
-│   ├── caseDiscussionController.js
-│   ├── contactController.js    # NOVO: Gerenciamento de contatos
-│   ├── notificationController.js
-│   ├── parentChatController.js
-│   ├── parentController.js
-│   ├── patientController.js
-│   ├── programController.js
-│   └── reportController.js     # NOVO: Relatórios de evolução terapêutica
-├── middleware/
-│   └── authMiddleware.js   # Middleware de autenticação
-├── models/                 # Modelos de dados
-│   ├── assignmentModel.js
-│   ├── caseDiscussionModel.js
-│   ├── clinicModel.js
-│   ├── contactModel.js         # NOVO: Modelo de contatos
-│   ├── db.js              # Conexão com PostgreSQL
-│   ├── notificationStatusModel.js
-│   ├── parentChatModel.js
-│   ├── patientModel.js
-│   ├── programModel.js
-│   ├── reportModel.js          # NOVO: Modelo de relatórios com análise automática
-│   └── userModel.js
-├── routes/                 # Definição de rotas da API
-│   ├── adminRoutes.js
-│   ├── assignmentRoutes.js
-│   ├── authRoutes.js           # APRIMORADO: Com rota GET /auth/profile
-│   ├── caseDiscussionRoutes.js
-│   ├── contactRoutes.js        # NOVO: Rotas de contatos
-│   ├── notificationRoutes.js
-│   ├── parentChatRoutes.js
-│   ├── parentRoutes.js
-│   ├── patientRoutes.js
-│   ├── programRoutes.js
-│   ├── promptLevelRoutes.js    # NOVO: Rotas para níveis de prompting
-│   └── reportRoutes.js         # NOVO: Rotas de relatórios
-├── utils/
-│   ├── promptLevels.js     # NOVO: Definições e cálculos de níveis ABA
-│   ├── progressAlerts.js   # NOVO: Sistema de alertas de progresso
-│   └── statusNormalizer.js # Utilitário de normalização de status
-└── server.js              # Servidor principal com Socket.IO
-```
+O ABAPlay oferece dois planos de assinatura:
 
-### Frontend (`/frontend`)
-```
-src/
-├── api/                   # Comunicação com a API
-│   ├── adminApi.js
-│   ├── authApi.js
-│   ├── caseDiscussionApi.js
-│   ├── contactApi.js          # NOVO: API de contatos
-│   ├── notificationApi.js
-│   ├── parentApi.js
-│   ├── parentChatApi.js
-│   ├── patientApi.js
-│   ├── programApi.js
-│   └── reportApi.js           # NOVO: API de relatórios de evolução
-├── components/            # Componentes React organizados por funcionalidade
-│   ├── admin/            # Componentes de administração
-│   ├── chat/             # Componentes de chat e discussões
-│   ├── contacts/         # NOVO: Componentes de contatos
-│   ├── layout/           # Componentes de layout (Navbar, Sidebar)
-│   ├── notifications/    # Sistema de notificações
-│   ├── patient/          # Componentes de pacientes
-│   ├── program/          # Componentes de programas e sessões
-│   ├── reports/          # NOVO: Componentes de relatórios de evolução
-│   └── shared/           # Componentes compartilhados
-├── context/              # Context API para gerenciamento de estado
-│   ├── AuthContext.js    # APRIMORADO: Estado de autenticação com sincronização multi-dispositivo
-│   ├── PatientContext.js # APRIMORADO: Estado de pacientes com logs sanitizados
-│   └── ProgramContext.js # APRIMORADO: Estado de programas com logs sanitizados
-├── hooks/
-│   ├── useApi.js         # Hook customizado para API
-│   └── usePatientNotifications.js # NOVO: Hook de notificações por paciente
-├── pages/                # Componentes de páginas principais
-│   ├── AdminPage.js
-│   ├── AdminProgramsPage.js
-│   ├── ClientsPage.js
-│   ├── ColleaguesPage.js      # NOVO: Página de colegas e networking
-│   ├── ContactsPage.js        # NOVO: Página de contatos
-│   ├── DashboardPage.js
-│   ├── HomePage.js
-│   ├── LoginPage.js
-│   ├── NotesPage.js
-│   ├── ParentDashboardPage.js
-│   ├── ProgramSessionPage.js
-│   └── ProgramsPage.js
-├── utils/
-│   └── pdfGenerator.js   # Geração de relatórios PDF
-├── App.js               # Componente principal com roteamento
-├── config.js            # Configurações do frontend
-└── index.js             # Ponto de entrada da aplicação
-```
+### ABAPlay Essencial (R$ 15/paciente/mês)
+- Gestão completa de agendamentos
+- Registro de sessões com anotações
+- Relatórios gerenciais em PDF
+- Notificações em tempo real
+- Calendário completo da clínica
 
-## Funcionalidades Detalhadas
+### ABAPlay Pro (R$ 35/paciente/mês)
+- **Tudo do Essencial, mais:**
+- Biblioteca de 500+ programas de intervenção
+- Registro de sessões com níveis de prompting ABA
+- Gráficos de evolução por área
+- Relatórios profissionais avançados
+- Chat em tempo real com pais
+- Discussões de caso (equipe)
+- Dashboard de gestão completo
+- Portal completo para pais
 
-### Sistema de Relatórios de Evolução Terapêutica (NOVO)
-- **Multidisciplinar**: Adequado para psicólogos, fonoaudiólogos, terapeutas ocupacionais, musicoterapeutas, etc.
-- **Configuração Única**: Dados profissionais (registro, qualificações, assinatura) salvos uma única vez
-- **Persistência de Dados**: Informações do paciente reutilizadas automaticamente
-- **Seletor de Períodos**: Análise flexível (30/60/90 dias ou período personalizado)
-- **Análise Automática**: Insights baseados em dados reais das sessões com estatísticas detalhadas
-- **Preview Editável**: Revisão completa antes da geração do PDF
-- **PDFs Profissionais**: Formatação consistente e profissional para todas as páginas
-- **Componentes Principais**:
-  - `ReportEvolutionModal`: Configuração inicial e seletor de período
-  - `ReportPreview`: Preview com seções editáveis
-  - `ReportEvolutionContainer`: Orquestração do fluxo completo
+**Trial Gratuito:** 7 dias de acesso completo ao plano Pro, sem cartão de crédito.
 
-### Sistema de Comunicação em Tempo Real
-- **Chat Terapeuta-Pai**: Comunicação direta via Socket.IO
-- **Discussões de Caso**: Colaboração entre profissionais
-- **Notificações Push**: Alertas em tempo real sobre atualizações
+---
 
-### Gerenciamento de Programas
-- **Estrutura Hierárquica**: Disciplinas → Áreas → Sub-áreas → Programas
-- **Status Normalizados**: Sistema consistente (ativo/arquivado/pausado)
-- **Atribuição Inteligente**: Controle de quais programas são atribuídos a cada paciente
-- **Materiais e Procedimentos**: Armazenamento em formato JSONB para flexibilidade
+## 🤝 Contribuição
 
-### Análise e Relatórios  
-- **Gráficos Interativos**: Visualização de progresso com Chart.js
-- **Agrupamento por Área**: Organização de dados por especialidade
-- **Relatórios PDF**: Geração automática com jsPDF e autotable
-- **Métricas de Sessão**: Acompanhamento detalhado de evolução
+Este é um projeto proprietário. Para contribuições ou sugestões, entre em contato com a equipe de desenvolvimento.
 
-### Segurança e Autenticação
-- **JWT Stateless**: Tokens seguros para autenticação
-- **Controle de Acesso**: Middleware para verificação de permissões  
-- **Hash de Senhas**: Criptografia com bcrypt
-- **Validação de Entrada**: express-validator para sanitização
-- **Headers de Segurança**: Helmet para proteção adicional
+---
 
-## Melhoras e Funcionalidades Recentes
+## 📄 Licença
 
-### Melhorias na Experiência do Usuário
-- **Persistência de Seleção**: Manutenção do estado do paciente selecionado durante navegação
-- **Redirecionamento Inteligente**: Roteamento baseado em roles após login
-- **Interface Responsiva**: Otimizada para diferentes dispositivos
+**Proprietary License** - © 2025 ABAPlay. Todos os direitos reservados.
 
-### Funcionalidades de Comunicação  
-- **Chat em Tempo Real**: Socket.IO para comunicação instantânea
-- **Sistema de Notificações**: Badges e painéis com contadores em tempo real
-- **Discussões de Caso**: Plataforma para colaboração profissional
+Este software é proprietário e confidencial. Uso não autorizado, cópia, distribuição ou modificação são estritamente proibidos.
 
-### Análise e Relatórios
-- **Dashboard de Pais**: Gráficos organizados por área de intervenção 
-- **Relatórios Consolidados**: PDFs com anotações e gráficos de progresso
-- **Visualização Aprimorada**: Charts interativos com anotações
+---
 
-### Gerenciamento de Dados
-- **Normalização de Status**: Sistema consistente para status de programas com constraints de banco de dados
-- **Validação Aprimorada**: Sanitização robusta de dados de entrada com express-validator
-- **Estrutura de Banco Otimizada**: Relacionamentos eficientes, suporte a SSL e integridade referencial
+## 📧 Suporte e Contato
 
-## Melhorias e Correções Recentes
+- **Email:** abaplayoficial@gmail.com
+- **WhatsApp:** (11) 98854-3437
+- **Website:** https://abaplay.app.br
+- **Landing Page:** https://vendas.abaplay.app.br
 
-### Sistema de Níveis de Prompting ABA (Novo)
-- **6 Níveis de Prompting**: Independente, Dica Verbal, Dica Gestual, Ajuda Física Parcial, Ajuda Física Total, Sem Resposta
-- **Indicadores Visuais**: Cores e descrições específicas para cada nível
-- **Pontuação Automática**: Cálculo de progresso baseado no nível de prompting e taxa de sucesso
-- **Interface Intuitiva**: Componente `PromptLevelSelector` com dropdown interativo
+---
 
-### Correções de Bugs Importantes
-- **Erro de Atribuição de Programas**: Corrigida violação de constraint de status no banco de dados
-- **Status Normalizado**: Implementação de valores padronizados (active/archived/paused) em inglês
-- **Tratamento de Erros**: Melhor handling de erros de duplicação e validação
+## 🎯 Status do Projeto
 
-### Melhorias na Interface de Usuário
-- **LoginPage Modernizada**: Novo design com animações e experiência aprimorada
-- **Dashboard de Pais Aprimorado**: Gráficos organizados por área de intervenção
-- **Relatórios PDF Avançados**: Inclusão de dados de sessão e gráficos de progresso
-- **Navegação Intuitiva**: Melhor fluxo de usuário e persistência de estado
+- ✅ **Backend:** Estável e em produção
+- ✅ **Frontend:** Estável e em produção
+- ✅ **Landing Page:** Ativa em vendas.abaplay.app.br
+- ✅ **Banco de Dados:** Schema v2.2.0 consolidado
+- ✅ **Documentação:** Completa e atualizada
 
-### Arquitetura e Performance
-- **Context API Otimizado**: Melhor gerenciamento de estado com PatientContext
-- **API Error Handling**: Tratamento abrangente de erros em todos os endpoints
-- **Socket.IO Integração**: Comunicação em tempo real aprimorada
-- **Componentização**: Melhor organização de componentes por funcionalidade
+---
 
-### Sistema de Notificações Avançado
-- **Badges Inteligentes**: Indicadores de contagem em tempo real
-- **Alertas de Progresso**: Notificações automáticas baseadas em marcos de desenvolvimento
-- **Notificações por Paciente**: Sistema granular de notificações específicas
-
-## Funcionalidades Implementadas Recentemente
-
-### 🚀 Versão 1.2.0 (Janeiro 2025) - Sistema de Agendamentos Inteligente
-
-#### ✅ Sistema Completo de Agendamentos Recorrentes
-- **Problema Resolvido**: Agendamentos manuais consomem horas de trabalho administrativo
-- **Solução**: Sistema automatizado de geração de agendamentos recorrentes
-- **Recursos**:
-  - Padrões de recorrência: semanal, quinzenal, mensal (por dia da semana)
-  - Geração automática até 4 semanas à frente
-  - Pausar/retomar templates com motivos documentados
-  - Detecção automática de conflitos de horário
-  - Calendário visual (semana) + lista detalhada
-- **Impacto**: Redução de até 95% do tempo gasto em agendamentos
-
-#### ✅ Detecção Automática de Sessões Órfãs
-- **Problema Resolvido**: Sessões agendadas mas não registradas passavam despercebidas
-- **Solução**: Job cron automático para detecção e manutenção
-- **Recursos**:
-  - Executa diariamente às 2h da manhã
-  - Identifica sessões agendadas sem registro de progresso
-  - Marca automaticamente como "não realizado" após período de tolerância
-  - Notifica terapeutas para justificativa
-  - Arquivo: `backend/src/jobs/sessionMaintenanceJob.js`
-- **Impacto**: 100% de rastreabilidade e documentação de sessões
-
-#### ✅ NotificationsPage Mobile-First
-- **Problema Resolvido**: Bottom sheet modal truncava texto das notificações em mobile
-- **Solução**: Página dedicada fullscreen com melhor UX
-- **Recursos**:
-  - Agrupamento por data (Hoje, Ontem, Esta semana, Mais antigas)
-  - Exibição completa de texto sem truncamento
-  - Navegação direta para chats e modais específicos
-  - Função "Marcar todas como lidas"
-  - Color-coding por tipo de notificação
-- **Impacto**: Melhor experiência mobile e organização de notificações
-
-#### ✅ Correções Críticas de Bugs
-1. **validate-assignment Error 500**: Implementado fallback silencioso para não bloquear agendamentos
-2. **active_programs_count**: Corrigido para mostrar todos os 14 programas em "Sessão Geral" (antes mostrava apenas 1)
-3. **Navegação de chat**: Notificações agora navegam para modais corretos (`/parent-chat` e `/case-discussion`)
-4. **Navegação mobile**: Botão Admin movido para BottomNavigation, reorganização de Sidebar Tools
-
-## Funcionalidades Implementadas (2024)
-
-### ✅ Sistema Completo de Relatórios de Evolução Terapêutica
-- **Problema Resolvido**: Necessidade de relatórios profissionais para diferentes disciplinas
-- **Solução**: Sistema completo multidisciplinar com análise automática e geração de PDFs
-- **Impacto**: Profissionais podem gerar relatórios detalhados em minutos ao invés de horas
-
-### ✅ Correções de Persistência de Dados
-- **Problema Resolvido**: Dados de usuário e paciente não persistiam no sistema de relatórios
-- **Solução**: Atualização dos models para retornar campos complementares (professional_id, qualifications, guardian_name, etc.)
-- **Impacto**: Dados preenchidos uma vez são reutilizados automaticamente
-
-### ✅ Formatação Profissional de PDFs
-- **Problema Resolvido**: Inconsistências de formatação entre páginas dos relatórios
-- **Solução**: Sistema de preservação de contexto de formatação e espaçamentos padronizados
-- **Impacto**: PDFs com aparência profissional e consistente
-
-### ✅ Aceitação de Termos para Administradores
-- **Problema Resolvido**: Termos de uso não persistiam, obrigando re-aceitação a cada login
-- **Solução**: Correção do userModel.js para retornar campos terms_accepted_at
-- **Impacto**: Administradores aceitam termos apenas uma vez
-
-### ✅ Sistema de Cores Padronizado
-- **Problema Resolvido**: Botão de relatório consolidado sem cor definida
-- **Solução**: Adição da cor purple ao sistema de cores dos ActionCards
-- **Impacto**: Interface mais harmoniosa e profissional
-
-## Melhorias Mais Recentes (2024)
-
-### ✅ Sincronização Multi-Dispositivo de Dados Profissionais
-- **Problema Resolvido**: Dados profissionais (registros, qualificações, assinaturas) só persistiam no navegador específico onde foram preenchidos
-- **Solução**: Sistema completo de sincronização com backend como fonte única da verdade
-- **Implementação**:
-  - Nova API `GET /auth/profile` para buscar perfil completo do usuário
-  - AuthContext aprimorado com sincronização automática no login e startup
-  - localStorage usado como cache inteligente com fallback para offline
-  - Integração seamless sem quebrar funcionalidades existentes
-- **Impacto**: Terapeutas podem acessar seus dados profissionais de qualquer dispositivo/navegador
-
-### ✅ Segurança de Produção - Sanitização de Logs
-- **Problema Resolvido**: Logs de desenvolvimento expunham dados sensíveis no console do navegador (tokens, dados de pacientes, credenciais)
-- **Solução**: Auditoria completa da aplicação com remoção/sanitização de todos os logs sensíveis
-- **Implementação**:
-  - Revisão de 47+ arquivos JavaScript
-  - Remoção de logs com tokens JWT, IDs de pacientes, dados pessoais
-  - Conversão de logs detalhados para comentários simples
-  - Preservação apenas de logs essenciais para debugging não-sensível
-- **Impacto**: Aplicação segura para produção sem risco de vazamento de dados via console
-
-### ✅ Arquitetura de Fallback Resiliente
-- **Problema Resolvido**: Aplicação poderia quebrar se backend indisponível durante sincronização
-- **Solução**: Sistema de fallback inteligente que nunca compromete a funcionalidade
-- **Implementação**:
-  - Mecanismos de retry automático
-  - Graceful degradation para localStorage quando API falha
-  - Sincronização assíncrona sem bloquear interface
-  - Manutenção de backward compatibility total
-- **Impacto**: Aplicação robusta que funciona mesmo com problemas de conectividade
+**Desenvolvido com ❤️ para clínicas de terapia infantil que buscam excelência operacional e clínica.**

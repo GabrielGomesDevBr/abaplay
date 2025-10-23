@@ -26,8 +26,9 @@ const usePendingActions = () => {
     try {
       const data = await getPendingActions();
 
-      const orphans = data.orphan_sessions_count || 0;
-      const missed = data.missed_appointments_count || 0;
+      // Backend retorna arrays, precisamos contar
+      const orphans = Array.isArray(data.orphan_sessions) ? data.orphan_sessions.length : 0;
+      const missed = Array.isArray(data.missed_appointments) ? data.missed_appointments.length : 0;
       const total = orphans + missed;
 
       setOrphansCount(orphans);

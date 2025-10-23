@@ -110,30 +110,6 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
     );
   }
 
-  // Ferramentas de navegação (menu expandido no Sidebar)
-  // ✅ ATUALIZADO: Removido "Programas" (já está na barra inferior) e "Admin" (movido para barra inferior)
-  // ✅ FASE 2: Dashboard oculto para plano agendamento
-  const toolsMenuItems = [
-    {
-      icon: faTachometerAlt,
-      label: 'Dashboard',
-      path: '/dashboard',
-      show: canAccessDashboard(), // Apenas plano Pro
-    },
-    {
-      icon: faPencilAlt,
-      label: 'Anotações',
-      path: '/notes',
-      show: true,
-    },
-    {
-      icon: faSignOutAlt,
-      label: 'Sair',
-      action: logout,
-      show: true,
-      isLogout: true,
-    },
-  ];
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-white to-indigo-50/30 border-r border-indigo-200 shadow-sm">
@@ -311,62 +287,6 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
         </div>
       )}
 
-      {/* Seção de Ferramentas (colapsável em mobile) */}
-      <div className="border-t border-indigo-200 bg-white lg:hidden pb-20">
-        {/* Cabeçalho colapsável */}
-        <button
-          onClick={() => setToolsExpanded(!toolsExpanded)}
-          className="w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 transition-all"
-        >
-          <div className="flex items-center space-x-2">
-            <FontAwesomeIcon icon={faFolderOpen} className="text-purple-600" />
-            <span className="font-semibold text-gray-700">Ferramentas</span>
-          </div>
-          <FontAwesomeIcon
-            icon={toolsExpanded ? faChevronUp : faChevronDown}
-            className="text-purple-600 transition-transform"
-          />
-        </button>
-
-        {/* Lista de ferramentas */}
-        {toolsExpanded && (
-          <div className="px-2 py-2 space-y-1 bg-gradient-to-b from-white to-indigo-50/30 pb-4">
-            {toolsMenuItems.filter(item => item.show).map((item, index) => {
-              const isActive = item.path ? location.pathname.startsWith(item.path) : false;
-              const isLogoutButton = item.isLogout;
-
-              return (
-                <button
-                  key={index}
-                  onClick={() => {
-                    if (item.action) {
-                      item.action(); // Executa ação (logout)
-                    } else if (item.path) {
-                      navigate(item.path); // Navega para rota
-                    }
-                    setToolsExpanded(false); // Fecha o menu após ação
-                  }}
-                  className={`
-                    w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 transition-all duration-200
-                    ${isActive
-                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
-                      : isLogoutButton
-                        ? 'text-red-600 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 hover:text-red-700'
-                        : 'text-gray-700 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-700'
-                    }
-                  `}
-                >
-                  <FontAwesomeIcon
-                    icon={item.icon}
-                    className={`${isActive ? 'text-white' : isLogoutButton ? 'text-red-600' : 'text-indigo-600'}`}
-                  />
-                  <span className="font-medium">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
     </div>
   );
 };

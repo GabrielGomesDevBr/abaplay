@@ -36,8 +36,8 @@ const AdminController = {
         return res.status(400).json(formatValidationErrors(errors));
     }
     try {
-        const { fullName, username, password, role, associated_patient_id } = req.body;
-        const { clinic_id } = req.user; 
+        const { fullName, username, password, role, associated_patient_id, specialties } = req.body;
+        const { clinic_id } = req.user;
         const existingUser = await UserModel.findByUsername(username);
         if (existingUser) {
             return res.status(409).json({ errors: [{ msg: 'Este nome de utilizador já está em uso.', param: 'username' }] });
@@ -50,18 +50,38 @@ const AdminController = {
         }
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
-        
+
         const newUserPayload = {
             username: username,
             password_hash: hashedPassword,
             full_name: fullName,
             role: role,
-            is_admin: false, 
+            is_admin: false,
             clinic_id: clinic_id,
             associated_patient_id: role === 'pai' ? associated_patient_id : null,
         };
 
         const createdUser = await UserModel.create(newUserPayload);
+
+        // Se for terapeuta e tiver especialidades, adicionar
+        if (role === 'terapeuta' && specialties && Array.isArray(specialties) && specialties.length > 0) {
+            const therapistSpecialtyModel = require('../models/therapistSpecialtyModel');
+
+            for (const specialty of specialties) {
+                try {
+                    await therapistSpecialtyModel.addTherapistSpecialty({
+                        therapist_id: createdUser.id,
+                        discipline_id: specialty.discipline_id,
+                        certification_date: specialty.certification_date || null,
+                        notes: specialty.notes || null
+                    });
+                } catch (specialtyError) {
+                    // Log error mas não falha a criação do usuário
+                    console.error(`Erro ao adicionar especialidade ${specialty.discipline_id}:`, specialtyError.message);
+                }
+            }
+        }
+
         const { password_hash, ...safeUser } = createdUser;
         res.status(201).json({
             message: `Utilizador "${safeUser.full_name}" criado com sucesso!`,

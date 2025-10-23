@@ -107,6 +107,11 @@ const ReportConfigModal = ({
       newErrors.therapist = 'Selecione um terapeuta para relatório individual';
     }
 
+    // Para relatório de presenças, exigir seleção de paciente
+    if (scope.type === 'patient-attendance' && !scope.patientId) {
+      newErrors.patient = 'Selecione um paciente para o relatório de presenças';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -329,6 +334,23 @@ const ReportConfigModal = ({
                       <div className="text-sm text-gray-500">Relatório detalhado de um profissional específico</div>
                     </div>
                   </label>
+
+                  <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="scope"
+                      value="patient-attendance"
+                      checked={scope.type === 'patient-attendance'}
+                      onChange={(e) => setScope(prev => ({ ...prev, type: e.target.value, therapistId: null }))}
+                      disabled={isGenerating}
+                      className="mr-3 text-red-600 focus:ring-red-500"
+                    />
+                    <FontAwesomeIcon icon={faChartBar} className="mr-3 text-purple-600" />
+                    <div>
+                      <div className="font-medium">Relatório de Presenças do Paciente</div>
+                      <div className="text-sm text-gray-500">Consolidado de atendimentos e comparecimento do paciente</div>
+                    </div>
+                  </label>
                 </div>
 
                 {/* Seleção de terapeuta específico */}
@@ -378,6 +400,31 @@ const ReportConfigModal = ({
                         Deixe em branco para incluir todos os pacientes do terapeuta
                       </p>
                     </div>
+                  </div>
+                )}
+
+                {/* Seleção de paciente para relatório de presenças */}
+                {scope.type === 'patient-attendance' && (
+                  <div className="mt-4">
+                    <label className="block text-xs text-gray-600 mb-2 font-medium">
+                      Paciente *
+                    </label>
+                    <select
+                      value={scope.patientId || ''}
+                      onChange={(e) => setScope(prev => ({ ...prev, patientId: e.target.value || null }))}
+                      disabled={isGenerating}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    >
+                      <option value="">Selecione um paciente...</option>
+                      {patients.map(patient => (
+                        <option key={patient.id} value={patient.id}>
+                          {patient.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.patient && (
+                      <p className="text-red-500 text-xs mt-2">{errors.patient}</p>
+                    )}
                   </div>
                 )}
               </div>

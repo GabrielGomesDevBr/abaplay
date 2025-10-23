@@ -34,6 +34,18 @@ const ScheduledSession = {
             notes = null
         } = sessionData;
 
+        // Verificar disponibilidade do terapeuta
+        const availabilityCheck = await this.checkTherapistAvailability(therapist_id, scheduled_date, scheduled_time, duration_minutes);
+        if (!availabilityCheck.is_available) {
+            const error = new Error(
+                `Terapeuta não disponível neste horário. Horários disponíveis na ${availabilityCheck.day_name}: ${availabilityCheck.available_slots}`
+            );
+            error.code = 'THERAPIST_UNAVAILABLE';
+            error.availableSlots = availabilityCheck.available_slots;
+            error.dayName = availabilityCheck.day_name;
+            throw error;
+        }
+
         // Verificar conflitos antes de criar (nova função)
         const hasConflict = await this.checkSessionConflict(patient_id, therapist_id, scheduled_date, scheduled_time, duration_minutes);
         if (hasConflict) {
@@ -244,12 +256,25 @@ const ScheduledSession = {
             throw new Error('Nenhum campo válido para atualizar.');
         }
 
-        // Verificar conflitos se estiver mudando data/hora
+        // Verificar disponibilidade e conflitos se estiver mudando data/hora
         if (updateData.scheduled_date || updateData.scheduled_time || updateData.duration_minutes) {
             const date = updateData.scheduled_date || existing.scheduled_date;
             const time = updateData.scheduled_time || existing.scheduled_time;
             const duration = updateData.duration_minutes || existing.duration_minutes;
 
+            // Verificar disponibilidade do terapeuta
+            const availabilityCheck = await this.checkTherapistAvailability(existing.therapist_id, date, time, duration);
+            if (!availabilityCheck.is_available) {
+                const error = new Error(
+                    `Terapeuta não disponível neste horário. Horários disponíveis na ${availabilityCheck.day_name}: ${availabilityCheck.available_slots}`
+                );
+                error.code = 'THERAPIST_UNAVAILABLE';
+                error.availableSlots = availabilityCheck.available_slots;
+                error.dayName = availabilityCheck.day_name;
+                throw error;
+            }
+
+            // Verificar conflitos
             const hasConflict = await this.checkSessionConflict(existing.patient_id, existing.therapist_id, date, time, duration, id);
             if (hasConflict) {
                 throw new Error('Conflito de agendamento: Já existe uma sessão para este terapeuta no novo horário.');
@@ -524,6 +549,28 @@ const ScheduledSession = {
     },
 
     /**
+     * Verifica disponibilidade do terapeuta no horário solicitado
+     * Consulta a tabela therapist_availability_template
+     * @param {number} therapist_id - ID do terapeuta
+     * @param {string} scheduled_date - Data do agendamento (YYYY-MM-DD)
+     * @param {string} scheduled_time - Horário do agendamento (HH:MM)
+     * @param {number} duration_minutes - Duração em minutos
+     * @returns {Promise<Object>} { is_available, available_slots, day_name }
+     */
+    async checkTherapistAvailability(therapist_id, scheduled_date, scheduled_time, duration_minutes = 60) {
+        try {
+            const { rows } = await pool.query(
+                'SELECT * FROM check_therapist_availability($1, $2, $3, $4)',
+                [therapist_id, scheduled_date, scheduled_time, duration_minutes]
+            );
+            return rows[0] || { is_available: false, available_slots: 'Nenhum horário configurado', day_name: 'Dia desconhecido' };
+        } catch (error) {
+            console.error('[SCHEDULING-ERROR] Erro ao verificar disponibilidade do terapeuta:', error);
+            throw error;
+        }
+    },
+
+    /**
      * FUNÇÃO LEGACY - Mantida para compatibilidade temporária
      * @deprecated Use checkSessionConflict em vez desta
      */
@@ -598,44 +645,54 @@ const ScheduledSession = {
 
     /**
      * NOVA FUNÇÃO: Detecta sessões realizadas sem agendamento (órfãs)
+     * Agora usa a view otimizada v_orphan_sessions para melhor performance e robustez
      * @param {Object} options - Opções de busca
      * @param {number} options.clinic_id - ID da clínica (opcional)
      * @param {string} options.start_date - Data inicial (opcional)
      * @param {string} options.end_date - Data final (opcional)
-     * @param {number} options.lookbackDays - Quantos dias olhar para trás (padrão: 2)
+     * @param {number} options.lookbackDays - Quantos dias olhar para trás (padrão: 7)
+     * @param {number} options.limit - Limite de resultados (padrão: 100)
+     * @param {number} options.offset - Offset para paginação (padrão: 0)
      * @returns {Promise<Array>} Lista de sessões órfãs detectadas
      */
     async findOrphanSessions(options = {}) {
-        const { clinic_id, start_date, end_date, lookbackDays = 2 } = options;
+        const {
+            clinic_id,
+            start_date,
+            end_date,
+            lookbackDays = 7,
+            limit = 100,
+            offset = 0
+        } = options;
 
         // Definir período padrão se não fornecido
         const defaultStartDate = start_date || new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         const defaultEndDate = end_date || new Date().toISOString().split('T')[0];
 
         let query = `
-            SELECT DISTINCT
-                ppp.id as session_id,
-                ppp.session_date,
-                ppp.created_at,
-                ppa.patient_id,
-                ppa.therapist_id,
-                p.name as patient_name,
-                u.full_name as therapist_name,
-                u.clinic_id
-            FROM patient_program_progress ppp
-            JOIN patient_program_assignments ppa ON ppp.assignment_id = ppa.id
-            JOIN patients p ON ppa.patient_id = p.id
-            JOIN users u ON ppa.therapist_id = u.id
-            WHERE
-                ppp.session_date >= $1::date
-                AND ppp.session_date <= $2::date
-                AND NOT EXISTS (
-                    SELECT 1 FROM scheduled_sessions ss
-                    WHERE ss.patient_id = ppa.patient_id
-                    AND ss.therapist_id = ppa.therapist_id
-                    AND ss.scheduled_date = ppp.session_date
-                    AND (ss.status = 'completed' OR ss.progress_session_id = ppp.id)
-                )
+            SELECT
+                session_id,
+                session_date,
+                session_created_at as created_at,
+                patient_id,
+                patient_name,
+                patient_dob,
+                patient_clinic_id,
+                therapist_id,
+                therapist_name,
+                therapist_username,
+                therapist_clinic_id,
+                assignment_id,
+                program_id,
+                program_name,
+                discipline_id,
+                discipline_name,
+                days_since_session,
+                day_of_week,
+                programs_worked_in_session
+            FROM v_orphan_sessions
+            WHERE session_date >= $1::date
+            AND session_date <= $2::date
         `;
 
         const values = [defaultStartDate, defaultEndDate];
@@ -644,11 +701,20 @@ const ScheduledSession = {
         // Filtrar por clínica se especificado
         if (clinic_id) {
             paramCount++;
-            query += ` AND u.clinic_id = $${paramCount}`;
+            query += ` AND therapist_clinic_id = $${paramCount}`;
             values.push(clinic_id);
         }
 
-        query += ` ORDER BY ppp.session_date DESC, ppp.created_at DESC`;
+        query += ` ORDER BY session_date DESC, session_created_at DESC`;
+
+        // Adicionar paginação
+        paramCount++;
+        query += ` LIMIT $${paramCount}`;
+        values.push(limit);
+
+        paramCount++;
+        query += ` OFFSET $${paramCount}`;
+        values.push(offset);
 
         try {
             const result = await pool.query(query, values);

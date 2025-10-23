@@ -122,3 +122,32 @@ export const getUserProfile = async () => {
 
   return response.json();
 };
+
+/**
+ * Buscar dados de atendimentos/presenças do paciente
+ */
+export const getPatientAttendanceData = async (patientId, startDate, endDate) => {
+  const token = localStorage.getItem('token');
+
+  const queryParams = new URLSearchParams();
+  queryParams.append('start_date', startDate);
+  queryParams.append('end_date', endDate);
+
+  const response = await fetch(
+    `${API_URL}/reports/patient-attendance/${patientId}?${queryParams}`,
+    {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Erro ao buscar dados de atendimento');
+  }
+
+  return response.json();
+};

@@ -529,7 +529,7 @@ const AppointmentForm = ({
           <div className="space-y-6 mb-6">
             {/* 1. Seleção de Paciente */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 <FontAwesomeIcon icon={faUser} className="mr-2 text-gray-400" />
                 Paciente *
               </label>
@@ -539,7 +539,7 @@ const AppointmentForm = ({
                 onChange={handleInputChange}
                 required
                 disabled={isLoading || loadingPatients}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[44px] border border-gray-300 rounded-md shadow-sm text-sm sm:text-base focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 <option value="">
                   {loadingPatients ? 'Carregando pacientes...' : 'Selecione um paciente'}
@@ -554,7 +554,7 @@ const AppointmentForm = ({
 
             {/* 2. Seleção de Terapeuta */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 <FontAwesomeIcon icon={faStethoscope} className="mr-2 text-gray-400" />
                 Terapeuta *
               </label>
@@ -564,7 +564,7 @@ const AppointmentForm = ({
                 onChange={handleInputChange}
                 required
                 disabled={isLoading || loadingTherapists}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[44px] border border-gray-300 rounded-md shadow-sm text-sm sm:text-base focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 <option value="">
                   {loadingTherapists ? 'Carregando terapeutas...' : 'Selecione um terapeuta'}
@@ -580,16 +580,16 @@ const AppointmentForm = ({
             {/* 3. Seleção de Disciplina (Opcional - Apenas Plano Pro) */}
             {hasProAccess && hasProAccess() && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                   <FontAwesomeIcon icon={faStickyNote} className="mr-2 text-gray-400" />
-                  Área de Intervenção <span className="text-gray-500 text-sm">(opcional)</span>
+                  Área de Intervenção <span className="text-gray-500 text-xs sm:text-sm">(opcional)</span>
                 </label>
                 <select
                   name="discipline_id"
                   value={formData.discipline_id}
                   onChange={handleInputChange}
                   disabled={isLoading || loadingDisciplines}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[44px] border border-gray-300 rounded-md shadow-sm text-sm sm:text-base focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">
                     {loadingDisciplines ? 'Carregando disciplinas...' : 'Sessão geral (todos os programas)'}
@@ -614,10 +614,10 @@ const AppointmentForm = ({
           </div>
 
           {/* Data e Horário */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
             {/* Data */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 <FontAwesomeIcon icon={faCalendarAlt} className="mr-2 text-gray-400" />
                 Data do Agendamento *
               </label>
@@ -629,13 +629,13 @@ const AppointmentForm = ({
                 min={getMinDate()}
                 required
                 disabled={isLoading}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[44px] border border-gray-300 rounded-md shadow-sm text-sm sm:text-base focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
               />
             </div>
 
             {/* Horário */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 <FontAwesomeIcon icon={faClock} className="mr-2 text-gray-400" />
                 Horário *
               </label>
@@ -645,7 +645,7 @@ const AppointmentForm = ({
                 onChange={handleInputChange}
                 required
                 disabled={isLoading}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[44px] border border-gray-300 rounded-md shadow-sm text-sm sm:text-base focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
               >
                 <option value="">Selecione um horário...</option>
                 {generateTimeOptions().map(time => (
@@ -743,7 +743,7 @@ const AppointmentForm = ({
 
           {/* Duração */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
               <FontAwesomeIcon icon={faStethoscope} className="mr-2 text-gray-400" />
               Duração (minutos)
             </label>
@@ -752,7 +752,7 @@ const AppointmentForm = ({
               value={formData.duration_minutes}
               onChange={handleInputChange}
               disabled={isLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+              className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[44px] border border-gray-300 rounded-md shadow-sm text-sm sm:text-base focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
             >
               <option value={30}>30 minutos</option>
               <option value={45}>45 minutos</option>
@@ -764,7 +764,7 @@ const AppointmentForm = ({
 
           {/* Observações */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
               <FontAwesomeIcon icon={faStickyNote} className="mr-2 text-gray-400" />
               Observações
             </label>
@@ -776,7 +776,7 @@ const AppointmentForm = ({
               maxLength={500}
               placeholder="Observações sobre o agendamento (opcional)..."
               disabled={isLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 resize-none"
+              className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[88px] border border-gray-300 rounded-md shadow-sm text-sm sm:text-base focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 resize-none"
             />
             <div className="mt-1 text-xs text-gray-500">
               {formData.notes.length}/500 caracteres
@@ -802,11 +802,11 @@ const AppointmentForm = ({
               </div>
 
               {recurrenceEnabled && (
-                <div className="bg-blue-50 p-4 rounded-lg space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-blue-50 p-3 sm:p-4 rounded-lg space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Tipo de recorrência */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                         Frequência
                       </label>
                       <select
@@ -814,7 +814,7 @@ const AppointmentForm = ({
                         value={recurrenceConfig.type}
                         onChange={handleRecurrenceConfigChange}
                         disabled={isLoading}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[44px] border border-gray-300 rounded-md shadow-sm text-sm sm:text-base focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       >
                         <option value="weekly">📅 Toda semana</option>
                         <option value="biweekly">📅 A cada 2 semanas</option>
@@ -824,7 +824,7 @@ const AppointmentForm = ({
 
                     {/* Semanas à frente para gerar */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                         Gerar para próximas
                       </label>
                       <select
@@ -832,7 +832,7 @@ const AppointmentForm = ({
                         value={recurrenceConfig.generateWeeks}
                         onChange={handleRecurrenceConfigChange}
                         disabled={isLoading}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[44px] border border-gray-300 rounded-md shadow-sm text-sm sm:text-base focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       >
                         <option value={4}>4 semanas</option>
                         <option value={6}>6 semanas</option>
@@ -845,7 +845,7 @@ const AppointmentForm = ({
 
                   {/* Data de término (opcional) */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                       Terminar em (opcional)
                     </label>
                     <input
@@ -855,7 +855,7 @@ const AppointmentForm = ({
                       onChange={handleRecurrenceConfigChange}
                       min={formData.scheduled_date}
                       disabled={isLoading}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[44px] border border-gray-300 rounded-md shadow-sm text-sm sm:text-base focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                     />
                     <div className="mt-1 text-xs text-gray-500">
                       Deixe em branco para gerar indefinidamente
@@ -994,19 +994,19 @@ const AppointmentForm = ({
           )}
 
           {/* Botões */}
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+          <div className="flex justify-end space-x-2 sm:space-x-3 pt-4 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 sm:px-6 sm:py-3 min-h-[44px] text-sm sm:text-base font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              className="px-4 py-2 sm:px-6 sm:py-3 min-h-[44px] text-sm sm:text-base font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
               {isLoading && (
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

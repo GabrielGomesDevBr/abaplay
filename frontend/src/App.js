@@ -25,6 +25,7 @@ import SuperAdminPage from './pages/SuperAdminPage';
 // --- IMPORTAÇÕES DO SISTEMA DE AGENDAMENTO ---
 import SchedulingPage from './pages/SchedulingPage';
 import TherapistSchedulePage from './pages/TherapistSchedulePage';
+import TherapistAvailabilityPage from './pages/TherapistAvailabilityPage';
 // --- IMPORTAÇÃO DA PÁGINA DE NOTIFICAÇÕES ---
 import NotificationsPage from './pages/NotificationsPage';
 
@@ -189,6 +190,9 @@ function App() {
 
                   {/* Página de agenda pessoal para terapeutas */}
                   <Route path="my-schedule" element={<TherapistSchedulePage />} />
+
+                  {/* Página de gestão de disponibilidade (híbrida: admin vê todos, terapeuta vê só o seu) */}
+                  <Route path="availability" element={<TherapistAvailabilityPage />} />
 
                   {/* Página de notificações */}
                   <Route path="notifications" element={<NotificationsPage />} />

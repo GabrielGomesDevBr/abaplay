@@ -802,22 +802,22 @@ const SessionProgress = ({ program, assignment }) => {
               <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full mr-2"></div>
               Informações da Sessão
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="session-date" className="block text-sm font-medium text-blue-700 mb-2">
+                <label htmlFor="session-date" className="block text-xs sm:text-sm font-medium text-blue-700 mb-2">
                   Data da Sessão
                 </label>
-                <input 
-                  type="date" 
-                  id="session-date" 
-                  required 
-                  value={sessionDate} 
-                  onChange={e => setSessionDate(e.target.value)} 
-                  className="w-full px-4 py-3 border border-blue-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white" 
+                <input
+                  type="date"
+                  id="session-date"
+                  required
+                  value={sessionDate}
+                  onChange={e => setSessionDate(e.target.value)}
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[44px] border border-blue-300 rounded-xl shadow-sm text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
                 />
               </div>
               <div>
-                <label htmlFor="teaching-modality" className="block text-sm font-medium text-blue-700 mb-2">
+                <label htmlFor="teaching-modality" className="block text-xs sm:text-sm font-medium text-blue-700 mb-2">
                   Modalidade de Ensino
                 </label>
                 <select
@@ -825,7 +825,7 @@ const SessionProgress = ({ program, assignment }) => {
                   value={teachingModality}
                   onChange={e => setTeachingModality(e.target.value)}
                   required
-                  className="w-full px-4 py-3 border border-blue-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[44px] border border-blue-300 rounded-xl shadow-sm text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
                 >
                   <option value="" disabled>Selecione a modalidade</option>
                   {TEACHING_MODALITIES.map(modality => (
@@ -844,50 +844,50 @@ const SessionProgress = ({ program, assignment }) => {
               <div className="w-2 h-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full mr-2"></div>
               Dados da Sessão
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="session-attempts" className="block text-sm font-medium text-emerald-700 mb-2">
+                <label htmlFor="session-attempts" className="block text-xs sm:text-sm font-medium text-emerald-700 mb-2">
                   Tentativas
                 </label>
-                <input 
-                  type="number" 
-                  id="session-attempts" 
-                  value={attempts} 
-                  readOnly 
-                  className="w-full px-4 py-3 border border-emerald-200 rounded-xl shadow-sm bg-emerald-100/50 cursor-not-allowed text-emerald-800 font-medium" 
+                <input
+                  type="number"
+                  id="session-attempts"
+                  value={attempts}
+                  readOnly
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[44px] border border-emerald-200 rounded-xl shadow-sm text-sm sm:text-base bg-emerald-100/50 cursor-not-allowed text-emerald-800 font-medium"
                 />
               </div>
               <div>
-                <label htmlFor="session-successes" className="block text-sm font-medium text-emerald-700 mb-2">
+                <label htmlFor="session-successes" className="block text-xs sm:text-sm font-medium text-emerald-700 mb-2">
                   Acertos
                 </label>
-                <input 
-                  type="number" 
-                  id="session-successes" 
-                  value={successes} 
-                  onChange={e => setSuccesses(e.target.value)} 
-                  min="0" 
-                  step="1" 
-                  required 
-                  placeholder="Ex: 8" 
-                  className="w-full px-4 py-3 border border-emerald-300 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white" 
+                <input
+                  type="number"
+                  id="session-successes"
+                  value={successes}
+                  onChange={e => setSuccesses(e.target.value)}
+                  min="0"
+                  step="1"
+                  required
+                  placeholder="Ex: 8"
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[44px] border border-emerald-300 rounded-xl shadow-sm text-sm sm:text-base focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
                 />
               </div>
             </div>
           </div>
           {/* Observações - Modernizado */}
           <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 sm:p-4 lg:p-6">
-            <label htmlFor="session-notes" className="block text-sm font-medium text-amber-700 mb-3 flex items-center">
+            <label htmlFor="session-notes" className="block text-xs sm:text-sm font-medium text-amber-700 mb-3 flex items-center">
               <div className="w-2 h-2 bg-gradient-to-r from-amber-500 to-orange-600 rounded-full mr-2"></div>
               Observações da Sessão
             </label>
-            <textarea 
-              id="session-notes" 
-              value={notes} 
-              onChange={e => setNotes(e.target.value)} 
-              rows="4" 
-              placeholder="Registre observações importantes sobre a sessão: comportamento, estratégias utilizadas, contexto, etc..." 
-              className="w-full px-4 py-3 border border-amber-300 rounded-xl shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all bg-white resize-none" 
+            <textarea
+              id="session-notes"
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              rows="4"
+              placeholder="Registre observações importantes sobre a sessão: comportamento, estratégias utilizadas, contexto, etc..."
+              className="w-full px-3 py-2 sm:px-4 sm:py-3 min-h-[88px] border border-amber-300 rounded-xl shadow-sm text-sm sm:text-base focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all bg-white resize-none"
             />
           </div>
           
