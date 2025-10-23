@@ -374,7 +374,7 @@ const ParentDashboardPage = () => {
                                 <FontAwesomeIcon icon={faComments} className="text-white text-xl" />
                             </div>
                             <div className="text-left">
-                                <p className="text-white font-semibold text-sm">Conversa com a Equipe</p>
+                                <p className="text-white font-semibold text-sm">Chat com a Família</p>
                                 <p className="text-blue-100 text-xs">Toque para abrir o chat</p>
                             </div>
                         </div>

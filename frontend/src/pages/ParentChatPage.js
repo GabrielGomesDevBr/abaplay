@@ -87,11 +87,11 @@ const ParentChatPage = () => {
 
               <div className="w-full sm:w-auto">
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-1 break-words">
-                  Conversa com a Equipe
+                  Chat com a Família
                 </h1>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm sm:text-base text-gray-600">
                   <FontAwesomeIcon icon={faComments} className="text-indigo-500" />
-                  <span className="font-medium hidden sm:inline">Chat sobre:</span>
+                  <span className="font-medium hidden sm:inline">Paciente:</span>
                   <span className="font-bold text-gray-800">{selectedPatient.name}</span>
                 </div>
               </div>

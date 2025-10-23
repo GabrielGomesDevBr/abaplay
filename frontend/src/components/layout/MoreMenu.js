@@ -72,9 +72,9 @@ const MoreMenu = ({ isOpen, onClose }) => {
     {
       icon: faHome,
       label: 'Dashboard',
-      action: () => handleNavigate('/'),
-      isActive: location.pathname === '/',
-      show: true,
+      action: () => handleNavigate('/dashboard'),
+      isActive: location.pathname === '/dashboard',
+      show: canAccessPrograms(), // Pro feature
     },
     {
       icon: faFolderOpen,
@@ -108,9 +108,9 @@ const MoreMenu = ({ isOpen, onClose }) => {
     {
       icon: faClipboard,
       label: 'Anotações',
-      action: () => handleNavigate('/case-discussions'),
-      isActive: location.pathname === '/case-discussions',
-      show: canAccessPrograms(), // Pro feature
+      action: () => handleNavigate('/notes'),
+      isActive: location.pathname === '/notes',
+      show: true, // Disponível para todos os planos (útil no plano Essencial)
     },
     {
       icon: faSignOutAlt,
