@@ -416,7 +416,7 @@ Este software é proprietário e confidencial. Uso não autorizado, cópia, dist
 - **Email:** abaplayoficial@gmail.com
 - **WhatsApp:** (11) 98854-3437
 - **Website:** https://abaplay.app.br
-- **Landing Page:** https://vendas.abaplay.app.br
+- **Landing Page:** https://info.abaplay.app.br
 
 ---
 
