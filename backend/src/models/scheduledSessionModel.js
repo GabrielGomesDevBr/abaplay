@@ -186,6 +186,216 @@ const ScheduledSession = {
     },
 
     /**
+     * ✅ NOVO INTELIGENTE: Busca agendamento correspondente para vincular a sessão de programa
+     * Versão com priorização híbrida: disciplina → status → cronológico (mais antigo primeiro)
+     *
+     * @param {Object} params - Parâmetros de busca
+     * @param {number} params.patient_id - ID do paciente
+     * @param {number} params.therapist_id - ID do terapeuta
+     * @param {string} params.session_date - Data da sessão (YYYY-MM-DD)
+     * @param {number} [params.discipline_id] - ID da disciplina para priorização (opcional)
+     * @param {number} [params.window_hours=10] - Janela de tempo para busca (horas antes/depois)
+     * @param {number} params.clinic_id - ID da clínica (segurança)
+     * @returns {Promise<Object|null>} Agendamento encontrado ou null
+     */
+    async findMatchingAppointment({ patient_id, therapist_id, session_date, discipline_id = null, window_hours = 10, clinic_id }) {
+        // Buscar agendamentos no dia com priorização inteligente
+        const query = `
+            SELECT
+                ss.id,
+                ss.patient_id,
+                ss.therapist_id,
+                ss.discipline_id,
+                ss.scheduled_date,
+                ss.scheduled_time,
+                ss.duration_minutes,
+                ss.status,
+                ss.progress_session_id,
+                ss.notes,
+                p.clinic_id,
+                d.name as discipline_name,
+                -- Calcular prioridade
+                CASE
+                    WHEN $5::integer IS NOT NULL AND ss.discipline_id = $5 THEN 0  -- Disciplina match
+                    WHEN ss.discipline_id IS NULL THEN 1                           -- Sem disciplina definida
+                    ELSE 2                                                         -- Disciplina diferente
+                END as discipline_priority,
+                CASE WHEN ss.status = 'scheduled' THEN 0 ELSE 1 END as status_priority
+            FROM scheduled_sessions ss
+            JOIN patients p ON ss.patient_id = p.id
+            LEFT JOIN disciplines d ON ss.discipline_id = d.id
+            WHERE ss.patient_id = $1
+                AND ss.therapist_id = $2
+                AND ss.scheduled_date = $3
+                AND ss.status IN ('scheduled', 'completed')
+                AND ss.progress_session_id IS NULL  -- Apenas agendamentos ainda não vinculados
+                AND p.clinic_id = $4
+            ORDER BY
+                discipline_priority ASC,     -- 1º: Priorizar match de disciplina
+                status_priority ASC,         -- 2º: Priorizar status 'scheduled'
+                ss.scheduled_time ASC        -- 3º: Ordem cronológica (mais antigo primeiro)
+            LIMIT 1
+        `;
+
+        try {
+            const { rows } = await pool.query(query, [patient_id, therapist_id, session_date, clinic_id, discipline_id]);
+
+            if (rows.length > 0) {
+                const match = rows[0];
+                const disciplineInfo = match.discipline_name
+                    ? `disciplina ${match.discipline_name}`
+                    : 'sem disciplina especificada';
+
+                console.log(`[SCHEDULING] ✓ Agendamento correspondente encontrado: ID ${match.id} (${disciplineInfo}) para paciente ${patient_id} em ${session_date} ${match.scheduled_time}`);
+                return match;
+            }
+
+            console.log(`[SCHEDULING] ⚠️ Nenhum agendamento disponível encontrado para paciente ${patient_id}, terapeuta ${therapist_id}, data ${session_date}`);
+            return null;
+        } catch (error) {
+            console.error('[SCHEDULING-ERROR] Erro ao buscar agendamento correspondente:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * ✅ NOVO: Busca TODOS os agendamentos correspondentes para permitir escolha manual
+     * Usado quando há múltiplos agendamentos e precisamos perguntar ao terapeuta
+     *
+     * @param {Object} params - Parâmetros de busca
+     * @param {number} params.patient_id - ID do paciente
+     * @param {number} params.therapist_id - ID do terapeuta
+     * @param {string} params.session_date - Data da sessão (YYYY-MM-DD)
+     * @param {number} params.clinic_id - ID da clínica (segurança)
+     * @returns {Promise<Array>} Lista de agendamentos disponíveis
+     */
+    async findAllMatchingAppointments({ patient_id, therapist_id, session_date, clinic_id }) {
+        const query = `
+            SELECT
+                ss.id,
+                ss.patient_id,
+                ss.therapist_id,
+                ss.discipline_id,
+                ss.scheduled_date,
+                ss.scheduled_time,
+                ss.duration_minutes,
+                ss.status,
+                ss.progress_session_id,
+                ss.notes,
+                d.name as discipline_name
+            FROM scheduled_sessions ss
+            JOIN patients p ON ss.patient_id = p.id
+            LEFT JOIN disciplines d ON ss.discipline_id = d.id
+            WHERE ss.patient_id = $1
+                AND ss.therapist_id = $2
+                AND ss.scheduled_date = $3
+                AND ss.status IN ('scheduled', 'completed')
+                AND ss.progress_session_id IS NULL
+                AND p.clinic_id = $4
+            ORDER BY ss.scheduled_time ASC
+        `;
+
+        try {
+            const { rows } = await pool.query(query, [patient_id, therapist_id, session_date, clinic_id]);
+            console.log(`[SCHEDULING] Encontrados ${rows.length} agendamentos disponíveis para paciente ${patient_id} em ${session_date}`);
+            return rows;
+        } catch (error) {
+            console.error('[SCHEDULING-ERROR] Erro ao buscar todos os agendamentos correspondentes:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * ✅ NOVO: Detecta se outra sessão foi registrada dentro da janela de 1 hora (mesma sessão)
+     * @param {Object} params - Parâmetros de busca
+     * @param {number} params.patient_id - ID do paciente
+     * @param {number} params.therapist_id - ID do terapeuta
+     * @param {string} params.session_date - Data da sessão (YYYY-MM-DD)
+     * @param {number} params.clinic_id - ID da clínica (segurança)
+     * @param {number} [params.window_minutes=60] - Janela de tempo em minutos (padrão: 60 = 1 hora)
+     * @returns {Promise<Object|null>} Sessão recente encontrada ou null
+     */
+    async detectSameSession({ patient_id, therapist_id, session_date, clinic_id, window_minutes = 60 }) {
+        const query = `
+            SELECT
+                ppp.id,
+                ppp.assignment_id,
+                ppp.session_date,
+                ppp.created_at,
+                ppa.program_id,
+                pr.name as program_name,
+                pr.discipline_id,
+                d.name as discipline_name,
+                EXTRACT(EPOCH FROM (NOW() - ppp.created_at))/60 as minutes_ago
+            FROM patient_program_progress ppp
+            JOIN patient_program_assignments ppa ON ppp.assignment_id = ppa.id
+            JOIN programs pr ON ppa.program_id = pr.id
+            LEFT JOIN disciplines d ON pr.discipline_id = d.id
+            JOIN patients p ON ppa.patient_id = p.id
+            WHERE ppa.patient_id = $1
+                AND ppa.therapist_id = $2
+                AND ppp.session_date = $3
+                AND p.clinic_id = $4
+                AND ppp.created_at >= NOW() - INTERVAL '${window_minutes} minutes'
+            ORDER BY ppp.created_at DESC
+            LIMIT 1
+        `;
+
+        try {
+            const { rows } = await pool.query(query, [patient_id, therapist_id, session_date, clinic_id]);
+
+            if (rows.length > 0) {
+                const session = rows[0];
+                console.log(`[SCHEDULING] ✓ Sessão recente detectada: ID ${session.id} registrada há ${Math.round(session.minutes_ago)} min atrás`);
+                return session;
+            }
+
+            return null;
+        } catch (error) {
+            console.error('[SCHEDULING-ERROR] Erro ao detectar mesma sessão:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * ✅ NOVO: Vincula sessão de programa a agendamento
+     * Agora marca como 'completed' apenas se estiver 'scheduled', mantém 'completed' se já estiver
+     * @param {number} appointment_id - ID do agendamento
+     * @param {number} progress_session_id - ID da sessão de programa (patient_program_progress.id)
+     * @param {string} [notes] - Notas adicionais (opcional)
+     * @returns {Promise<Object>} Agendamento atualizado
+     */
+    async linkToProgressSession(appointment_id, progress_session_id, notes = null) {
+        const query = `
+            UPDATE scheduled_sessions
+            SET
+                progress_session_id = $1,
+                status = CASE
+                    WHEN status = 'scheduled' THEN 'completed'
+                    ELSE status
+                END,
+                notes = COALESCE($2, notes, 'Sessão registrada via programa'),
+                updated_at = NOW()
+            WHERE id = $3
+            RETURNING *
+        `;
+
+        try {
+            const { rows } = await pool.query(query, [progress_session_id, notes, appointment_id]);
+
+            if (rows.length === 0) {
+                throw new Error(`Agendamento ID ${appointment_id} não encontrado para vincular`);
+            }
+
+            console.log(`[SCHEDULING] ✓ Vinculação bem-sucedida: Agendamento ${appointment_id} ← Sessão ${progress_session_id}`);
+            return rows[0];
+        } catch (error) {
+            console.error(`[SCHEDULING-ERROR] Erro ao vincular sessão ${progress_session_id} ao agendamento ${appointment_id}:`, error);
+            throw error;
+        }
+    },
+
+    /**
      * Busca agendamentos de um terapeuta específico
      * @param {number} therapist_id - ID do terapeuta
      * @param {string} start_date - Data inicial (opcional)

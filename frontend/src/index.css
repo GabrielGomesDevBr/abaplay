@@ -140,3 +140,12 @@ body {
 .animate-spin-slow {
   animation: spin 1.5s linear infinite;
 }
+
+/* Checkboxes verdes para lista de disponibilidade (evita confusão com cabeçalho azul) */
+input[type="checkbox"].text-green-600 {
+  accent-color: #16a34a; /* green-600 */
+}
+
+input[type="checkbox"].text-green-600:focus {
+  outline-color: #22c55e; /* green-500 */
+}

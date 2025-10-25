@@ -32,6 +32,8 @@ import WeekCalendarView from '../components/scheduling/WeekCalendarView'; // ✅
 import RetroactiveSessionModal from '../components/scheduling/RetroactiveSessionModal'; // ✅ SOLUÇÃO 4: Modal para registro retroativo
 import AvailabilitySearchModal from '../components/scheduling/AvailabilitySearchModal'; // ✅ AGENDAMENTO INTELIGENTE: Busca rápida
 import AppointmentWizard from '../components/scheduling/AppointmentWizard'; // ✅ AGENDAMENTO INTELIGENTE: Assistente
+import ManageRecurrenceModal from '../components/scheduling/ManageRecurrenceModal'; // ✅ NOVO: Gerenciar recorrências
+import LinkSessionModal from '../components/scheduling/LinkSessionModal'; // ✅ NOVO: Registro de sessão com vinculação
 import {
   getAppointments,
   createAppointment,
@@ -44,6 +46,7 @@ import {
   justifyAbsence,        // ✅ FASE 3
   cancelAppointment      // ✅ NOVO: Função de cancelamento
 } from '../api/schedulingApi';
+import recurrenceApi from '../api/recurrenceApi'; // ✅ NOVO: API de gerenciamento de recorrências
 import { fetchAllAssignments } from '../api/adminApi';
 import { generateAppointmentReport } from '../components/scheduling/AppointmentReportGenerator';
 import { getPatientAttendanceData } from '../api/reportApi';
@@ -78,6 +81,8 @@ const SchedulingPage = () => {
   const [showRetroactiveSessionModal, setShowRetroactiveSessionModal] = useState(false); // ✅ SOLUÇÃO 4: Modal retroativo
   const [showAvailabilitySearch, setShowAvailabilitySearch] = useState(false); // ✅ AGENDAMENTO INTELIGENTE: Busca rápida
   const [showAppointmentWizard, setShowAppointmentWizard] = useState(false); // ✅ AGENDAMENTO INTELIGENTE: Assistente
+  const [showManageRecurrence, setShowManageRecurrence] = useState(false); // ✅ NOVO: Modal de gerenciamento de recorrências
+  const [showLinkSessionModal, setShowLinkSessionModal] = useState(false); // ✅ NOVO: Modal de vinculação de sessão
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [selectedOrphanSession, setSelectedOrphanSession] = useState(null);
@@ -438,6 +443,39 @@ const SchedulingPage = () => {
     } finally {
       setIsCancelling(false);
     }
+  };
+
+  // ✅ NOVO: Handler para gerenciar recorrências
+  const handleManageRecurrence = (appointment) => {
+    setSelectedAppointment(appointment);
+    setShowManageRecurrence(true);
+  };
+
+  const handleConfirmManageRecurrence = async (params) => {
+    try {
+      const result = await recurrenceApi.manageRecurrence(params);
+      await loadAppointments();
+      setShowManageRecurrence(false);
+      setSelectedAppointment(null);
+
+      const message = recurrenceApi.formatCancellationMessage(result.data);
+      toast.success(message);
+    } catch (error) {
+      console.error('Erro ao gerenciar recorrência:', error);
+      toast.error(error.message || 'Erro ao processar ação');
+      throw error; // Re-throw para o modal saber que falhou
+    }
+  };
+
+  // ✅ NOVO: Handler para registrar sessão vinculada (Plano Pro)
+  const handleRecordSession = (appointment) => {
+    setSelectedAppointment(appointment);
+    setShowLinkSessionModal(true);
+  };
+
+  const handleSessionRecordSuccess = async (data) => {
+    await loadAppointments();
+    console.log('[SUCCESS] Sessão registrada:', data);
   };
 
   const handlePageChange = (page) => {
@@ -822,6 +860,8 @@ const SchedulingPage = () => {
             onJustify={handleJustifyAppointment}         // ✅ FASE 3
             onViewNextOccurrences={handleViewNextOccurrences} // ✅ FASE 3
             onCancel={handleCancelAppointment}           // ✅ NOVO: Cancelamento
+            onManageRecurrence={handleManageRecurrence}  // ✅ NOVO: Gerenciar recorrências
+            onRecordSession={handleRecordSession}        // ✅ NOVO: Registrar sessão (Pro)
             isLoading={isLoading}
             pagination={pagination}
             onPageChange={handlePageChange}
@@ -924,6 +964,33 @@ const SchedulingPage = () => {
         appointment={selectedAppointment}
         onConfirm={handleConfirmCancel}
         isLoading={isCancelling}
+      />
+
+      {/* ✅ NOVO: Modal de Gerenciamento de Recorrências */}
+      <ManageRecurrenceModal
+        isOpen={showManageRecurrence}
+        onClose={() => {
+          setShowManageRecurrence(false);
+          setSelectedAppointment(null);
+        }}
+        appointment={selectedAppointment}
+        onConfirm={handleConfirmManageRecurrence}
+      />
+
+      {/* ✅ NOVO: Modal de Registro de Sessão com Vinculação (Plano Pro) */}
+      <LinkSessionModal
+        isOpen={showLinkSessionModal}
+        onClose={() => {
+          setShowLinkSessionModal(false);
+          setSelectedAppointment(null);
+        }}
+        appointment={selectedAppointment}
+        patient={selectedAppointment ? {
+          id: selectedAppointment.patient_id,
+          name: selectedAppointment.patient_name
+        } : null}
+        assignments={assignments.filter(a => a.patient_id === selectedAppointment?.patient_id)}
+        onSuccess={handleSessionRecordSuccess}
       />
 
       {/* ✅ SOLUÇÃO 4: Modal para Registrar Sessão Retroativa (Plano Agendamento) */}

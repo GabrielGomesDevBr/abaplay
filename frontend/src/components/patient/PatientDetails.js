@@ -6,14 +6,17 @@ import { generateProgramGradePDF, generateWeeklyRecordSheetPDF } from '../../uti
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faEdit, faTrashAlt, faFilePdf, faClipboardList, faChartPie,
-    faCalendarAlt, faNotesMedical, faComments, faUsers, faStethoscope, faUserPlus
+    faCalendarAlt, faNotesMedical, faComments, faUsers, faStethoscope, faUserPlus, faBan
 } from '@fortawesome/free-solid-svg-icons';
 import ParentTherapistChat from '../chat/ParentTherapistChat';
 import CaseDiscussionChat from '../chat/CaseDiscussionChat';
 import ReportEvolutionModal from '../reports/ReportEvolutionModal';
 import ExpandedPatientForm from './ExpandedPatientForm';
 import SessionNoteModal from '../scheduling/SessionNoteModal';
+import TerminatePatientModal from '../scheduling/TerminatePatientModal';
+import recurrenceApi from '../../api/recurrenceApi';
 import { completeSessionWithNotes, getTodaySchedule, createAndCompleteSession } from '../../api/therapistScheduleApi';
+import toast from 'react-hot-toast';
 
 const formatDate = (dateString) => {
   if (!dateString) return 'Não informado';
@@ -86,6 +89,8 @@ const PatientDetails = () => {
   const [isEvolutionReportVisible, setIsEvolutionReportVisible] = useState(false);
   const [isExpandedFormVisible, setIsExpandedFormVisible] = useState(false);
   const [isSessionNoteModalOpen, setIsSessionNoteModalOpen] = useState(false);
+  const [isTerminateModalOpen, setIsTerminateModalOpen] = useState(false); // ✅ NOVO: Modal de encerramento de tratamento
+  const [futureSessions, setFutureSessions] = useState([]); // ✅ NOVO: Sessões futuras do paciente
   const [selectedSession, setSelectedSession] = useState(null);
 
   if (!selectedPatient) {
@@ -194,6 +199,36 @@ const PatientDetails = () => {
     } else {
       setIsDiscussionChatVisible(false);
       setIsParentChatVisible(prevState => !prevState); // Modal em desktop
+    }
+  };
+
+  // ✅ NOVO: Handler para abrir modal de encerramento de tratamento
+  const handleOpenTerminateModal = async () => {
+    try {
+      // Buscar sessões futuras do paciente
+      const response = await recurrenceApi.getPatientFutureSessions(selectedPatient.id);
+      setFutureSessions(response.data || []);
+      setIsTerminateModalOpen(true);
+    } catch (error) {
+      console.error('Erro ao buscar sessões futuras:', error);
+      toast.error('Erro ao carregar sessões futuras. Tente novamente.');
+    }
+  };
+
+  const handleCloseTerminateModal = () => {
+    setIsTerminateModalOpen(false);
+    setFutureSessions([]);
+  };
+
+  const handleConfirmTerminate = async (params) => {
+    try {
+      const result = await recurrenceApi.terminatePatientTreatment(params);
+      toast.success(`Tratamento encerrado! ${result.data.cancelled_count} sessões canceladas.`);
+      handleCloseTerminateModal();
+    } catch (error) {
+      console.error('Erro ao encerrar tratamento:', error);
+      toast.error(error.message || 'Erro ao encerrar tratamento');
+      throw error; // Re-throw para o modal saber que falhou
     }
   };
 
@@ -366,6 +401,31 @@ const PatientDetails = () => {
                 </div>
               )}
 
+              {/* ✅ NOVO: Seção de Encerramento de Tratamento - APENAS ADMIN COM PLANO PRO */}
+              {user?.is_admin && hasProAccess() && (
+                <div className="border-t border-gray-200 pt-6 mb-6">
+                  <div className="flex items-center mb-4 pb-2 border-b border-gray-200">
+                    <div className="w-2 h-2 bg-red-600 rounded-full mr-3"></div>
+                    <h3 className="text-lg font-semibold text-gray-800">🚫 Gerenciamento de Tratamento</h3>
+                  </div>
+                  <div className="bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-300 p-4 rounded-lg">
+                    <ActionCard
+                      icon={faBan}
+                      title="Encerrar Tratamento"
+                      description="Cancela TODAS as sessões futuras do paciente em TODAS as disciplinas. Esta ação deve ser usada quando o paciente deixa a clínica."
+                      onClick={handleOpenTerminateModal}
+                      colorClass="red"
+                    />
+                    <div className="mt-3 flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded p-3">
+                      <span className="text-yellow-600 text-lg">⚠️</span>
+                      <p className="text-xs text-yellow-800 leading-relaxed">
+                        <strong>Atenção:</strong> Esta ação cancela TODAS as sessões agendadas futuras e é irreversível. Use apenas quando o paciente realmente encerrar o tratamento na clínica.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Seção de Documentos redesenhada - APENAS PLANO PRO */}
               {hasProAccess() && (
                 <div className="border-t border-gray-200 pt-6">
@@ -431,6 +491,17 @@ const PatientDetails = () => {
           isOpen={isSessionNoteModalOpen}
           onClose={handleCloseSessionNote}
           onSave={handleSaveSessionNote}
+        />
+      )}
+
+      {/* ✅ NOVO: Modal de Encerramento de Tratamento (apenas para Admin com Plano Pro) */}
+      {user?.is_admin && hasProAccess() && (
+        <TerminatePatientModal
+          isOpen={isTerminateModalOpen}
+          onClose={handleCloseTerminateModal}
+          patient={selectedPatient}
+          futureSessions={futureSessions}
+          onConfirm={handleConfirmTerminate}
         />
       )}
     </>

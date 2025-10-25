@@ -11,6 +11,9 @@ router.get('/prompt-levels', requireProPlan, assignmentController.getPromptLevel
 // Rota para registrar progresso (evolução)
 router.post('/progress', requireProPlan, assignmentController.recordProgress);
 
+// ✅ NOVO: Rota para registrar progresso com vinculação automática ao agendamento
+router.post('/progress-with-link', requireProPlan, assignmentController.recordProgressWithLink);
+
 // Rota para atribuir um programa a um paciente
 router.post('/', requireProPlan, assignmentController.assignProgramToPatient);
 

@@ -308,6 +308,30 @@ const AppointmentDetailsModal = ({
             </div>
           </div>
 
+          {/* ✅ NOVO: Sessão Vinculada (Plano Pro) */}
+          {appointment.progress_session_id && (
+            <div className="bg-green-50 p-4 rounded-lg mb-6 border-2 border-green-200">
+              <h3 className="text-sm font-medium text-green-800 mb-3 flex items-center">
+                <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
+                Sessão Registrada (Plano Pro)
+              </h3>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-300">
+                    <FontAwesomeIcon icon={faCheckCircle} className="mr-1 w-3 h-3" />
+                    Vinculada
+                  </span>
+                  <span className="text-sm text-green-700">
+                    ID da Sessão: #{appointment.progress_session_id}
+                  </span>
+                </div>
+                <div className="text-xs text-green-600 mt-2">
+                  Esta consulta possui um registro de sessão do Plano Pro vinculado. Os dados de progresso do paciente foram registrados e estão disponíveis nos relatórios.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Observações */}
           {appointment.notes && (
             <div className="bg-gray-50 p-4 rounded-lg mb-6">

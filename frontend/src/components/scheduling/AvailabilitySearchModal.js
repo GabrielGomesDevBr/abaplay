@@ -12,13 +12,13 @@ import {
   faSpinner,
   faFilter,
   faCheckCircle,
-  faDownload,
   faUserPlus,
   faEye,
   faFilePdf,
   faCopy
 } from '@fortawesome/free-solid-svg-icons';
 import availabilityApi from '../../api/availabilityApi';
+import recurrenceApi from '../../api/recurrenceApi';
 import { getDisciplineHierarchy } from '../../api/programApi';
 import { useAuth } from '../../context/AuthContext';
 import { generateAvailabilityPDF } from '../../utils/pdfGenerator';
@@ -45,7 +45,7 @@ const AvailabilitySearchModal = ({
 
   // Estados dos filtros
   const [filters, setFilters] = useState({
-    discipline_id: prefilledDisciplineId || '',
+    discipline_ids: prefilledDisciplineId ? [prefilledDisciplineId] : [], // ALTERADO: Array
     day_of_week: '',
     time_period: 'all',
     start_date: '',
@@ -66,6 +66,11 @@ const AvailabilitySearchModal = ({
   const [error, setError] = useState(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
+  // NOVO: Estados para melhorias
+  const [sortBy, setSortBy] = useState('date'); // 'date', 'specialty', 'preferred', 'time'
+  const [viewMode, setViewMode] = useState('list'); // 'list' ou 'grid'
+  const [patientConflicts, setPatientConflicts] = useState([]); // Datas/horários com conflito
+
   // Carregar disciplinas ao abrir
   useEffect(() => {
     if (isOpen && hasProAccess && hasProAccess()) {
@@ -78,11 +83,43 @@ const AvailabilitySearchModal = ({
     if (isOpen) {
       setFilters(prev => ({
         ...prev,
-        discipline_id: prefilledDisciplineId || prev.discipline_id,
+        discipline_ids: prefilledDisciplineId ? [prefilledDisciplineId] : prev.discipline_ids,
         patient_id: prefilledPatientId || prev.patient_id
       }));
     }
   }, [isOpen, prefilledDisciplineId, prefilledPatientId]);
+
+  // NOVO: Funções para manipular seleção de disciplinas
+  const toggleDiscipline = (disciplineId) => {
+    setFilters(prev => ({
+      ...prev,
+      discipline_ids: prev.discipline_ids.includes(disciplineId)
+        ? prev.discipline_ids.filter(id => id !== disciplineId) // Remover
+        : [...prev.discipline_ids, disciplineId] // Adicionar
+    }));
+  };
+
+  const selectAllDisciplines = () => {
+    setFilters(prev => ({
+      ...prev,
+      discipline_ids: disciplines.map(d => d.id)
+    }));
+  };
+
+  const clearAllDisciplines = () => {
+    setFilters(prev => ({
+      ...prev,
+      discipline_ids: []
+    }));
+  };
+
+  const toggleAllDisciplines = () => {
+    if (filters.discipline_ids.length === disciplines.length) {
+      clearAllDisciplines();
+    } else {
+      selectAllDisciplines();
+    }
+  };
 
   const loadDisciplines = async () => {
     try {
@@ -100,6 +137,96 @@ const AvailabilitySearchModal = ({
     } catch (error) {
       console.error('Erro ao carregar disciplinas:', error);
     }
+  };
+
+  // NOVO: Funções de preset
+  const getTodayString = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  const getDatePlusDays = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+  };
+
+  const applyPreset = (presetType) => {
+    switch (presetType) {
+      case 'quick':
+        setFilters(prev => ({
+          ...prev,
+          time_period: 'all',
+          start_date: getTodayString(),
+          end_date: getDatePlusDays(7),
+          require_specialty: false,
+          day_of_week: ''
+        }));
+        break;
+      case 'specialist':
+        setFilters(prev => ({
+          ...prev,
+          time_period: 'all',
+          start_date: getTodayString(),
+          end_date: '',
+          require_specialty: true,
+          day_of_week: ''
+        }));
+        break;
+      case 'morning':
+        setFilters(prev => ({
+          ...prev,
+          time_period: 'morning',
+          start_date: getTodayString(),
+          end_date: getDatePlusDays(14),
+          require_specialty: false,
+          day_of_week: ''
+        }));
+        break;
+      default:
+        break;
+    }
+  };
+
+  // NOVO: Função de ordenação
+  const getSortedResults = () => {
+    if (!results || results.length === 0) return [];
+
+    const sorted = [...results];
+
+    switch (sortBy) {
+      case 'date':
+        sorted.sort((a, b) => {
+          const dateCompare = a.available_date.localeCompare(b.available_date);
+          if (dateCompare !== 0) return dateCompare;
+          return a.available_time.localeCompare(b.available_time);
+        });
+        break;
+      case 'specialty':
+        sorted.sort((a, b) => {
+          if (a.has_specialty && !b.has_specialty) return -1;
+          if (!a.has_specialty && b.has_specialty) return 1;
+          return a.available_date.localeCompare(b.available_date);
+        });
+        break;
+      case 'time':
+        sorted.sort((a, b) => {
+          return a.available_time.localeCompare(b.available_time);
+        });
+        break;
+      default:
+        break;
+    }
+
+    return sorted;
+  };
+
+  // NOVO: Verificar se slot tem conflito
+  const hasConflict = (slot) => {
+    return patientConflicts.some(conflict =>
+      conflict.date === slot.available_date &&
+      conflict.time === slot.available_time
+    );
   };
 
   /**
@@ -167,6 +294,15 @@ const AvailabilitySearchModal = ({
           return; // Pula o patient_id
         }
 
+        // ALTERADO: Tratar discipline_ids como array
+        if (key === 'discipline_ids') {
+          if (value && value.length > 0) {
+            searchFilters[key] = value; // Enviar array
+          }
+          // Se vazio, não envia (null = todas)
+          return;
+        }
+
         if (value !== '' && value !== null && value !== undefined) {
           searchFilters[key] = value;
         }
@@ -174,9 +310,27 @@ const AvailabilitySearchModal = ({
 
       const response = await availabilityApi.searchAvailableSlots(searchFilters);
       setResults(response.slots || []);
+
+      // NOVO: Verificar conflitos se houver paciente selecionado
+      if (filters.patient_id && response.slots && response.slots.length > 0) {
+        try {
+          const conflictData = await recurrenceApi.checkPatientConflicts(
+            filters.patient_id,
+            response.slots
+          );
+          setPatientConflicts(conflictData.conflicts || []);
+        } catch (conflictError) {
+          console.error('[AVAILABILITY] Erro ao verificar conflitos:', conflictError);
+          // Não bloquear a busca se falhar a verificação de conflitos
+          setPatientConflicts([]);
+        }
+      } else {
+        setPatientConflicts([]);
+      }
     } catch (err) {
       setError(err.message || 'Erro ao buscar disponibilidade');
       setResults([]);
+      setPatientConflicts([]);
     } finally {
       setIsSearching(false);
     }
@@ -277,8 +431,11 @@ const AvailabilitySearchModal = ({
     // Criar texto simples
     let text = 'HORÁRIOS DISPONÍVEIS - ABAPLAY\n\n';
 
-    const disciplineName = disciplines.find(d => d.id === parseInt(filters.discipline_id))?.name || 'Todas as disciplinas';
-    text += `Especialidade: ${disciplineName}\n`;
+    // ALTERADO: Mostrar múltiplas disciplinas selecionadas
+    const selectedDisciplineNames = filters.discipline_ids.length > 0
+      ? filters.discipline_ids.map(id => disciplines.find(d => d.id === id)?.name).filter(Boolean).join(', ')
+      : 'Todas as disciplinas';
+    text += `Especialidade(s): ${selectedDisciplineNames}\n`;
     text += `Duração: ${filters.duration_minutes} minutos\n\n`;
 
     // Ordenar e agrupar
@@ -328,7 +485,7 @@ const AvailabilitySearchModal = ({
   const handleClose = () => {
     // Resetar estados
     setFilters({
-      discipline_id: '',
+      discipline_ids: [], // ALTERADO: Array vazio
       day_of_week: '',
       time_period: 'all',
       start_date: '',
@@ -347,8 +504,9 @@ const AvailabilitySearchModal = ({
     onClose();
   };
 
-  // Agrupar resultados por terapeuta
-  const groupedResults = results.reduce((acc, slot) => {
+  // MODIFICADO: Agrupar resultados ordenados por terapeuta
+  const sortedResults = getSortedResults();
+  const groupedResults = sortedResults.reduce((acc, slot) => {
     if (!acc[slot.therapist_id]) {
       acc[slot.therapist_id] = {
         therapist_name: slot.therapist_name,
@@ -356,6 +514,15 @@ const AvailabilitySearchModal = ({
       };
     }
     acc[slot.therapist_id].slots.push(slot);
+    return acc;
+  }, {});
+
+  // NOVO: Agrupar por data (para visualização em grade)
+  const groupedByDate = sortedResults.reduce((acc, slot) => {
+    if (!acc[slot.available_date]) {
+      acc[slot.available_date] = [];
+    }
+    acc[slot.available_date].push(slot);
     return acc;
   }, {});
 
@@ -433,27 +600,99 @@ const AvailabilitySearchModal = ({
             </div>
           </div>
 
+          {/* NOVO: Presets de Configuração */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Atalhos de Configuração
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => applyPreset('quick')}
+                className="p-3 border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all text-left"
+              >
+                <div className="font-medium text-blue-700 text-sm mb-1">⚡ Busca Rápida</div>
+                <div className="text-xs text-gray-600">
+                  Esta semana • Todos períodos
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => applyPreset('specialist')}
+                className="p-3 border-2 border-green-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all text-left"
+              >
+                <div className="font-medium text-green-700 text-sm mb-1">👨‍⚕️ Especialistas</div>
+                <div className="text-xs text-gray-600">
+                  Apenas especialistas
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => applyPreset('morning')}
+                className="p-3 border-2 border-purple-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all text-left"
+              >
+                <div className="font-medium text-purple-700 text-sm mb-1">🌅 Manhãs</div>
+                <div className="text-xs text-gray-600">
+                  Período manhã • Próximas 2 semanas
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Filtros Principais */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            {/* Disciplina */}
+            {/* Disciplinas (Seleção Múltipla) */}
             {hasProAccess && hasProAccess() && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <FontAwesomeIcon icon={faStethoscope} className="mr-2" />
-                  Disciplina
-                </label>
-                <select
-                  value={filters.discipline_id}
-                  onChange={(e) => handleFilterChange('discipline_id', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Todas as disciplinas</option>
-                  {disciplines.map(discipline => (
-                    <option key={discipline.id} value={discipline.id}>
-                      {discipline.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="md:col-span-3">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    <FontAwesomeIcon icon={faStethoscope} className="mr-2" />
+                    Disciplinas
+                  </label>
+                  <button
+                    type="button"
+                    onClick={toggleAllDisciplines}
+                    className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                  >
+                    {filters.discipline_ids.length === disciplines.length
+                      ? 'Desmarcar todas'
+                      : 'Marcar todas'}
+                  </button>
+                </div>
+
+                <div className="border border-gray-300 rounded-lg p-3 bg-gray-50 max-h-40 overflow-y-auto">
+                  {disciplines.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-2">
+                      Carregando disciplinas...
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {disciplines.map(discipline => (
+                        <label
+                          key={discipline.id}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded transition"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={filters.discipline_ids.includes(discipline.id)}
+                            onChange={() => toggleDiscipline(discipline.id)}
+                            className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                          />
+                          <span className="text-sm text-gray-700">{discipline.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Contador de selecionadas */}
+                <p className="text-xs text-gray-600 mt-1">
+                  {filters.discipline_ids.length === 0
+                    ? 'Nenhuma selecionada (busca em todas)'
+                    : `${filters.discipline_ids.length} de ${disciplines.length} selecionada${filters.discipline_ids.length > 1 ? 's' : ''}`}
+                </p>
               </div>
             )}
 
@@ -611,10 +850,53 @@ const AvailabilitySearchModal = ({
                 </div>
               ) : (
                 <div>
-                  <div className="mb-4 flex flex-col xs:flex-row justify-between items-stretch xs:items-center gap-2">
+                  {/* NOVO: Barra de controles (ordenação + visualização) */}
+                  <div className="mb-4 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <h3 className="text-lg font-semibold text-gray-800">
                       {results.length} horário{results.length !== 1 ? 's' : ''} disponível{results.length !== 1 ? 'is' : ''}
                     </h3>
+
+                    <div className="flex flex-col xs:flex-row gap-2">
+                      {/* Ordenação */}
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="date">📅 Data mais próxima</option>
+                        <option value="specialty">⭐ Especialistas primeiro</option>
+                        <option value="time">🕐 Horário</option>
+                      </select>
+
+                      {/* Toggle de visualização */}
+                      <div className="flex bg-white border border-gray-300 rounded-lg overflow-hidden">
+                        <button
+                          onClick={() => setViewMode('list')}
+                          className={`px-3 py-2 text-sm font-medium transition-colors ${
+                            viewMode === 'list'
+                              ? 'bg-blue-600 text-white'
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                          title="Visualização em lista"
+                        >
+                          📋 Lista
+                        </button>
+                        <button
+                          onClick={() => setViewMode('grid')}
+                          className={`px-3 py-2 text-sm font-medium transition-colors border-l border-gray-300 ${
+                            viewMode === 'grid'
+                              ? 'bg-blue-600 text-white'
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                          title="Visualização em grade por dia"
+                        >
+                          📆 Grade
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-4 flex flex-col xs:flex-row justify-between items-stretch xs:items-center gap-2">
 
                     {/* NOVO: Botões de exportação (modo consulta) */}
                     {searchMode === 'consult' && selectedSlots.length > 0 && (
@@ -651,18 +933,27 @@ const AvailabilitySearchModal = ({
                     )}
                   </div>
 
-                  {/* Resultados agrupados por terapeuta */}
-                  <div className="space-y-4">
-                    {Object.keys(groupedResults).map(therapistId => {
-                      const group = groupedResults[therapistId];
+                  {/* Resultados - Visualização Condicional */}
+                  {viewMode === 'list' ? (
+                    /* VISUALIZAÇÃO EM LISTA - Agrupado por terapeuta */
+                    <div className="space-y-6">
+                      {Object.keys(groupedResults).map((therapistId, therapistIndex) => {
+                        const group = groupedResults[therapistId];
                       // NOVO: Para checkbox master
                       const therapistSlots = group.slots;
                       const allSelected = searchMode === 'consult' && therapistSlots.every(slot => isSlotSelected(slot));
                       const someSelected = searchMode === 'consult' && therapistSlots.some(slot => isSlotSelected(slot)) && !allSelected;
 
                       return (
-                        <div key={therapistId} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                          <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                        <div key={therapistId}>
+                          {/* Separador visual entre terapeutas */}
+                          {therapistIndex > 0 && (
+                            <div className="border-t-4 border-indigo-600 mb-6"></div>
+                          )}
+
+                          <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden shadow-sm">
+                          {/* Header do terapeuta com destaque visual */}
+                          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 border-b-2 border-blue-700">
                             <div className="flex items-center gap-3">
                               {/* NOVO: Checkbox master (só no modo consulta) */}
                               {searchMode === 'consult' && (
@@ -673,15 +964,15 @@ const AvailabilitySearchModal = ({
                                     if (input) input.indeterminate = someSelected;
                                   }}
                                   onChange={() => handleSelectAllTherapist(therapistId)}
-                                  className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded touch-manipulation"
+                                  className="h-5 w-5 text-green-600 bg-white border-2 border-white rounded touch-manipulation focus:ring-2 focus:ring-green-400"
                                 />
                               )}
 
-                              <h4 className="font-semibold text-gray-800 flex items-center">
-                                <FontAwesomeIcon icon={faUser} className="mr-2 text-blue-600" />
+                              <h4 className="font-bold text-white flex items-center text-base">
+                                <FontAwesomeIcon icon={faUser} className="mr-2" />
                                 {group.therapist_name}
-                                <span className="ml-2 text-sm font-normal text-gray-600">
-                                  ({group.slots.length} horário{group.slots.length !== 1 ? 's' : ''})
+                                <span className="ml-3 text-sm font-normal bg-white/20 px-2 py-0.5 rounded">
+                                  {group.slots.length} horário{group.slots.length !== 1 ? 's' : ''}
                                 </span>
                               </h4>
                             </div>
@@ -692,18 +983,18 @@ const AvailabilitySearchModal = ({
                               const selected = isSlotSelected(slot);
 
                               return searchMode === 'consult' ? (
-                                // MODO CONSULTA: Checkbox
+                                // MODO CONSULTA: Checkbox (VERDE para não confundir com cabeçalho azul)
                                 <label
                                   key={index}
                                   className={`px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors cursor-pointer touch-manipulation ${
-                                    selected ? 'bg-indigo-50' : ''
+                                    selected ? 'bg-green-50' : ''
                                   }`}
                                 >
                                   <input
                                     type="checkbox"
                                     checked={selected}
                                     onChange={() => handleToggleSlot(slot)}
-                                    className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded flex-shrink-0 touch-manipulation"
+                                    className="h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded flex-shrink-0 touch-manipulation"
                                   />
 
                                   <div className="flex-1 min-w-0">
@@ -730,6 +1021,11 @@ const AvailabilitySearchModal = ({
 
                                     {/* Badges */}
                                     <div className="flex flex-wrap gap-2 mt-2">
+                                      {hasConflict(slot) && (
+                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-300">
+                                          ⚠️ Conflito: Paciente já tem agendamento neste horário
+                                        </span>
+                                      )}
                                       {slot.has_specialty && (
                                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
                                           <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
@@ -779,6 +1075,11 @@ const AvailabilitySearchModal = ({
 
                                     {/* Badges */}
                                     <div className="flex flex-wrap gap-2 mt-2">
+                                      {hasConflict(slot) && (
+                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-300">
+                                          ⚠️ Conflito: Paciente já tem agendamento neste horário
+                                        </span>
+                                      )}
                                       {slot.has_specialty && (
                                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
                                           <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
@@ -808,10 +1109,130 @@ const AvailabilitySearchModal = ({
                               );
                             })}
                           </div>
+                          </div>
                         </div>
                       );
                     })}
                   </div>
+                  ) : (
+                    /* VISUALIZAÇÃO EM GRADE - Agrupado por data */
+                    <div className="space-y-4">
+                      {Object.keys(groupedByDate).sort().map((date, dateIndex) => {
+                        const daySlots = groupedByDate[date];
+
+                        return (
+                          <div key={date} className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden shadow-sm">
+                            {/* Header da data */}
+                            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3 border-b-2 border-indigo-700">
+                              <h4 className="font-bold text-white flex items-center text-base">
+                                <FontAwesomeIcon icon={faCalendarAlt} className="mr-2" />
+                                {formatDate(date)} - {translateDayName(daySlots[0].day_name)}
+                                <span className="ml-3 text-sm font-normal bg-white/20 px-2 py-0.5 rounded">
+                                  {daySlots.length} horário{daySlots.length !== 1 ? 's' : ''}
+                                </span>
+                              </h4>
+                            </div>
+
+                            {/* Grade de horários */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+                              {daySlots.map((slot, index) => {
+                                const selected = isSlotSelected(slot);
+                                const conflict = hasConflict(slot);
+
+                                return searchMode === 'consult' ? (
+                                  /* MODO CONSULTA: Card com checkbox */
+                                  <label
+                                    key={index}
+                                    className={`border-2 rounded-lg p-3 cursor-pointer transition-all ${
+                                      selected
+                                        ? 'border-green-500 bg-green-50'
+                                        : conflict
+                                        ? 'border-red-300 bg-red-50'
+                                        : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                                    }`}
+                                  >
+                                    <div className="flex items-start gap-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={selected}
+                                        onChange={() => handleToggleSlot(slot)}
+                                        className="h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded flex-shrink-0 mt-0.5"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <FontAwesomeIcon icon={faClock} className="text-blue-600" />
+                                          <span className="font-bold text-lg text-gray-900">
+                                            {slot.available_time.slice(0, 5)}
+                                          </span>
+                                        </div>
+                                        <div className="text-sm text-gray-700 mb-2">
+                                          <FontAwesomeIcon icon={faUser} className="text-gray-400 mr-1" />
+                                          {slot.therapist_name}
+                                        </div>
+                                        {/* Badges compactos */}
+                                        <div className="flex flex-wrap gap-1">
+                                          {conflict && (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                              ⚠️ Conflito
+                                            </span>
+                                          )}
+                                          {slot.has_specialty && (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                              ⭐
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </label>
+                                ) : (
+                                  /* MODO SCHEDULE: Card com botão */
+                                  <div
+                                    key={index}
+                                    className={`border-2 rounded-lg p-3 transition-all ${
+                                      conflict
+                                        ? 'border-red-300 bg-red-50'
+                                        : 'border-gray-300 hover:border-blue-400 hover:shadow-md'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <FontAwesomeIcon icon={faClock} className="text-blue-600" />
+                                      <span className="font-bold text-lg text-gray-900">
+                                        {slot.available_time.slice(0, 5)}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm text-gray-700 mb-2">
+                                      <FontAwesomeIcon icon={faUser} className="text-gray-400 mr-1" />
+                                      {slot.therapist_name}
+                                    </div>
+                                    {/* Badges compactos */}
+                                    <div className="flex flex-wrap gap-1 mb-3">
+                                      {conflict && (
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                          ⚠️ Conflito
+                                        </span>
+                                      )}
+                                      {slot.has_specialty && (
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                          ⭐ Especialista
+                                        </span>
+                                      )}
+                                    </div>
+                                    <button
+                                      onClick={() => handleSelectSlot(slot)}
+                                      className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                                    >
+                                      Selecionar
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

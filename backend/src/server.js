@@ -31,6 +31,8 @@ const availabilitySearchRoutes = require('./routes/availabilitySearchRoutes');
 const therapistSpecialtyRoutes = require('./routes/therapistSpecialtyRoutes');
 // --- Sistema de gestão de disponibilidade de terapeutas ---
 const therapistAvailabilityRoutes = require('./routes/therapistAvailabilityRoutes');
+// --- Sistema de gerenciamento de recorrências ---
+const recurrenceManagementRoutes = require('./routes/recurrenceManagementRoutes');
 
 // --- Job unificado de manutenção de sessões (NOVO) ---
 const SessionMaintenanceJob = require('./jobs/sessionMaintenanceJob');
@@ -130,6 +132,8 @@ app.use('/api/availability', verifyToken, verifyClinicStatus, availabilitySearch
 app.use('/api/therapists', verifyToken, verifyClinicStatus, therapistSpecialtyRoutes);
 // --- Sistema de gestão de disponibilidade de terapeutas ---
 app.use('/api/therapist-availability', verifyToken, verifyClinicStatus, therapistAvailabilityRoutes);
+// --- Sistema de gerenciamento de recorrências (cancelamento em lote) ---
+app.use('/api/recurrence', verifyToken, verifyClinicStatus, recurrenceManagementRoutes);
 
 
 // Rota de autenticação (não precisa de token)

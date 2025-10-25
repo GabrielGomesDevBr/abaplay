@@ -1,4 +1,5 @@
 const Assignment = require('../models/assignmentModel');
+const ScheduledSession = require('../models/scheduledSessionModel');
 const { getAllPromptLevels, getPromptLevel, isValidPromptLevel, calculateProgressScore } = require('../utils/promptLevels');
 
 /**
@@ -151,6 +152,255 @@ exports.recordProgress = async (req, res) => {
     } catch (error) {
         console.error('[CONTROLLER-ERROR] recordProgress:', error);
         res.status(500).send('Erro ao registrar progresso.');
+    }
+};
+
+/**
+ * ✅ NOVO INTELIGENTE: Registra progresso e vincula automaticamente ao agendamento
+ * Versão com detecção de mesma sessão, priorização por disciplina, e alertas educacionais
+ * @description Registra sessão de programa e vincula ao agendamento correspondente (se existir)
+ * @route POST /api/assignments/progress-with-link
+ */
+exports.recordProgressWithLink = async (req, res) => {
+    try {
+        const progressData = { ...req.body, therapist_id: req.user.id };
+        const {
+            patient_id,
+            session_date,
+            assignment_id,
+            create_retroactive = false,
+            selected_appointment_id = null
+        } = progressData;
+        const clinic_id = req.user.clinic_id;
+
+        // 1. Processa níveis de prompting (mesmo fluxo do recordProgress)
+        if (progressData.details && progressData.details.promptLevel !== undefined) {
+            const promptLevelId = progressData.details.promptLevel;
+
+            if (!isValidPromptLevel(promptLevelId)) {
+                return res.status(400).json({
+                    errors: [{ msg: 'Nível de prompting inválido. Deve ser entre 0 e 5.' }]
+                });
+            }
+
+            const promptLevel = getPromptLevel(promptLevelId);
+            progressData.details.promptLevelName = promptLevel.name;
+            progressData.details.promptLevelColor = promptLevel.color;
+
+            if (progressData.attempts > 0) {
+                const successRate = progressData.successes / progressData.attempts;
+                progressData.details.progressScore = calculateProgressScore(promptLevelId, successRate);
+            }
+        }
+
+        // 2. NOVO: Detectar se existe sessão recente (janela de 1 hora) - "mesma sessão"
+        const recentSession = await ScheduledSession.detectSameSession({
+            patient_id,
+            therapist_id: req.user.id,
+            session_date,
+            clinic_id,
+            window_minutes: 60 // 1 hora
+        });
+
+        // 3. Buscar disciplina do programa para priorização
+        let programDisciplineId = null;
+        if (assignment_id) {
+            try {
+                const assignmentDetails = await Assignment.getAssignmentDetailsById(assignment_id);
+                programDisciplineId = assignmentDetails?.discipline_id || null;
+            } catch (err) {
+                console.warn(`[PROGRESS-LINK] Não foi possível buscar disciplina do assignment ${assignment_id}:`, err.message);
+            }
+        }
+
+        // 4. Registra progresso normalmente
+        const progress = await Assignment.createProgress(progressData);
+        console.log(`[PROGRESS-LINK] ✓ Progresso registrado: ID ${progress.id} para paciente ${patient_id} em ${session_date}`);
+
+        // 5. Se houver sessão recente (mesma sessão), usar o mesmo agendamento vinculado
+        if (recentSession && selected_appointment_id === null) {
+            // Buscar o agendamento que foi vinculado à sessão recente
+            const recentAppointmentQuery = await ScheduledSession.findMatchingAppointment({
+                patient_id,
+                therapist_id: req.user.id,
+                session_date,
+                discipline_id: programDisciplineId,
+                clinic_id
+            });
+
+            if (recentAppointmentQuery) {
+                // Adicionar nova sessão ao mesmo agendamento (múltiplos programas)
+                // Nota: progress_session_id armazena o primeiro registro, mas podemos usar notas para trackear múltiplos
+                const updatedNotes = recentAppointmentQuery.notes
+                    ? `${recentAppointmentQuery.notes} | Programa adicional ID ${progress.id}`
+                    : `Múltiplos programas trabalhados. Primeira sessão: ${recentAppointmentQuery.progress_session_id}, adicional: ${progress.id}`;
+
+                await ScheduledSession.linkToProgressSession(
+                    recentAppointmentQuery.id,
+                    recentAppointmentQuery.progress_session_id || progress.id, // Manter o primeiro
+                    updatedNotes
+                );
+
+                console.log(`[PROGRESS-LINK] ✓ Mesma sessão detectada! Vinculado ao mesmo agendamento ${recentAppointmentQuery.id}`);
+
+                return res.status(201).json({
+                    success: true,
+                    progress,
+                    linked: true,
+                    same_session: true,
+                    appointment: {
+                        id: recentAppointmentQuery.id,
+                        scheduled_time: recentAppointmentQuery.scheduled_time,
+                        discipline_id: recentAppointmentQuery.discipline_id
+                    },
+                    message: 'Sessão registrada (mesmo atendimento da sessão anterior)!'
+                });
+            }
+        }
+
+        // 6. Se terapeuta selecionou agendamento manualmente (disciplina diferente)
+        if (selected_appointment_id) {
+            const selectedAppointment = await ScheduledSession.findById(selected_appointment_id, clinic_id);
+
+            if (!selectedAppointment) {
+                return res.status(404).json({
+                    success: false,
+                    errors: [{ msg: 'Agendamento selecionado não encontrado.' }]
+                });
+            }
+
+            await ScheduledSession.linkToProgressSession(selected_appointment_id, progress.id, progressData.notes);
+
+            console.log(`[PROGRESS-LINK] ✓ Vinculação manual: Agendamento ${selected_appointment_id} ← Sessão ${progress.id}`);
+
+            return res.status(201).json({
+                success: true,
+                progress,
+                linked: true,
+                manually_selected: true,
+                appointment: {
+                    id: selectedAppointment.id,
+                    scheduled_time: selectedAppointment.scheduled_time,
+                    discipline_id: selectedAppointment.discipline_id
+                },
+                message: 'Sessão registrada e vinculada ao agendamento selecionado!'
+            });
+        }
+
+        // 7. Busca agendamento correspondente com priorização por disciplina
+        const appointment = await ScheduledSession.findMatchingAppointment({
+            patient_id,
+            therapist_id: req.user.id,
+            session_date,
+            discipline_id: programDisciplineId,
+            clinic_id
+        });
+
+        // 8. Se encontrou agendamento, verificar disciplina
+        if (appointment) {
+            // Verificar se disciplinas são diferentes (e ambas definidas)
+            const disciplineMismatch = programDisciplineId &&
+                appointment.discipline_id &&
+                programDisciplineId !== appointment.discipline_id;
+
+            if (disciplineMismatch) {
+                // Buscar todos os agendamentos disponíveis para o terapeuta escolher
+                const allAppointments = await ScheduledSession.findAllMatchingAppointments({
+                    patient_id,
+                    therapist_id: req.user.id,
+                    session_date,
+                    clinic_id
+                });
+
+                console.log(`[PROGRESS-LINK] ⚠️ Disciplina diferente detectada. Solicitando confirmação do terapeuta.`);
+
+                return res.status(201).json({
+                    success: true,
+                    progress,
+                    linked: false,
+                    ask_therapist: true,
+                    available_appointments: allAppointments.map(apt => ({
+                        id: apt.id,
+                        scheduled_time: apt.scheduled_time,
+                        discipline_id: apt.discipline_id,
+                        discipline_name: apt.discipline_name,
+                        status: apt.status
+                    })),
+                    program_discipline_id: programDisciplineId,
+                    message: 'Disciplina do programa difere do agendamento. Qual agendamento corresponde a esta sessão?'
+                });
+            }
+
+            // Disciplina match ou não definida - vincular automaticamente
+            await ScheduledSession.linkToProgressSession(appointment.id, progress.id, progressData.notes);
+
+            console.log(`[PROGRESS-LINK] ✓ Vinculação automática: Agendamento ${appointment.id} ← Sessão ${progress.id}`);
+
+            // Calcular tempo desde o agendamento para alertas educacionais
+            const appointmentDateTime = new Date(`${appointment.scheduled_date}T${appointment.scheduled_time}`);
+            const now = new Date();
+            const hoursSinceAppointment = (now - appointmentDateTime) / (1000 * 60 * 60);
+
+            // Alerta educacional se registro tardio (> 4 horas)
+            const delayedRegistration = hoursSinceAppointment > 4;
+
+            return res.status(201).json({
+                success: true,
+                progress,
+                linked: true,
+                appointment: {
+                    id: appointment.id,
+                    scheduled_time: appointment.scheduled_time,
+                    discipline_id: appointment.discipline_id,
+                    discipline_name: appointment.discipline_name
+                },
+                delayed_registration: delayedRegistration,
+                hours_since_appointment: Math.round(hoursSinceAppointment * 10) / 10,
+                message: delayedRegistration
+                    ? `Sessão registrada! (Dica: registre logo após a sessão para melhor organização)`
+                    : 'Sessão registrada e vinculada ao agendamento!'
+            });
+        }
+
+        // 9. Nenhum agendamento encontrado - oferecer criar retroativo
+        if (create_retroactive) {
+            const retroactiveAppointment = await ScheduledSession.createRetroactiveAppointment({
+                patient_id,
+                therapist_id: req.user.id,
+                session_date,
+                session_id: progress.id,
+                created_by: req.user.id
+            });
+
+            console.log(`[PROGRESS-LINK] ✓ Agendamento retroativo criado: ID ${retroactiveAppointment.id} para sessão ${progress.id}`);
+
+            return res.status(201).json({
+                success: true,
+                progress,
+                linked: true,
+                appointment: retroactiveAppointment,
+                retroactive: true,
+                message: 'Sessão registrada e agendamento retroativo criado!'
+            });
+        }
+
+        // 10. Nenhum agendamento encontrado e não quer retroativo - sugerir
+        console.log(`[PROGRESS-LINK] ⚠️ Nenhum agendamento encontrado para paciente ${patient_id} em ${session_date}`);
+
+        return res.status(201).json({
+            success: true,
+            progress,
+            linked: false,
+            suggest_retroactive: true,
+            message: 'Sessão registrada. Deseja criar um agendamento retroativo?'
+        });
+
+    } catch (error) {
+        console.error('[CONTROLLER-ERROR] recordProgressWithLink:', error);
+        res.status(500).json({
+            success: false,
+            errors: [{ msg: 'Erro ao registrar progresso com vinculação.' }]
+        });
     }
 };
 

@@ -4,6 +4,7 @@
 // - CORRIGIDO: Padronizada a estrutura de resposta de erro para ser consistente
 //   com o resto da aplicação ({ errors: [{ msg: '...' }] }).
 // - MELHORADO: Adicionados logs mais detalhados para depuração de erros de token.
+// - ADICIONADO: Middleware `requireAdmin` para verificar permissões de administrador.
 // -----------------------------------------------------------------------------
 
 const jwt = require('jsonwebtoken');
@@ -54,8 +55,16 @@ const verifyToken = (req, res, next) => {
   }
 };
 
+const requireAdmin = (req, res, next) => {
+  if (!req.user || !req.user.is_admin) {
+    return res.status(403).json({ errors: [{ msg: 'Acesso negado. Requer privilégios de administrador.' }] });
+  }
+  next();
+};
+
 module.exports = {
-  verifyToken
+  verifyToken,
+  requireAdmin
 };
 
 // -----------------------------------------------------------------------------

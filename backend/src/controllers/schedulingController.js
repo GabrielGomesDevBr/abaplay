@@ -1191,6 +1191,46 @@ const SchedulingController = {
                 errors: [{ msg: error.message || 'Erro ao registrar sessão.' }]
             });
         }
+    },
+
+    /**
+     * ✅ NOVO: Buscar agendamentos de hoje para um paciente específico
+     * GET /api/scheduling/patient/:patient_id/today
+     * Usado para mostrar badge de agendamentos no Pro plan
+     */
+    async getTodayAppointmentsForPatient(req, res, next) {
+        try {
+            const { patient_id } = req.params;
+            const { clinic_id, id: therapist_id } = req.user;
+
+            const today = new Date().toISOString().split('T')[0];
+
+            const appointments = await ScheduledSessionModel.findAll({
+                clinic_id,
+                patient_id: parseInt(patient_id),
+                therapist_id: parseInt(therapist_id), // Apenas agendamentos do terapeuta logado
+                start_date: today,
+                end_date: today,
+                limit: 10,
+                offset: 0
+            });
+
+            // Filtrar apenas agendamentos scheduled ou completed (não cancelados)
+            const activeAppointments = appointments.filter(apt =>
+                ['scheduled', 'completed'].includes(apt.status)
+            );
+
+            res.status(200).json({
+                patient_id: parseInt(patient_id),
+                date: today,
+                count: activeAppointments.length,
+                appointments: activeAppointments
+            });
+
+        } catch (error) {
+            console.error(`[SCHEDULING-CONTROLLER] Erro ao buscar agendamentos de hoje para paciente ${req.params.patient_id}:`, error);
+            next(error);
+        }
     }
 };
 

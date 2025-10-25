@@ -16,7 +16,7 @@ const db = require('./db');
 exports.searchAvailableSlots = async (params) => {
     const {
         clinic_id,
-        discipline_id = null,
+        discipline_ids = null,  // ALTERADO: Agora é array
         day_of_week = null,
         time_period = 'all',
         start_date = null,
@@ -27,10 +27,15 @@ exports.searchAvailableSlots = async (params) => {
         patient_id = null
     } = params;
 
+    // CONVERSÃO: Se discipline_ids for array vazio, tratar como NULL
+    const finalDisciplineIds = (discipline_ids && discipline_ids.length > 0)
+        ? discipline_ids
+        : null;
+
     const query = `
         SELECT * FROM search_available_slots(
             p_clinic_id := $1,
-            p_discipline_id := $2,
+            p_discipline_ids := $2,  -- ALTERADO: Agora recebe array
             p_day_of_week := $3,
             p_time_period := $4,
             p_start_date := $5,
@@ -44,7 +49,7 @@ exports.searchAvailableSlots = async (params) => {
 
     const result = await db.query(query, [
         clinic_id,
-        discipline_id,
+        finalDisciplineIds,  // PostgreSQL aceita array JavaScript diretamente
         day_of_week,
         time_period,
         start_date || new Date().toISOString().split('T')[0],

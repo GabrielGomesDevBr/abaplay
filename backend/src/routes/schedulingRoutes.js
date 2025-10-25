@@ -351,4 +351,17 @@ router.post(
     schedulingController.validateAssignment
 );
 
+/**
+ * ✅ NOVO: Buscar agendamentos de hoje para um paciente (Pro plan)
+ * GET /api/scheduling/patient/:patient_id/today
+ */
+router.get(
+    '/patient/:patient_id/today',
+    verifyToken,
+    [
+        param('patient_id', 'ID do paciente deve ser um número válido.').isInt()
+    ],
+    schedulingController.getTodayAppointmentsForPatient
+);
+
 module.exports = router;

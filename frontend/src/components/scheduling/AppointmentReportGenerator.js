@@ -78,9 +78,21 @@ export class AppointmentReportGenerator {
     };
 
 
+    // ✅ NOVO: Calcular métricas de vinculação (Plano Pro)
+    const linkedSessions = appointments.filter(a => a.progress_session_id).length;
+    const completedAppointments = appointments.filter(a => a.status === 'completed').length;
+    const linkageRate = completedAppointments > 0
+      ? ((linkedSessions / completedAppointments) * 100).toFixed(1)
+      : 0;
+
     return {
       appointments,
-      statistics,
+      statistics: {
+        ...statistics,
+        // ✅ NOVO: Métricas de vinculação de sessões (Plano Pro)
+        linked_sessions: linkedSessions,
+        linkage_rate: parseFloat(linkageRate)
+      },
       config
     };
   }
@@ -258,7 +270,9 @@ export class AppointmentReportGenerator {
       ['Faltas Não Justificadas', `${missedNotJustified} (${this.calculatePercentage(missedNotJustified, statistics.total_appointments)}%)`],
       ['Faltas Justificadas', `${missedJustified} (${this.calculatePercentage(missedJustified, statistics.total_appointments)}%)`],
       ['Cancelamentos', `${statistics.cancelled_appointments || 0} (${this.calculatePercentage(statistics.cancelled_appointments, statistics.total_appointments)}%)`],
-      ['Taxa de Comparecimento', `${statistics.attendance_rate || 0}%`]
+      ['Taxa de Comparecimento', `${statistics.attendance_rate || 0}%`],
+      // ✅ NOVO: Métricas de vinculação (Plano Pro)
+      ['Sessões com Registro Vinculado', `${statistics.linked_sessions || 0} (${statistics.linkage_rate || 0}%)`]
     ];
 
     doc.autoTable({
@@ -304,6 +318,14 @@ export class AppointmentReportGenerator {
     doc.setTextColor(100, 100, 100);
     doc.text('* Taxa de Comparecimento calculada sobre agendamentos não cancelados', margin, finalY);
     doc.text(`  (${statistics.completed_appointments || 0} realizadas ÷ ${totalNonCancelled} não canceladas = ${statistics.attendance_rate || 0}%)`, margin, finalY + 4);
+
+    // ✅ NOVO: Nota explicativa sobre vinculação de sessões (Plano Pro)
+    if (statistics.linked_sessions > 0) {
+      doc.text('** Sessões com Registro Vinculado: agendamentos que possuem registro de progresso (Plano Pro)', margin, finalY + 8);
+      doc.text(`   (${statistics.linked_sessions || 0} vinculadas ÷ ${statistics.completed_appointments || 0} realizadas = ${statistics.linkage_rate || 0}%)`, margin, finalY + 12);
+      finalY += 8;
+    }
+
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'normal');
 
@@ -596,6 +618,12 @@ export class AppointmentReportGenerator {
       ? `${hoursWorked}h ${minutesRemaining}m`
       : `${minutesRemaining}min`;
 
+    // ✅ NOVO: Calcular métricas de vinculação (Plano Pro)
+    const linkedSessions = appointments.filter(a => a.progress_session_id).length;
+    const linkageRate = stats.completed > 0
+      ? ((linkedSessions / stats.completed) * 100).toFixed(1)
+      : 0;
+
     const performanceData = [
       ['Total de Agendamentos', `${stats.total}`],
       ['Sessões Realizadas', `${stats.completed} (${stats.completedRate}%)`],
@@ -603,7 +631,9 @@ export class AppointmentReportGenerator {
       ['Faltas Sem Justificativa', `${missedNotJustified} (${this.calculatePercentage(missedNotJustified, stats.total)}%)`],
       ['Faltas Justificadas', `${missedJustified} (${this.calculatePercentage(missedJustified, stats.total)}%)`],
       ['Cancelamentos', `${stats.cancelled} (${stats.cancelledRate}%)`],
-      ['Taxa de Comparecimento', `${stats.attendanceRate}%`]
+      ['Taxa de Comparecimento', `${stats.attendanceRate}%`],
+      // ✅ NOVO: Métricas de vinculação (Plano Pro)
+      ['Sessões com Registro Vinculado', `${linkedSessions} (${linkageRate}%)`]
     ];
 
     doc.autoTable({
@@ -648,6 +678,14 @@ export class AppointmentReportGenerator {
     doc.setTextColor(100, 100, 100);
     doc.text('* Taxa de Comparecimento calculada sobre agendamentos não cancelados', margin, finalY);
     doc.text(`  (${stats.completed} realizadas ÷ ${stats.total - stats.cancelled} não canceladas = ${stats.attendanceRate}%)`, margin, finalY + 4);
+
+    // ✅ NOVO: Nota explicativa sobre vinculação de sessões (Plano Pro)
+    if (linkedSessions > 0) {
+      doc.text('** Sessões com Registro Vinculado: agendamentos que possuem registro de progresso (Plano Pro)', margin, finalY + 8);
+      doc.text(`   (${linkedSessions} vinculadas ÷ ${stats.completed} realizadas = ${linkageRate}%)`, margin, finalY + 12);
+      finalY += 8;
+    }
+
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'normal');
 

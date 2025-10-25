@@ -54,7 +54,8 @@ exports.searchAvailableSlots = async (req, res) => {
         }
 
         const {
-            discipline_id,
+            discipline_id,        // DEPRECATED: manter para compatibilidade
+            discipline_ids,       // NOVO: Array de IDs
             day_of_week,
             time_period,
             start_date,
@@ -68,9 +69,16 @@ exports.searchAvailableSlots = async (req, res) => {
         const clinicId = req.user.clinic_id;
         console.log('[AVAILABILITY] clinicId extraído:', clinicId);
 
+        // COMPATIBILIDADE: Se vier discipline_id (singular), converter para array
+        let finalDisciplineIds = discipline_ids;
+        if (!finalDisciplineIds && discipline_id) {
+            finalDisciplineIds = [discipline_id];
+            console.log('[AVAILABILITY] Convertido discipline_id para array:', finalDisciplineIds);
+        }
+
         const params = {
             clinic_id: clinicId,
-            discipline_id,
+            discipline_ids: finalDisciplineIds,  // ALTERADO: Agora é array
             day_of_week,
             time_period,
             start_date,
@@ -118,6 +126,8 @@ exports.suggestAppointments = async (req, res) => {
             patient_id,
             disciplines = [],
             time_period,
+            start_date,  // NOVO: Data inicial
+            end_date,    // NOVO: Data final
             require_specialty = true,
             max_suggestions_per_discipline = 5
         } = req.body;
@@ -125,20 +135,32 @@ exports.suggestAppointments = async (req, res) => {
         const clinicId = req.user.clinic_id;
         console.log('[AVAILABILITY] clinicId:', clinicId);
         console.log('[AVAILABILITY] Disciplinas solicitadas:', disciplines);
+        console.log('[AVAILABILITY] Período de datas:', { start_date, end_date });
 
         const suggestions = {};
 
         // Buscar sugestões para cada disciplina
         for (const disciplineId of disciplines) {
             console.log(`[AVAILABILITY] Buscando slots para disciplina ${disciplineId}...`);
-            const slots = await availabilityModel.searchAvailableSlots({
+
+            const searchParams = {
                 clinic_id: clinicId,
                 discipline_id: disciplineId,
                 time_period: time_period || 'all',
                 duration_minutes: 60,
                 require_specialty,
                 patient_id
-            });
+            };
+
+            // Adicionar datas se fornecidas
+            if (start_date) {
+                searchParams.start_date = start_date;
+            }
+            if (end_date) {
+                searchParams.end_date = end_date;
+            }
+
+            const slots = await availabilityModel.searchAvailableSlots(searchParams);
 
             console.log(`[AVAILABILITY] Disciplina ${disciplineId}: ${slots.length} slots encontrados`);
             const normalizedSlots = normalizeSlots(slots);

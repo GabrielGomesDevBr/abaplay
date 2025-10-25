@@ -10,7 +10,8 @@ import {
   faCalendarAlt,
   faSync,
   faExclamationTriangle,
-  faTimes  // ✅ NOVO: Ícone para cancelar
+  faTimes,  // ✅ Ícone para cancelar
+  faCalendarTimes  // ✅ Ícone para gerenciar recorrências
 } from '@fortawesome/free-solid-svg-icons';
 
 /**
@@ -28,7 +29,8 @@ const AppointmentActions = ({
   onViewDetails,
   onJustify,
   onViewNextOccurrences,
-  onCancel, // ✅ NOVO: Handler para cancelamento
+  onCancel, // ✅ Handler para cancelamento
+  onManageRecurrence, // ✅ Handler para gerenciar recorrências
   className = ''
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -37,9 +39,10 @@ const AppointmentActions = ({
   const isRecurring = !!appointment.recurring_template_id;
   const isMissed = appointment.status === 'missed';
   const isCompleted = appointment.status === 'completed';
-  const isScheduled = appointment.status === 'scheduled'; // ✅ NOVO: Verificar se está agendado
-  const isCancelled = appointment.status === 'cancelled'; // ✅ NOVO: Verificar se foi cancelado
-  const isJustified = !!appointment.justified_at; // ✅ Verificar se já foi justificado
+  const isScheduled = appointment.status === 'scheduled';
+  const isCancelled = appointment.status === 'cancelled';
+  const isJustified = !!appointment.justified_at;
+  // hasLinkedSession removido - não é mais necessário sem a opção "Registrar Sessão"
 
   // Fechar menu ao clicar fora
   useEffect(() => {
@@ -139,6 +142,17 @@ const AppointmentActions = ({
             >
               <FontAwesomeIcon icon={faCalendarAlt} className="w-4 h-4 text-indigo-500" />
               <span>Ver Próximas Ocorrências</span>
+            </button>
+          )}
+
+          {/* Gerenciar recorrências - só para recorrentes */}
+          {isRecurring && (
+            <button
+              onClick={() => handleAction('manageRecurrence', onManageRecurrence)}
+              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-orange-50 flex items-center space-x-3"
+            >
+              <FontAwesomeIcon icon={faCalendarTimes} className="w-4 h-4 text-orange-600" />
+              <span>Gerenciar Recorrências</span>
             </button>
           )}
 

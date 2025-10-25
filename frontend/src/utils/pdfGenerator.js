@@ -1801,18 +1801,12 @@ export const generateAvailabilityPDF = async ({ selectedSlots, filters, discipli
         // CABEÇALHO
         // ========================================
 
-        // Logo/Nome ABAplay
-        doc.setFontSize(18);
+        // Título (REMOVIDO: nome ABAplay)
+        doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(60, 60, 180); // Azul ABAplay
-        doc.text('ABAplay', pageWidth / 2, y, { align: 'center' });
-        y += 8;
-
-        // Título
-        doc.setFontSize(14);
         doc.setTextColor(0);
         doc.text('Horários Disponíveis', pageWidth / 2, y, { align: 'center' });
-        y += 6;
+        y += 8;
 
         // Subtítulo com data
         doc.setFontSize(9);
@@ -1860,11 +1854,11 @@ Identificamos os seguintes horários disponíveis que podem atender às suas nec
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
 
-        // Especialidade
-        const disciplineName = filters.discipline_id
-            ? disciplines.find(d => d.id === parseInt(filters.discipline_id))?.name || 'Não especificada'
+        // Especialidades (CORRIGIDO: suporte a múltiplas)
+        const disciplineName = filters.discipline_ids && filters.discipline_ids.length > 0
+            ? filters.discipline_ids.map(id => disciplines.find(d => d.id === parseInt(id))?.name).filter(Boolean).join(', ')
             : 'Todas as especialidades';
-        doc.text(`• Especialidade: ${disciplineName}`, margin + 5, y);
+        doc.text(`• Especialidade(s): ${disciplineName}`, margin + 5, y);
         y += 5;
 
         // Duração
@@ -1918,67 +1912,71 @@ Identificamos os seguintes horários disponíveis que podem atender às suas nec
             y = checkAndAddPage(y, 25);
 
             // Header do terapeuta
+            const hasSpecialty = group.slots.some(s => s.has_specialty);
+            const headerHeight = hasSpecialty ? 12 : 8;
+
             doc.setFillColor(240, 240, 240);
-            doc.rect(margin, y - 3, contentWidth, 8, 'F');
+            doc.rect(margin, y - 3, contentWidth, headerHeight, 'F');
 
             doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(0);
             doc.text(group.name, margin + 3, y + 2);
 
-            // Badge de especialista se aplicável
-            if (group.slots.some(s => s.has_specialty)) {
-                doc.setFontSize(8);
+            // Badge de especialista abaixo do nome (não sobrepõe)
+            if (hasSpecialty) {
+                doc.setFontSize(7);
                 doc.setFont('helvetica', 'normal');
                 doc.setFillColor(220, 255, 220);
                 doc.setDrawColor(100, 180, 100);
                 doc.setLineWidth(0.2);
-                const badgeX = margin + 3 + doc.getTextWidth(group.name) + 5;
-                doc.roundedRect(badgeX, y - 2, 20, 4, 1, 1, 'FD');
+                const badgeY = y + 6;
+                doc.roundedRect(margin + 3, badgeY - 2, 20, 3.5, 0.8, 0.8, 'FD');
                 doc.setTextColor(0, 100, 0);
-                doc.text('Especialista', badgeX + 2, y + 1);
+                doc.text('Especialista', margin + 4, badgeY);
                 doc.setTextColor(0);
             }
 
-            y += 8;
+            y += headerHeight;
 
-            // Tabela de horários
+            // Tabela de horários (MELHORADO: layout mais limpo e organizado)
             const tableData = group.slots.map(slot => {
                 const date = formatDate(slot.available_date);
                 const dayName = translateDayName(slot.day_name);
                 const time = slot.available_time.slice(0, 5);
-                const room = slot.suggested_room_name || '-';
 
                 return [
-                    `${date}\n(${dayName})`,
+                    date,
+                    dayName,
                     time,
-                    `${filters.duration_minutes} min`,
-                    room
+                    `${filters.duration_minutes} min`
                 ];
             });
 
             autoTable(doc, {
                 startY: y,
-                head: [['Data', 'Horário', 'Duração', 'Sala']],
+                head: [['Data', 'Dia da Semana', 'Horário', 'Duração']],
                 body: tableData,
-                theme: 'plain',
+                theme: 'grid',
                 styles: {
                     fontSize: 9,
-                    cellPadding: 3,
-                    lineColor: [220, 220, 220],
-                    lineWidth: 0.1
-                },
-                headStyles: {
-                    fillColor: [250, 250, 250],
-                    textColor: [80, 80, 80],
-                    fontStyle: 'bold',
+                    cellPadding: 4,
+                    lineColor: [200, 200, 200],
+                    lineWidth: 0.1,
                     halign: 'left'
                 },
+                headStyles: {
+                    fillColor: [70, 130, 180],
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    halign: 'center',
+                    fontSize: 9
+                },
                 columnStyles: {
-                    0: { cellWidth: 50 },
-                    1: { cellWidth: 25, halign: 'center' },
+                    0: { cellWidth: 35, halign: 'center' },
+                    1: { cellWidth: 45, halign: 'left' },
                     2: { cellWidth: 30, halign: 'center' },
-                    3: { cellWidth: contentWidth - 105 }
+                    3: { cellWidth: contentWidth - 110, halign: 'center' }
                 },
                 margin: { left: margin, right: margin },
                 didDrawPage: (data) => {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { usePatients } from '../../context/PatientContext';
 import { useAuth } from '../../context/AuthContext';
@@ -17,31 +17,77 @@ import {
   faUserShield,
   faAddressBook,
   faSignOutAlt,
-  faTimes
+  faTimes,
+  faCalendar
 } from '@fortawesome/free-solid-svg-icons';
 import usePatientNotifications from '../../hooks/usePatientNotifications';
 import PatientNotificationBadge from '../notifications/PatientNotificationBadge';
+import sessionLinkApi from '../../api/sessionLinkApi'; // ✅ NOVO: Para buscar agendamentos
 
 const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { patients, selectedPatient, selectPatient, clearPatientSelection, isLoading } = usePatients();
-  const { user, logout, canAccessDashboard } = useAuth();
+  const { user, logout, canAccessDashboard, hasProAccess } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 
   // Se não receber props de controle, usa estado local
   const [localToolsExpanded, setLocalToolsExpanded] = useState(false);
   const toolsExpanded = isToolsExpanded !== undefined ? isToolsExpanded : localToolsExpanded;
   const setToolsExpanded = setIsToolsExpanded || setLocalToolsExpanded;
-  
+
   // Hook para notificações dos pacientes
   const patientIds = useMemo(() => (patients || []).map(p => p.id), [patients]);
-  
-  const { 
-    patientNotifications, 
-    sortPatientsByPriority, 
+
+  const {
+    patientNotifications,
+    sortPatientsByPriority,
     markAsRead
   } = usePatientNotifications(patientIds);
+
+  // ✅ NOVO: Estado para agendamentos de hoje (Plano Pro)
+  const [todayAppointments, setTodayAppointments] = useState({});
+  const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
+
+  // ✅ NOVO: Buscar agendamentos de hoje para todos os pacientes (Plano Pro)
+  useEffect(() => {
+    const loadTodayAppointments = async () => {
+      if (!hasProAccess() || !patients || patients.length === 0) {
+        return;
+      }
+
+      setIsLoadingAppointments(true);
+      const appointmentsMap = {};
+
+      try {
+        // Buscar agendamentos para cada paciente
+        await Promise.all(
+          patients.map(async (patient) => {
+            try {
+              const response = await sessionLinkApi.getTodayAppointments(patient.id);
+              if (response.data && response.data.count > 0) {
+                appointmentsMap[patient.id] = {
+                  count: response.data.count,
+                  appointments: response.data.appointments
+                };
+              }
+            } catch (error) {
+              // Silenciar erros individuais (paciente pode não ter agendamentos)
+              console.log(`Sem agendamentos para paciente ${patient.id}`);
+            }
+          })
+        );
+
+        setTodayAppointments(appointmentsMap);
+      } catch (error) {
+        console.error('Erro ao carregar agendamentos de hoje:', error);
+      } finally {
+        setIsLoadingAppointments(false);
+      }
+    };
+
+    loadTodayAppointments();
+  }, [patients, hasProAccess]);
 
   const handleSelectPatient = (patient) => {
     selectPatient(patient);
@@ -208,12 +254,28 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`
-                        font-medium truncate
-                        ${isSelected ? 'text-white' : 'text-gray-800'}
-                      `}>
-                        {patient.name}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className={`
+                          font-medium truncate
+                          ${isSelected ? 'text-white' : 'text-gray-800'}
+                        `}>
+                          {patient.name}
+                        </p>
+                        {/* ✅ NOVO: Badge de agendamentos de hoje (Plano Pro) */}
+                        {hasProAccess() && todayAppointments[patient.id] && (
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
+                              isSelected
+                                ? 'bg-white bg-opacity-20 text-white border-white border-opacity-40'
+                                : 'bg-blue-50 text-blue-700 border-blue-200'
+                            }`}
+                            title={`${todayAppointments[patient.id].count} agendamento${todayAppointments[patient.id].count > 1 ? 's' : ''} hoje`}
+                          >
+                            <FontAwesomeIcon icon={faCalendar} className="mr-1" />
+                            {todayAppointments[patient.id].count}
+                          </span>
+                        )}
+                      </div>
                       {isSelected && (
                         <p className="text-indigo-100 text-xs mt-1">
                           ✅ Cliente selecionado
@@ -223,6 +285,12 @@ const Sidebar = ({ isToolsExpanded, setIsToolsExpanded }) => {
                       {patientNotifications[patient.id]?.total > 0 && !isSelected && (
                         <p className="text-blue-600 text-xs mt-1 font-medium">
                           🔔 {patientNotifications[patient.id].total} nova{patientNotifications[patient.id].total !== 1 ? 's' : ''} mensagem{patientNotifications[patient.id].total !== 1 ? 'ns' : ''}
+                        </p>
+                      )}
+                      {/* ✅ NOVO: Mostrar info de agendamentos abaixo (quando não selecionado) */}
+                      {hasProAccess() && todayAppointments[patient.id] && !isSelected && (
+                        <p className="text-blue-600 text-xs mt-1 font-medium">
+                          📅 {todayAppointments[patient.id].count} agendamento{todayAppointments[patient.id].count > 1 ? 's' : ''} hoje
                         </p>
                       )}
                     </div>

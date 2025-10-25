@@ -16,7 +16,8 @@ import {
   faChevronUp,
   faSync,
   faEllipsisV,
-  faStickyNote
+  faStickyNote,
+  faCheckCircle  // ✅ NOVO: Ícone de sessão vinculada
 } from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatTime, getStatusBadgeClass, getStatusText } from '../../api/schedulingApi';
 import { translateStatus } from '../../utils/statusTranslator';
@@ -108,6 +109,8 @@ const AppointmentsList = ({
   onJustify,
   onViewNextOccurrences,
   onCancel, // ✅ NOVO: Handler de cancelamento
+  onManageRecurrence, // ✅ NOVO: Handler de gerenciamento de recorrências
+  onRecordSession, // ✅ NOVO: Handler de registro de sessão (Pro)
   isLoading = false,
   pagination = null,
   onPageChange = null,
@@ -759,8 +762,19 @@ const AppointmentsList = ({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {appointment.patient_name}
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-medium text-gray-900">
+                        {appointment.patient_name}
+                      </div>
+                      {/* ✅ NOVO: Badge de sessão vinculada */}
+                      {appointment.progress_session_id && (
+                        <span
+                          className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200"
+                          title="Sessão registrada e vinculada"
+                        >
+                          <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
+                        </span>
+                      )}
                     </div>
                     {appointment.patient_age && (
                       <div className="text-sm text-gray-500">
@@ -838,6 +852,8 @@ const AppointmentsList = ({
                       onJustify={onJustify}
                       onViewNextOccurrences={onViewNextOccurrences}
                       onCancel={onCancel}  // ✅ NOVO: Passar handler de cancelamento
+                      onManageRecurrence={onManageRecurrence}  // ✅ NOVO: Passar handler de gerenciamento de recorrências
+                      onRecordSession={onRecordSession}  // ✅ NOVO: Passar handler de registro de sessão (Pro)
                     />
                   </td>
                 </tr>
